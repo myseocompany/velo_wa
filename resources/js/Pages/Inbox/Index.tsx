@@ -17,6 +17,7 @@ interface ConversationUpdatedPayload {
     status: string;
     last_message_at: string | null;
     message_count: number;
+    last_message?: Conversation['last_message'];
     contact: Conversation['contact'];
     assignee: Conversation['assignee'];
 }
@@ -62,6 +63,28 @@ export default function InboxIndex({ activeConversationId }: Props) {
     // Real-time: new / updated message
     const handleMessageReceived = useCallback((data: unknown) => {
         const payload = data as MessageReceivedPayload;
+
+        setConversations((prev) => {
+            const idx = prev.findIndex((c) => c.id === payload.conversation_id);
+            if (idx === -1) {
+                return prev;
+            }
+
+            const updated: Conversation = {
+                ...prev[idx],
+                last_message_at: payload.created_at,
+                last_message: {
+                    body: payload.body,
+                    direction: payload.direction,
+                    created_at: payload.created_at,
+                    media_type: payload.media_type,
+                },
+            };
+            const next = [...prev];
+            next.splice(idx, 1);
+
+            return [updated, ...next];
+        });
 
         // Add to thread if viewing that conversation
         if (activeConv?.id === payload.conversation_id) {

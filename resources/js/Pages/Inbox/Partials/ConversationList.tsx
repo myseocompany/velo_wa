@@ -9,6 +9,25 @@ interface Props {
     onSelect: (conversation: Conversation) => void;
 }
 
+function getLastMessagePreview(conversation: Conversation): string {
+    const last = conversation.last_message;
+
+    if (!last) {
+        return `${conversation.message_count} mensaje${conversation.message_count !== 1 ? 's' : ''}`;
+    }
+
+    const body = last.body?.trim();
+    if (body) {
+        return body;
+    }
+
+    if (last.media_type) {
+        return 'Archivo adjunto';
+    }
+
+    return 'Mensaje sin texto';
+}
+
 function Avatar({ name }: { name: string | null }) {
     const initials = (name ?? '?')
         .split(' ')
@@ -63,7 +82,7 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
                                     )}
                                 </div>
                                 <p className="mt-0.5 truncate text-xs text-gray-500">
-                                    {conv.message_count} mensaje{conv.message_count !== 1 ? 's' : ''}
+                                    {getLastMessagePreview(conv)}
                                 </p>
                             </div>
                         </button>

@@ -15,7 +15,7 @@ class ConversationController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Conversation::query()->with(['contact', 'assignee']);
+        $query = Conversation::query()->with(['contact', 'assignee', 'latestMessage']);
 
         $status = $request->string('status')->toString();
         if (in_array($status, array_column(ConversationStatus::cases(), 'value'), true)) {
@@ -55,7 +55,7 @@ class ConversationController extends Controller
 
     public function show(Conversation $conversation): ConversationResource
     {
-        $conversation->load(['contact', 'assignee']);
+        $conversation->load(['contact', 'assignee', 'latestMessage']);
 
         return new ConversationResource($conversation);
     }

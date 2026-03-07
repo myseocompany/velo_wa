@@ -61,6 +61,33 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  queue-worker:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    working_dir: /var/www/html
+    command: php artisan queue:work --queue=whatsapp,default --tries=3 --timeout=60 --sleep=1
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: velo
+      DB_USERNAME: velo
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EVOLUTION_API_URL: http://evolution-api:8080
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      evolution-api:
+        condition: service_started
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"

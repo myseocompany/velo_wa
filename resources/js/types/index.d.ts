@@ -87,6 +87,12 @@ export interface Conversation {
     updated_at: string;
     contact?: Contact;
     assignee?: User;
+    last_message?: {
+        body: string | null;
+        direction: MessageDirection;
+        created_at: string;
+        media_type: string | null;
+    } | null;
 }
 
 export interface Message {

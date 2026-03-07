@@ -73,19 +73,19 @@ export default function Dashboard({ stats, conversation_chart, recent_conversati
                     <MetricCard
                         label="Conversaciones abiertas"
                         value={stats.open_conversations}
-                        icon={<Inbox size={20} className="text-blue-500" />}
+                        icon={<Inbox size={20} className="text-ink-700" />}
                         color="blue"
                     />
                     <MetricCard
                         label="Total contactos"
                         value={stats.total_contacts}
-                        icon={<Users size={20} className="text-green-500" />}
+                        icon={<Users size={20} className="text-brand-500" />}
                         color="green"
                     />
                     <MetricCard
                         label="Mensajes hoy"
                         value={stats.messages_today}
-                        icon={<MessageSquare size={20} className="text-purple-500" />}
+                        icon={<MessageSquare size={20} className="text-brand-500" />}
                         color="purple"
                     />
                     <MetricCard
@@ -95,7 +95,7 @@ export default function Dashboard({ stats, conversation_chart, recent_conversati
                                 ? formatSeconds(stats.avg_response_time)
                                 : '—'
                         }
-                        icon={<TrendingUp size={20} className="text-orange-500" />}
+                        icon={<TrendingUp size={20} className="text-ink-500" />}
                         color="orange"
                         isText
                     />
@@ -123,8 +123,8 @@ export default function Dashboard({ stats, conversation_chart, recent_conversati
                                             preserveScroll
                                             className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                                                 isActive
-                                                    ? 'border-green-200 bg-green-50 text-green-700'
-                                                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                                    ? 'border-brand-200 bg-brand-50 text-ink-900'
+                                                    : 'border-gray-200 bg-white text-ink-900/70 hover:bg-brand-50 hover:text-ink-900'
                                             }`}
                                         >
                                             {item.label}
@@ -151,7 +151,7 @@ export default function Dashboard({ stats, conversation_chart, recent_conversati
                                         tickLine={false}
                                     />
                                     <Tooltip
-                                        cursor={{ fill: '#ecfdf5' }}
+                                        cursor={{ fill: '#ffe8f3' }}
                                         formatter={(value: number) => [
                                             `${value} conversaciones`,
                                             'Total',
@@ -159,7 +159,7 @@ export default function Dashboard({ stats, conversation_chart, recent_conversati
                                     />
                                     <Bar
                                         dataKey="conversations"
-                                        fill="#16a34a"
+                                        fill="#f5257e"
                                         radius={[6, 6, 0, 0]}
                                         maxBarSize={42}
                                     />

@@ -174,7 +174,7 @@ export default function PipelineIndex() {
                 
                     {loading ? (
                     <div className="mt-4 flex h-48 items-center justify-center rounded-xl border border-slate-200 bg-white">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
                     </div>
                 ) : (
                     <DragDropContext onDragEnd={onDragEnd}>

@@ -131,7 +131,7 @@ services:
 
 ```env
 # Application
-APP_NAME=Velo
+APP_NAME=AriCRM
 APP_ENV=local
 APP_URL=http://localhost:8000
 
@@ -308,9 +308,9 @@ VPS (4 CPU, 8GB RAM, 80GB SSD) — ~$40/mo
 ### Domain & DNS
 
 ```
-velo.app (or similar)
-├── app.velo.app    → Laravel application
-├── ws.velo.app     → Reverb WebSocket
-├── api.velo.app    → (optional, can use app.velo.app/api)
-└── media.velo.app  → S3/CDN for media (later)
+aricrm.app (or similar)
+├── app.aricrm.app    → Laravel application
+├── ws.aricrm.app     → Reverb WebSocket
+├── api.aricrm.app    → (optional, can use app.aricrm.app/api)
+└── media.aricrm.app  → S3/CDN for media (later)
 ```

@@ -52,7 +52,7 @@
 
 ## Data Flow: Message Lifecycle
 
-### Inbound Message (Lead → Velo)
+### Inbound Message (Lead → AriCRM)
 
 ```
 WhatsApp Network

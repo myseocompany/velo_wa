@@ -2,7 +2,7 @@
 
 ## Overview
 
-Velo uses **Evolution API v2** as the WhatsApp bridge service. It runs as a Docker container and handles all WhatsApp protocol communication via Baileys internally. Laravel communicates with it via REST API and receives events via webhooks.
+AriCRM uses **Evolution API v2** as the WhatsApp bridge service. It runs as a Docker container and handles all WhatsApp protocol communication via Baileys internally. Laravel communicates with it via REST API and receives events via webhooks.
 
 ---
 
@@ -205,7 +205,7 @@ apikey: ${EVOLUTION_API_KEY}
 ### Webhook Authentication (Laravel side)
 
 Inbound webhooks must include the same `EVOLUTION_API_KEY` configured in Laravel.
-Accepted headers in Velo:
+Accepted headers in AriCRM:
 
 - `apikey: <EVOLUTION_API_KEY>`
 - `x-api-key: <EVOLUTION_API_KEY>`

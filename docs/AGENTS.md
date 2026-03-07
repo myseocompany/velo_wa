@@ -1,6 +1,6 @@
 # Agents & Service Responsibilities
 
-This document defines the boundaries, responsibilities, and communication patterns of each service/agent in the Velo platform.
+This document defines the boundaries, responsibilities, and communication patterns of each service/agent in the AriCRM platform.
 
 ---
 
@@ -41,7 +41,7 @@ This document defines the boundaries, responsibilities, and communication patter
 
 ---
 
-## 1. Velo Core (Laravel Application)
+## 1. AriCRM Core (Laravel Application)
 
 **Role**: Central orchestrator. All business logic lives here.
 

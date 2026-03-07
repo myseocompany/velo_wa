@@ -50,7 +50,7 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
                     <li key={conv.id}>
                         <button
                             onClick={() => onSelect(conv)}
-                            className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 ${isActive ? 'border-l-2 border-green-600 bg-green-50' : ''}`}
+                            className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 ${isActive ? 'border-l-2 border-brand-600 bg-brand-50' : ''}`}
                         >
                             <ContactAvatar
                                 name={displayName}

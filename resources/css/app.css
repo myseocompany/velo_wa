@@ -2,21 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    :root {
+        /* AriCRM palette inspired by Dribbble-style UI contrast */
+        --color-primary: #f5257e;
+        --color-primary-soft: #ffe8f3;
+        --color-link: #060318;
+        --color-ink-soft: #6b6b8f;
+        --color-canvas: #f8f8ff;
+        --color-accent: #8a8adc;
+    }
+
+    body {
+        background: var(--color-canvas);
+    }
+
+    a {
+        color: var(--color-link);
+        transition: color 160ms ease;
+    }
+
+    a:hover {
+        color: var(--color-primary);
+    }
+}
+
 .pipeline-scroll::-webkit-scrollbar {
     height: 12px;
 }
 
 .pipeline-scroll::-webkit-scrollbar-track {
-    background: #e2e8f0;
+    background: #ececfa;
     border-radius: 9999px;
 }
 
 .pipeline-scroll::-webkit-scrollbar-thumb {
-    background: #94a3b8;
+    background: #b0b0e8;
     border-radius: 9999px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid #ececfa;
 }
 
 .pipeline-scroll::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #8a8adc;
 }

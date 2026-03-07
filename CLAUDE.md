@@ -1,8 +1,8 @@
-# Velo - WhatsApp CRM SaaS
+# AriCRM - WhatsApp CRM SaaS
 
 ## Project Overview
 
-Velo is a multi-tenant SaaS platform that connects businesses to WhatsApp for lead management, conversational inbox, and sales pipeline tracking. Each tenant connects their own WhatsApp number via QR scan and manages contacts, conversations, and deals through a unified interface.
+AriCRM is a multi-tenant SaaS platform that connects businesses to WhatsApp for lead management, conversational inbox, and sales pipeline tracking. Each tenant connects their own WhatsApp number via QR scan and manages contacts, conversations, and deals through a unified interface.
 
 ## Tech Stack
 

@@ -22,7 +22,7 @@ function MediaContent({ message, isOut }: { message: Message; isOut: boolean }) 
 
     if (!media_type) return null;
 
-    const textColor = isOut ? 'text-green-100' : 'text-gray-500';
+    const textColor = isOut ? 'text-brand-100' : 'text-gray-500';
 
     // Media not yet downloaded
     if (!media_url) {
@@ -56,7 +56,7 @@ function MediaContent({ message, isOut }: { message: Message; isOut: boolean }) 
         case 'audio':
             return (
                 <div className="flex items-center gap-2 py-1">
-                    <Mic className={`h-4 w-4 flex-shrink-0 ${isOut ? 'text-green-100' : 'text-green-600'}`} />
+                    <Mic className={`h-4 w-4 flex-shrink-0 ${isOut ? 'text-brand-100' : 'text-brand-600'}`} />
                     <audio src={media_url} controls preload="metadata" className="h-8 max-w-[240px]" />
                 </div>
             );
@@ -67,7 +67,7 @@ function MediaContent({ message, isOut }: { message: Message; isOut: boolean }) 
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
-                        isOut ? 'border-green-400 hover:bg-green-600' : 'border-gray-200 hover:bg-gray-50'
+                        isOut ? 'border-brand-400 hover:bg-brand-600' : 'border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                     <FileText className="h-5 w-5 flex-shrink-0" />
@@ -107,7 +107,7 @@ function MessageBubble({ message }: { message: Message }) {
             <div
                 className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${
                     isOut
-                        ? 'rounded-br-sm bg-green-500 text-white'
+                        ? 'rounded-br-sm bg-brand-500 text-white'
                         : 'rounded-bl-sm bg-white text-gray-900'
                 }`}
             >
@@ -117,7 +117,7 @@ function MessageBubble({ message }: { message: Message }) {
                     <p className="text-xs italic opacity-70">[Mensaje vacío]</p>
                 )}
                 <div className={`mt-1 flex items-center gap-1 ${isOut ? 'justify-end' : 'justify-start'}`}>
-                    <span className={`text-[10px] ${isOut ? 'text-green-100' : 'text-gray-400'}`}>{time}</span>
+                    <span className={`text-[10px] ${isOut ? 'text-brand-100' : 'text-gray-400'}`}>{time}</span>
                     {isOut && <StatusIcon status={message.status} />}
                 </div>
             </div>
@@ -182,13 +182,13 @@ export default function MessageThread({ conversationId, messages, onMessageSent 
                         onKeyDown={handleKeyDown}
                         placeholder="Escribe un mensaje… (Enter para enviar)"
                         rows={1}
-                        className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                         style={{ maxHeight: '120px' }}
                     />
                     <button
                         onClick={sendMessage}
                         disabled={!body.trim() || sending}
-                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700 disabled:opacity-40"
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-40"
                     >
                         {sending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

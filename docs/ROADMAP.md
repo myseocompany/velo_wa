@@ -191,7 +191,7 @@ Complete application ready for beta users.
 - [ ] Feedback collection and iteration
 
 ### Deliverable
-Velo live in production with paying customers.
+AriCRM live in production with paying customers.
 
 ---
 

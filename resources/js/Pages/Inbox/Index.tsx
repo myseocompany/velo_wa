@@ -127,7 +127,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                     <div className="flex-1 overflow-y-auto">
                         {loadingConvs ? (
                             <div className="flex items-center justify-center py-16">
-                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
                             </div>
                         ) : (
                             <ConversationList
@@ -163,7 +163,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
                             {loadingMessages ? (
                                 <div className="flex flex-1 items-center justify-center">
-                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
                                 </div>
                             ) : (
                                 <MessageThread

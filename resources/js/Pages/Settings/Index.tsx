@@ -23,13 +23,13 @@ export default function SettingsIndex() {
                                 Conecta o desconecta tu número y revisa el estado de la instancia.
                             </p>
                         </div>
-                        <QrCode className="h-6 w-6 text-green-600" />
+                        <QrCode className="h-6 w-6 text-brand-600" />
                     </div>
 
                     <div className="mt-4">
                         <Link
                             href="/settings/whatsapp"
-                            className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                            className="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
                         >
                             Ir a conexión WhatsApp
                         </Link>

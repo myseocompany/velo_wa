@@ -39,7 +39,7 @@ export default function ContactAvatar({
 
     return (
         <div
-            className={`${sizeClass} flex flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700`}
+            className={`${sizeClass} flex flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700`}
         >
             {initials}
         </div>

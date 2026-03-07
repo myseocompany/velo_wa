@@ -46,7 +46,8 @@ services:
       CACHE_REDIS_PREFIX_KEY: evolution
       CACHE_LOCAL_ENABLED: "false"
       # Webhooks
-      WEBHOOK_GLOBAL_URL: http://host.docker.internal:8000/api/v1/webhooks/evolution
+      WEBHOOK_GLOBAL_URL: http://host.docker.internal:8000/api/v1/webhooks/evolution?apikey=${EVOLUTION_API_KEY:-changeme}
+      WEBHOOK_GLOBAL_API_KEY: ${EVOLUTION_API_KEY:-changeme}
       WEBHOOK_GLOBAL_ENABLED: "true"
       WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: "false"
       # QR & misc

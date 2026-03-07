@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\MessageController;
+use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
@@ -36,4 +38,10 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->name('messages.store');
+
+    // Contacts
+    Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+
+    // Pipeline deals
+    Route::get('/pipeline/deals', [PipelineDealController::class, 'index'])->name('pipeline.deals.index');
 });

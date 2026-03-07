@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -34,8 +35,10 @@ return new class extends Migration
             $table->index(['tenant_id', 'phone']);
         });
 
-        // GIN index for tags (PostgreSQL-specific)
-        DB::statement('CREATE INDEX contacts_tags_gin ON contacts USING GIN (tags)');
+        // GIN index for tags (PostgreSQL-specific). Skip in SQLite tests.
+        if (Schema::getConnection()->getDriverName() === 'pgsql') {
+            DB::statement('CREATE INDEX contacts_tags_gin ON contacts USING GIN (tags)');
+        }
     }
 
     public function down(): void

@@ -23,6 +23,11 @@ class ContactResource extends JsonResource
             'first_contact_at' => $this->first_contact_at?->toIso8601String(),
             'last_contact_at'  => $this->last_contact_at?->toIso8601String(),
             'created_at'      => $this->created_at->toIso8601String(),
+            'updated_at'      => $this->updated_at->toIso8601String(),
+            'assignee'        => $this->whenLoaded('assignee', fn () => [
+                'id'   => $this->assignee->id,
+                'name' => $this->assignee->name,
+            ]),
         ];
     }
 }

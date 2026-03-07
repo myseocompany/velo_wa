@@ -66,14 +66,14 @@
 
 ### GET /api/v1/conversations
 
-List conversations for current tenant.
+List conversations for current tenant (cursor pagination).
 
 ```
 Query params:
-  status    = open|pending|closed (default: open)
+  status    = open|pending|closed (optional)
   assigned  = me|unassigned|all|{user_id} (default: all)
   search    = string (searches contact name/phone)
-  cursor    = string (cursor-based pagination)
+  cursor    = string
   limit     = integer (default: 25, max: 100)
 ```
 
@@ -90,55 +90,20 @@ Query params:
                 "profile_pic_url": "https://..."
             },
             "status": "open",
-            "assigned_to": {
-                "id": "uuid",
-                "name": "María García"
-            },
-            "last_message": {
-                "body": "Hola, quiero cotizar",
-                "direction": "in",
-                "created_at": "2024-03-06T15:30:00Z"
-            },
-            "unread_count": 3,
+            "assigned_to": "uuid_or_null",
             "first_message_at": "2024-03-06T15:28:00Z",
             "first_response_at": null,
+            "last_message_at": "2024-03-06T15:30:00Z",
+            "message_count": 3,
             "created_at": "2024-03-06T15:28:00Z"
         }
-    ],
-    "meta": {
-        "next_cursor": "eyJ...",
-        "has_more": true
-    }
+    ]
 }
 ```
 
 ### GET /api/v1/conversations/{id}
 
-Single conversation with recent messages.
-
-### POST /api/v1/conversations/{id}/assign
-
-```json
-// Request
-{ "user_id": "uuid" }
-
-// Response 200
-{ "data": { "id": "uuid", "assigned_to": { ... } } }
-```
-
-### POST /api/v1/conversations/{id}/close
-
-```json
-// Response 200
-{ "data": { "id": "uuid", "status": "closed", "closed_at": "..." } }
-```
-
-### POST /api/v1/conversations/{id}/reopen
-
-```json
-// Response 200
-{ "data": { "id": "uuid", "status": "open" } }
-```
+Single conversation.
 
 ---
 
@@ -148,7 +113,7 @@ Single conversation with recent messages.
 
 ```
 Query params:
-  cursor = string (cursor-based, newest first)
+  cursor = string (cursor-based)
   limit  = integer (default: 50, max: 200)
 ```
 
@@ -191,21 +156,10 @@ Query params:
 Send a message.
 
 ```json
-// Request (text)
-{
-    "body": "¡Hola! Te envío la cotización.",
-    "type": "text"
-}
+// Request
+{ "body": "¡Hola! Te envío la cotización." }
 
-// Request (media)
-{
-    "body": "Aquí va el documento",
-    "type": "media",
-    "media_file": "<multipart file upload>",
-    "media_type": "document"
-}
-
-// Response 201
+// Response 200
 {
     "data": {
         "id": "uuid",
@@ -225,76 +179,30 @@ Send a message.
 
 ```
 Query params:
-  search      = string (name, phone, email)
-  tag         = string (filter by tag)
-  assigned_to = uuid|unassigned
+  search      = string (name, push_name, phone, email)
   page        = integer
   per_page    = integer (default: 25)
   sort        = name|created_at|last_contact_at (default: last_contact_at)
   direction   = asc|desc (default: desc)
 ```
 
-### POST /api/v1/contacts
-
-```json
-// Request
-{
-    "phone": "573001234567",
-    "name": "Juan Pérez",
-    "email": "juan@example.com",
-    "company": "Empresa X",
-    "tags": ["vip", "bogota"],
-    "notes": "Referido por María"
-}
-
-// Response 201
-{ "data": { "id": "uuid", ... } }
-```
-
-### PUT /api/v1/contacts/{id}
-
-### DELETE /api/v1/contacts/{id}
-
-Soft delete.
+Current scope: read/list endpoint only.
 
 ---
 
 ## Pipeline Deals
 
-### GET /api/v1/deals
+### GET /api/v1/pipeline/deals
 
 ```
 Query params:
-  stage       = lead|qualified|proposal|negotiation|closed_won|closed_lost
-  assigned_to = uuid
-  page, per_page, sort, direction
+  stage    = lead|qualified|proposal|negotiation|closed_won|closed_lost
+  search   = string (title, notes)
+  page     = integer
+  per_page = integer (default: 100, max: 200)
 ```
 
-### POST /api/v1/deals
-
-```json
-{
-    "contact_id": "uuid",
-    "title": "Cotización hosting",
-    "stage": "lead",
-    "value": 1500000,
-    "currency": "COP"
-}
-```
-
-### PUT /api/v1/deals/{id}
-
-### PATCH /api/v1/deals/{id}/stage
-
-Move deal to a new stage. Auto-timestamps the transition.
-
-```json
-// Request
-{ "stage": "qualified" }
-
-// Response 200
-{ "data": { "id": "uuid", "stage": "qualified", "qualified_at": "2024-03-06T..." } }
-```
+Current scope: read/list endpoint only.
 
 ---
 
@@ -305,12 +213,10 @@ Move deal to a new stage. Auto-timestamps the transition.
 ```json
 // Response 200
 {
-    "data": {
-        "status": "connected",
-        "phone": "573001234567",
-        "connected_at": "2024-03-01T10:00:00Z",
-        "instance_id": "tenant_abc123"
-    }
+    "status": "connected",
+    "phone": "573001234567",
+    "connected_at": "2024-03-01T10:00:00Z",
+    "instance_id": "tenant_abc123"
 }
 ```
 
@@ -321,10 +227,8 @@ Start connection flow (generate QR).
 ```json
 // Response 200
 {
-    "data": {
-        "qr_code": "base64_encoded_qr_image",
-        "expires_at": "2024-03-06T15:35:00Z"
-    }
+    "qr_code": "base64_encoded_qr_image",
+    "expires_at": "2024-03-06T15:35:00Z"
 }
 ```
 

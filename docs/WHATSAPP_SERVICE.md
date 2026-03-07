@@ -202,6 +202,18 @@ apikey: ${EVOLUTION_API_KEY}
 
 ## Webhook Events
 
+### Webhook Authentication (Laravel side)
+
+Inbound webhooks must include the same `EVOLUTION_API_KEY` configured in Laravel.
+Accepted headers in Velo:
+
+- `apikey: <EVOLUTION_API_KEY>`
+- `x-api-key: <EVOLUTION_API_KEY>`
+- `x-evolution-apikey: <EVOLUTION_API_KEY>`
+- `Authorization: Bearer <EVOLUTION_API_KEY>`
+
+Requests without a valid key are rejected with `401 Unauthorized`.
+
 ### MESSAGES_UPSERT (Incoming Message)
 
 ```json

@@ -4,6 +4,43 @@ This document defines the boundaries, responsibilities, and communication patter
 
 ---
 
+## Development Handoff Notes
+
+### 2026-03-07 - Test baseline stabilization
+
+- Fixed test migration crash in SQLite by guarding PostgreSQL-only GIN index creation in `database/migrations/2024_01_01_000002_create_contacts_table.php`.
+- Updated `tests/Feature/ExampleTest.php` to assert redirect from `/` to `/dashboard`, matching current route behavior.
+- Updated `tests/Feature/Auth/RegistrationTest.php` to include `company` (required by custom multi-tenant registration flow).
+- Updated `tests/Feature/ProfileTest.php` to create users with tenant context and to assert soft delete behavior for account deletion.
+- Reason: `php artisan test` was failing at migration time (`CREATE INDEX ... USING GIN`) before feature tests could run.
+- Result after fixes: `php artisan test` passes (`25 passed`, `0 failed`).
+- Follow-up for next agent: keep PostgreSQL optimizations, but always guard driver-specific SQL so CI/testing can run on SQLite.
+
+### 2026-03-07 - Webhook authentication hardening
+
+- Secured `POST /api/v1/webhooks/evolution` in `app/Http/Controllers/WebhookController.php`.
+- Added required API key validation against `EVOLUTION_API_KEY` (`services.evolution.key`).
+- Accepted inbound key formats: `apikey`, `x-api-key`, `x-evolution-apikey`, or `Authorization: Bearer <key>`.
+- Unauthorized requests now return `401`; misconfigured server without key returns `503`.
+- Webhook logs now persist `tenant_id` when `instance` maps to a tenant.
+- Added regression tests in `tests/Feature/WebhookSecurityTest.php` for reject/accept behavior.
+- Result after fixes: `php artisan test` passes (`27 passed`, `0 failed`).
+
+### 2026-03-07 - API/docs alignment + usable Contacts/Pipeline
+
+- Extended `GET /api/v1/conversations` filtering in `app/Http/Controllers/Api/V1/ConversationController.php`:
+  - Supports `status`, `assigned`, `search`, `limit` with cursor pagination.
+- Added `GET /api/v1/contacts` endpoint (`ContactController@index`) with `search`, `sort`, `direction`, `per_page`.
+- Added `GET /api/v1/pipeline/deals` endpoint (`PipelineDealController@index`) with `stage`, `search`, `per_page`.
+- Added `PipelineDealResource` and expanded `ContactResource` (`updated_at`, `assignee`).
+- Replaced web placeholders:
+  - `/contacts` now renders `resources/js/Pages/Contacts/Index.tsx`.
+  - `/pipeline` now renders `resources/js/Pages/Pipeline/Index.tsx`.
+- Updated `docs/API.md` to match implemented contracts and endpoint names.
+- Validation: `php artisan test` and `npm run build` both passing after changes.
+
+---
+
 ## 1. Velo Core (Laravel Application)
 
 **Role**: Central orchestrator. All business logic lives here.

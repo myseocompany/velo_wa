@@ -36,17 +36,17 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     // Contacts (Phase 2)
     Route::get('/contacts', function () {
-        return Inertia::render('Dashboard', ['stats' => ['open_conversations' => 0, 'total_contacts' => 0, 'messages_today' => 0, 'avg_response_time' => null]]);
+        return Inertia::render('Contacts/Index');
     })->name('contacts');
 
     // Pipeline (Phase 3)
     Route::get('/pipeline', function () {
-        return Inertia::render('Dashboard', ['stats' => ['open_conversations' => 0, 'total_contacts' => 0, 'messages_today' => 0, 'avg_response_time' => null]]);
+        return Inertia::render('Pipeline/Index');
     })->name('pipeline');
 
     // Settings
     Route::get('/settings', function () {
-        return Inertia::render('Dashboard', ['stats' => ['open_conversations' => 0, 'total_contacts' => 0, 'messages_today' => 0, 'avg_response_time' => null]]);
+        return Inertia::render('Settings/Index');
     })->name('settings');
 
     Route::get('/settings/whatsapp', function () {

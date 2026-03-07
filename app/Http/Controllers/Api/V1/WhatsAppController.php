@@ -52,7 +52,8 @@ class WhatsAppController extends Controller
     {
         $tenant       = $request->user()->tenant;
         $instanceName = WhatsAppClientService::instanceName($tenant->id);
-        $webhookUrl   = url('/api/v1/webhooks/evolution');
+        $webhookApiKey = rawurlencode((string) config('services.evolution.key', ''));
+        $webhookUrl    = url("/api/v1/webhooks/evolution?apikey={$webhookApiKey}");
 
         // Delete any stale instance first — ensures a fresh QR every time
         try {

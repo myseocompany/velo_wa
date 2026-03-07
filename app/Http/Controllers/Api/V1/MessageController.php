@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
+use App\Events\ConversationUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\SendMessageRequest;
 use App\Http\Resources\MessageResource;
@@ -36,6 +37,12 @@ class MessageController extends Controller
             'sent_by'         => $request->user()->id,
             'is_automated'    => false,
         ]);
+
+        // Update conversation counters synchronously so the list reorders at once
+        $conversation->increment('message_count');
+        $conversation->update(['last_message_at' => $message->created_at]);
+
+        broadcast(new ConversationUpdated($conversation->fresh()));
 
         SendWhatsAppMessage::dispatch($message);
 

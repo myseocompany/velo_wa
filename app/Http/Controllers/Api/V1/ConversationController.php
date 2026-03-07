@@ -32,7 +32,9 @@ class ConversationController extends Controller
         } elseif ($assigned === 'unassigned') {
             $query->whereNull('assigned_to');
         } elseif ($assigned !== '' && $assigned !== 'all') {
-            $query->where('assigned_to', $assigned);
+            // Restrict to users within the same tenant to prevent cross-tenant enumeration
+            $query->where('assigned_to', $assigned)
+                ->whereHas('assignee', fn ($q) => $q->where('tenant_id', $request->user()->tenant_id));
         }
 
         $search = trim($request->string('search')->toString());

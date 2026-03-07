@@ -65,9 +65,10 @@ class SendWhatsAppMessage implements ShouldQueue
                 'error'      => $e->getMessage(),
             ]);
 
-            // On final attempt, mark as failed; otherwise let the queue retry
+            // On final attempt, mark as failed and notify the frontend; otherwise retry
             if ($this->attempts() >= $this->tries) {
                 $this->updateStatus(MessageStatus::Failed, $e->getMessage());
+                broadcast(new MessageReceived($this->message->fresh()));
             } else {
                 throw $e;
             }

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Pipeline\MoveDealToStage;
 use App\Enums\DealStage;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\UpdateDealStageRequest;
 use App\Http\Resources\PipelineDealResource;
 use App\Models\PipelineDeal;
-use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
 
 class PipelineDealController extends Controller
 {
@@ -21,7 +21,7 @@ class PipelineDealController extends Controller
         $query = PipelineDeal::query()->with(['contact', 'assignee']);
 
         $stage = $request->string('stage')->toString();
-        if (in_array($stage, array_column(DealStage::cases(), 'value'), true)) {
+        if ($stage !== '' && DealStage::tryFrom($stage) !== null) {
             $query->where('stage', $stage);
         }
 
@@ -33,68 +33,31 @@ class PipelineDealController extends Controller
             });
         }
 
+        // Build ORDER BY CASE from enum definition — stays in sync automatically
+        $cases    = collect(DealStage::cases())
+            ->map(fn (DealStage $s, int $i) => "WHEN ? THEN {$i}")
+            ->implode(' ');
+        $bindings = array_column(DealStage::cases(), 'value');
+
         $perPage = max(1, min((int) $request->integer('per_page', 100), 200));
 
         $deals = $query
-            ->orderByRaw("CASE stage
-                WHEN 'lead' THEN 1
-                WHEN 'qualified' THEN 2
-                WHEN 'proposal' THEN 3
-                WHEN 'negotiation' THEN 4
-                WHEN 'closed_won' THEN 5
-                WHEN 'closed_lost' THEN 6
-                ELSE 7
-            END")
+            ->orderByRaw("CASE stage {$cases} ELSE 999 END", $bindings)
             ->orderByDesc('updated_at')
             ->paginate($perPage);
 
         return PipelineDealResource::collection($deals);
     }
 
-    public function updateStage(Request $request, PipelineDeal $pipelineDeal): JsonResponse
-    {
-        $validated = $request->validate([
-            'stage' => ['required', Rule::in(array_column(DealStage::cases(), 'value'))],
-        ]);
-
-        /** @var DealStage $nextStage */
-        $nextStage = DealStage::from($validated['stage']);
-        $currentStage = $pipelineDeal->stage;
-
-        if ($nextStage === $currentStage) {
-            return response()->json([
-                'data' => new PipelineDealResource($pipelineDeal->load(['contact', 'assignee'])),
-            ]);
-        }
-
-        $now = CarbonImmutable::now();
-        $updates = ['stage' => $nextStage];
-
-        if ($pipelineDeal->lead_at === null && $nextStage === DealStage::Lead) {
-            $updates['lead_at'] = $now;
-        }
-        if ($pipelineDeal->qualified_at === null && $nextStage === DealStage::Qualified) {
-            $updates['qualified_at'] = $now;
-        }
-        if ($pipelineDeal->proposal_at === null && $nextStage === DealStage::Proposal) {
-            $updates['proposal_at'] = $now;
-        }
-        if ($pipelineDeal->negotiation_at === null && $nextStage === DealStage::Negotiation) {
-            $updates['negotiation_at'] = $now;
-        }
-        if ($pipelineDeal->closed_at === null && $nextStage->isClosed()) {
-            $updates['closed_at'] = $now;
-        }
-
-        if (! $nextStage->isClosed()) {
-            $updates['closed_at'] = null;
-        }
-
-        $pipelineDeal->fill($updates);
-        $pipelineDeal->save();
+    public function updateStage(
+        UpdateDealStageRequest $request,
+        PipelineDeal $pipelineDeal,
+        MoveDealToStage $action,
+    ): JsonResponse {
+        $deal = $action->handle($pipelineDeal, $request->stage());
 
         return response()->json([
-            'data' => new PipelineDealResource($pipelineDeal->load(['contact', 'assignee'])),
+            'data' => new PipelineDealResource($deal->load(['contact', 'assignee'])),
         ]);
     }
 }

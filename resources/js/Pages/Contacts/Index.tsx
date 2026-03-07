@@ -13,33 +13,33 @@ export default function ContactsIndex() {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [total, setTotal] = useState(0);
 
-    async function fetchContacts(query = '') {
-        setLoading(true);
-        try {
-            const res = await axios.get<ContactsApiResponse>('/api/v1/contacts', {
-                params: {
-                    search: query || undefined,
-                    per_page: 50,
-                    sort: 'last_contact_at',
-                    direction: 'desc',
-                },
-            });
-            setContacts(res.data.data);
-            setTotal(res.data.meta.total);
-        } finally {
-            setLoading(false);
-        }
-    }
-
     useEffect(() => {
-        fetchContacts();
-    }, []);
+        let cancelled = false;
 
-    useEffect(() => {
-        const id = window.setTimeout(() => {
-            fetchContacts(search.trim());
-        }, 250);
-        return () => window.clearTimeout(id);
+        const id = window.setTimeout(async () => {
+            setLoading(true);
+            try {
+                const res = await axios.get<ContactsApiResponse>('/api/v1/contacts', {
+                    params: {
+                        search: search.trim() || undefined,
+                        per_page: 50,
+                        sort: 'last_contact_at',
+                        direction: 'desc',
+                    },
+                });
+                if (!cancelled) {
+                    setContacts(res.data.data);
+                    setTotal(res.data.meta.total);
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }, search === '' ? 0 : 250);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(id);
+        };
     }, [search]);
 
     const emptyMessage = useMemo(() => {

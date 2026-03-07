@@ -22,22 +22,22 @@ Running local dev environment with auth, multi-tenancy, and all services healthy
 
 ---
 
-## Phase 1: WhatsApp Connection (Week 3-4)
+## Phase 1: WhatsApp Connection (Week 3-4) ✅ COMPLETE
 > Goal: Connect a WhatsApp number and receive/send messages
 
 ### Tasks
-- [ ] `WhatsAppClientService`: HTTP client to Evolution API
-- [ ] Settings page: WhatsApp connection with QR code display
-- [ ] QR generation flow: create instance → display QR → poll/webhook for connection
-- [ ] Webhook endpoint: receive and log all Evolution API events
-- [ ] `WebhookHandlerService`: route events by type
-- [ ] Handle `CONNECTION_UPDATE`: update tenant wa_status in real-time
-- [ ] Handle `MESSAGES_UPSERT`: create contact + conversation + message
-- [ ] Handle `MESSAGES_UPDATE`: update message delivery status
-- [ ] `SendWhatsAppMessage` job: send text via Evolution API
-- [ ] Basic inbox page: list conversations, view messages, send text replies
-- [ ] Real-time: broadcast new messages via Reverb, update inbox with Echo
-- [ ] Instance health check job (every 5 minutes)
+- [x] `WhatsAppClientService`: HTTP client to Evolution API
+- [x] Settings page: WhatsApp connection with QR code display
+- [x] QR generation flow: create instance → display QR → poll/webhook for connection
+- [x] Webhook endpoint: receive and log all Evolution API events
+- [x] `WebhookHandlerService`: route events by type
+- [x] Handle `CONNECTION_UPDATE`: update tenant wa_status in real-time
+- [x] Handle `MESSAGES_UPSERT`: create contact + conversation + message
+- [x] Handle `MESSAGES_UPDATE`: update message delivery status
+- [x] `SendWhatsAppMessage` job: send text via Evolution API
+- [x] Basic inbox page: list conversations, view messages, send text replies
+- [x] Real-time: broadcast new messages via Reverb, update inbox with Echo
+- [x] Instance health check job (every 5 minutes)
 
 ### Deliverable
 Can connect WhatsApp via QR, receive messages from leads, and reply from the inbox in real-time.

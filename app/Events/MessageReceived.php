@@ -38,8 +38,13 @@ class MessageReceived implements ShouldBroadcast
             'conversation_id' => $message->conversation_id,
             'direction'       => $message->direction->value,
             'body'            => $message->body,
+            'media_url'       => $message->media_url,
+            'media_type'      => $message->media_type,
+            'media_mime_type' => $message->media_mime_type,
+            'media_filename'  => $message->media_filename,
             'status'          => $message->status->value,
             'wa_message_id'   => $message->wa_message_id,
+            'error_message'   => $message->error_message,
             'is_automated'    => $message->is_automated,
             'sent_by'         => $message->sent_by,
             'sender'          => $message->sender ? [
@@ -47,6 +52,7 @@ class MessageReceived implements ShouldBroadcast
                 'name' => $message->sender->name,
             ] : null,
             'created_at'      => $message->created_at->toIso8601String(),
+            'updated_at'      => $message->updated_at->toIso8601String(),
         ];
     }
 }

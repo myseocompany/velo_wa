@@ -39,25 +39,37 @@ class ConversationUpdated implements ShouldBroadcast
         $lastMessage = $conv->messages->sortByDesc('created_at')->first();
 
         return [
-            'id'              => $conv->id,
-            'status'          => $conv->status->value,
-            'last_message_at' => $conv->last_message_at?->toIso8601String(),
-            'message_count'   => $conv->message_count,
-            'assigned_to'     => $conv->assigned_to,
-            'last_message'    => $lastMessage ? [
+            // Full Conversation shape so the frontend can insert new conversations
+            // without an extra API round-trip
+            'id'                => $conv->id,
+            'tenant_id'         => $conv->tenant_id,
+            'contact_id'        => $conv->contact_id,
+            'status'            => $conv->status->value,
+            'channel'           => $conv->channel->value,
+            'assigned_to'       => $conv->assigned_to,
+            'assigned_at'       => $conv->assigned_at?->toIso8601String(),
+            'first_message_at'  => $conv->first_message_at?->toIso8601String(),
+            'first_response_at' => $conv->first_response_at?->toIso8601String(),
+            'last_message_at'   => $conv->last_message_at?->toIso8601String(),
+            'message_count'     => $conv->message_count,
+            'closed_at'         => $conv->closed_at?->toIso8601String(),
+            'reopen_count'      => $conv->reopen_count,
+            'created_at'        => $conv->created_at->toIso8601String(),
+            'updated_at'        => $conv->updated_at->toIso8601String(),
+            'last_message'      => $lastMessage ? [
                 'body'       => $lastMessage->body,
                 'direction'  => $lastMessage->direction->value,
                 'created_at' => $lastMessage->created_at->toIso8601String(),
                 'media_type' => $lastMessage->media_type,
             ] : null,
-            'contact'         => $conv->contact ? [
-                'id'           => $conv->contact->id,
-                'name'         => $conv->contact->name,
-                'push_name'    => $conv->contact->push_name,
-                'phone'        => $conv->contact->phone,
+            'contact'           => $conv->contact ? [
+                'id'              => $conv->contact->id,
+                'name'            => $conv->contact->name,
+                'push_name'       => $conv->contact->push_name,
+                'phone'           => $conv->contact->phone,
                 'profile_pic_url' => $conv->contact->profile_pic_url,
             ] : null,
-            'assignee'        => $conv->assignee ? [
+            'assignee'          => $conv->assignee ? [
                 'id'   => $conv->assignee->id,
                 'name' => $conv->assignee->name,
             ] : null,

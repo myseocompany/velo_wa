@@ -13,15 +13,8 @@ interface Props {
     activeConversationId?: string;
 }
 
-interface ConversationUpdatedPayload {
-    id: string;
-    status: string;
-    last_message_at: string | null;
-    message_count: number;
-    last_message?: Conversation['last_message'];
-    contact: Conversation['contact'];
-    assignee: Conversation['assignee'];
-}
+// ConversationUpdated broadcasts the full Conversation shape
+type ConversationUpdatedPayload = Conversation;
 
 interface MessageReceivedPayload extends Message {
     conversation_id: string;
@@ -105,16 +98,11 @@ export default function InboxIndex({ activeConversationId }: Props) {
         setConversations((prev) => {
             const idx = prev.findIndex((c) => c.id === payload.id);
             if (idx === -1) {
-                // New conversation — reload list to get full data with contact
-                axios.get<{ data: Conversation[] }>('/api/v1/conversations').then((res) => {
-                    setConversations(res.data.data);
-                });
-                return prev;
+                // New conversation: insert directly at the top using broadcast data
+                return [payload, ...prev];
             }
-            const updated = {
-                ...prev[idx],
-                ...payload,
-            } as Conversation;
+            // Existing conversation: merge and bubble to top
+            const updated: Conversation = { ...prev[idx], ...payload };
             const next = [...prev];
             next.splice(idx, 1);
             return [updated, ...next];

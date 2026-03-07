@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Events\MessageReceived;
 use App\Models\Message;
 use App\Services\WhatsAppClientService;
 use Illuminate\Bus\Queueable;
@@ -84,6 +85,9 @@ class DownloadMessageMedia implements ShouldQueue
                 'media_mime_type' => $this->mediaMimeType,
                 'media_filename'  => $this->mediaFilename,
             ]);
+
+            // Notify the frontend so it replaces the "downloading" spinner with the media
+            broadcast(new MessageReceived($message->fresh()));
 
             Log::info('Media downloaded and stored', [
                 'message_id' => $this->messageId,

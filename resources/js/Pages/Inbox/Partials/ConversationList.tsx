@@ -2,6 +2,7 @@ import { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MessageSquare } from 'lucide-react';
+import ContactAvatar from './ContactAvatar';
 
 interface Props {
     conversations: Conversation[];
@@ -28,21 +29,6 @@ function getLastMessagePreview(conversation: Conversation): string {
     return 'Mensaje sin texto';
 }
 
-function Avatar({ name }: { name: string | null }) {
-    const initials = (name ?? '?')
-        .split(' ')
-        .slice(0, 2)
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase();
-
-    return (
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-            {initials}
-        </div>
-    );
-}
-
 export default function ConversationList({ conversations, activeId, onSelect }: Props) {
     if (conversations.length === 0) {
         return (
@@ -66,7 +52,11 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
                             onClick={() => onSelect(conv)}
                             className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 ${isActive ? 'border-l-2 border-green-600 bg-green-50' : ''}`}
                         >
-                            <Avatar name={displayName} />
+                            <ContactAvatar
+                                name={displayName}
+                                imageUrl={contact?.profile_pic_url}
+                                sizeClass="h-10 w-10"
+                            />
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between">
                                     <span className="truncate text-sm font-medium text-gray-900">

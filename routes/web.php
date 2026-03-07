@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DashboardController;
 use App\Models\Conversation;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -14,16 +15,9 @@ Route::get('/', function () {
 
 // Authenticated + tenant-scoped routes
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard', [
-            'stats' => [
-                'open_conversations' => 0,
-                'total_contacts'     => 0,
-                'messages_today'     => 0,
-                'avg_response_time'  => null,
-            ],
-        ]);
-    })->name('dashboard');
+    Route::middleware('instrument.dashboard')->group(function () {
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    });
 
     // Inbox
     Route::get('/inbox', function () {

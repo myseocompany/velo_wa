@@ -1,7 +1,16 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Inbox, MessageSquare, TrendingUp, Users } from 'lucide-react';
 import { PageProps } from '@/types';
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
 
 interface DashboardStats {
     open_conversations: number;
@@ -12,9 +21,37 @@ interface DashboardStats {
 
 interface DashboardProps {
     stats: DashboardStats;
+    conversation_chart: ConversationChart;
+    recent_conversations: RecentConversation[];
 }
 
-export default function Dashboard({ stats }: DashboardProps) {
+interface ConversationChartRange {
+    key: string;
+    label: string;
+}
+
+interface ConversationChartPoint {
+    bucket_start: string;
+    label: string;
+    conversations: number;
+}
+
+interface ConversationChart {
+    range: string;
+    ranges: ConversationChartRange[];
+    series: ConversationChartPoint[];
+    total: number;
+    timezone?: string;
+}
+
+interface RecentConversation {
+    id: string;
+    contact_name: string;
+    last_message: string;
+    last_message_at: string | null;
+}
+
+export default function Dashboard({ stats, conversation_chart, recent_conversations }: DashboardProps) {
     const { auth } = usePage<PageProps>().props;
 
     return (
@@ -63,6 +100,109 @@ export default function Dashboard({ stats }: DashboardProps) {
                         isText
                     />
                 </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
+                    <div className="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h2 className="text-base font-semibold text-gray-900">
+                                    Conversaciones
+                                </h2>
+                                <p className="text-sm text-gray-500">
+                                    {conversation_chart.total} en el periodo seleccionado
+                                </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                                {conversation_chart.ranges.map((item) => {
+                                    const isActive = conversation_chart.range === item.key;
+                                    return (
+                                        <Link
+                                            key={item.key}
+                                            href={route('dashboard', { range: item.key })}
+                                            preserveScroll
+                                            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                                isActive
+                                                    ? 'border-green-200 bg-green-50 text-green-700'
+                                                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="mt-5 h-72">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={conversation_chart.series}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis
+                                        dataKey="label"
+                                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis
+                                        allowDecimals={false}
+                                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: '#ecfdf5' }}
+                                        formatter={(value: number) => [
+                                            `${value} conversaciones`,
+                                            'Total',
+                                        ]}
+                                    />
+                                    <Bar
+                                        dataKey="conversations"
+                                        fill="#16a34a"
+                                        radius={[6, 6, 0, 0]}
+                                        maxBarSize={42}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl border border-gray-200 bg-white p-5">
+                        <h2 className="text-base font-semibold text-gray-900">
+                            Ultimas conversaciones
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500">
+                            5 conversaciones con mensajes recientes
+                        </p>
+
+                        <div className="mt-4 space-y-3">
+                            {recent_conversations.length === 0 && (
+                                <p className="text-sm text-gray-500">
+                                    No hay conversaciones con mensajes.
+                                </p>
+                            )}
+
+                            {recent_conversations.map((conversation) => (
+                                <Link
+                                    key={conversation.id}
+                                    href={route('inbox.conversation', { conversation: conversation.id })}
+                                    className="block rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
+                                >
+                                    <p className="truncate text-sm font-semibold text-gray-900">
+                                        {conversation.contact_name}
+                                    </p>
+                                    <p className="mt-1 truncate text-xs text-gray-500">
+                                        {conversation.last_message}
+                                    </p>
+                                    <p className="mt-2 text-xs text-gray-400">
+                                        {formatDateTime(conversation.last_message_at)}
+                                    </p>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );
@@ -94,4 +234,19 @@ function formatSeconds(seconds: number): string {
     if (seconds < 60) return `${seconds}s`;
     if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
     return `${Math.round(seconds / 3600)}h`;
+}
+
+function formatDateTime(value: string | null): string {
+    if (!value) return 'Sin fecha';
+
+    const date = new Date(value);
+
+    return date.toLocaleString('es-CO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    });
 }

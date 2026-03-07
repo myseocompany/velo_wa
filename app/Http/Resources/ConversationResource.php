@@ -27,12 +27,16 @@ class ConversationResource extends JsonResource
                 'id'   => $this->assignee->id,
                 'name' => $this->assignee->name,
             ]),
-            'last_message'      => $this->whenLoaded('latestMessage', fn () => $this->latestMessage ? [
-                'body'       => $this->latestMessage->body,
-                'direction'  => $this->latestMessage->direction->value,
-                'created_at' => $this->latestMessage->created_at->toIso8601String(),
-                'media_type' => $this->latestMessage->media_type,
-            ] : null),
+            'last_message'      => $this->whenLoaded('messages', function () {
+                $last = $this->messages->sortByDesc('created_at')->first();
+
+                return $last ? [
+                    'body'       => $last->body,
+                    'direction'  => $last->direction->value,
+                    'created_at' => $last->created_at->toIso8601String(),
+                    'media_type' => $last->media_type,
+                ] : null;
+            }),
             'created_at'        => $this->created_at->toIso8601String(),
         ];
     }

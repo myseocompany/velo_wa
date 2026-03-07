@@ -5,6 +5,7 @@ import { usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { MessageSquare } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import ContactAvatar from './Partials/ContactAvatar';
 import ConversationList from './Partials/ConversationList';
 import MessageThread from './Partials/MessageThread';
 
@@ -156,14 +157,11 @@ export default function InboxIndex({ activeConversationId }: Props) {
                         <>
                             {/* Thread header */}
                             <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-5 py-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-                                    {(activeConv.contact?.name ?? activeConv.contact?.push_name ?? '?')
-                                        .split(' ')
-                                        .slice(0, 2)
-                                        .map((w: string) => w[0])
-                                        .join('')
-                                        .toUpperCase()}
-                                </div>
+                                <ContactAvatar
+                                    name={activeConv.contact?.name ?? activeConv.contact?.push_name ?? '?'}
+                                    imageUrl={activeConv.contact?.profile_pic_url}
+                                    sizeClass="h-9 w-9"
+                                />
                                 <div>
                                     <p className="text-sm font-medium text-gray-900">
                                         {activeConv.contact?.name ??

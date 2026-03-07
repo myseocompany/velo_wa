@@ -44,4 +44,5 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Pipeline deals
     Route::get('/pipeline/deals', [PipelineDealController::class, 'index'])->name('pipeline.deals.index');
+    Route::patch('/pipeline/deals/{pipelineDeal}/stage', [PipelineDealController::class, 'updateStage'])->name('pipeline.deals.update-stage');
 });

@@ -31,7 +31,12 @@ class ConversationUpdated implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        $conv = $this->conversation->load(['contact', 'assignee', 'latestMessage']);
+        $conv = $this->conversation->load([
+            'contact',
+            'assignee',
+            'messages' => fn ($q) => $q->reorder()->orderByDesc('created_at')->limit(1),
+        ]);
+        $lastMessage = $conv->messages->sortByDesc('created_at')->first();
 
         return [
             'id'              => $conv->id,
@@ -39,11 +44,11 @@ class ConversationUpdated implements ShouldBroadcast
             'last_message_at' => $conv->last_message_at?->toIso8601String(),
             'message_count'   => $conv->message_count,
             'assigned_to'     => $conv->assigned_to,
-            'last_message'    => $conv->latestMessage ? [
-                'body'       => $conv->latestMessage->body,
-                'direction'  => $conv->latestMessage->direction->value,
-                'created_at' => $conv->latestMessage->created_at->toIso8601String(),
-                'media_type' => $conv->latestMessage->media_type,
+            'last_message'    => $lastMessage ? [
+                'body'       => $lastMessage->body,
+                'direction'  => $lastMessage->direction->value,
+                'created_at' => $lastMessage->created_at->toIso8601String(),
+                'media_type' => $lastMessage->media_type,
             ] : null,
             'contact'         => $conv->contact ? [
                 'id'           => $conv->contact->id,

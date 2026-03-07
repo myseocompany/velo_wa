@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Events;
+
+use App\Models\Message;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class MessageReceived implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public readonly Message $message,
+    ) {}
+
+    public function broadcastOn(): array
+    {
+        return [new PrivateChannel("tenant.{$this->message->tenant_id}")];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'message.received';
+    }
+
+    public function broadcastWith(): array
+    {
+        $message = $this->message->load('sender');
+
+        return [
+            'id'              => $message->id,
+            'conversation_id' => $message->conversation_id,
+            'direction'       => $message->direction->value,
+            'body'            => $message->body,
+            'status'          => $message->status->value,
+            'wa_message_id'   => $message->wa_message_id,
+            'is_automated'    => $message->is_automated,
+            'sent_by'         => $message->sent_by,
+            'sender'          => $message->sender ? [
+                'id'   => $message->sender->id,
+                'name' => $message->sender->name,
+            ] : null,
+            'created_at'      => $message->created_at->toIso8601String(),
+        ];
+    }
+}

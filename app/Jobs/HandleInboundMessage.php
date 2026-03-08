@@ -11,7 +11,9 @@ use App\Events\ConversationUpdated;
 use App\Events\MessageReceived;
 use App\Models\Conversation;
 use App\Models\Tenant;
+use App\Enums\AutomationTriggerType;
 use App\Services\AssignmentEngineService;
+use App\Services\AutomationEngineService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -38,6 +40,7 @@ class HandleInboundMessage implements ShouldQueue
         CreateOrUpdateConversation $createConversation,
         StoreInboundMessage $storeMessage,
         AssignmentEngineService $assignmentEngine,
+        AutomationEngineService $automationEngine,
     ): void {
         $tenant = Tenant::find($this->tenantId);
 
@@ -54,7 +57,7 @@ class HandleInboundMessage implements ShouldQueue
         }
 
         foreach ($messages as $msgPayload) {
-            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine);
+            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine, $automationEngine);
         }
     }
 
@@ -65,6 +68,7 @@ class HandleInboundMessage implements ShouldQueue
         CreateOrUpdateConversation $createConversation,
         StoreInboundMessage $storeMessage,
         AssignmentEngineService $assignmentEngine,
+        AutomationEngineService $automationEngine,
     ): void {
         $key       = $msgPayload['key'] ?? [];
         $fromMe    = (bool) ($key['fromMe'] ?? false);
@@ -99,6 +103,15 @@ class HandleInboundMessage implements ShouldQueue
             if ($isNewConversation) {
                 $assignmentEngine->autoAssign($conversation);
                 $conversation->refresh();
+            }
+
+            // Fire automations (only for inbound messages)
+            if (! $fromMe) {
+                if ($isNewConversation) {
+                    $automationEngine->dispatch($conversation, AutomationTriggerType::NewConversation, $message);
+                    $automationEngine->dispatch($conversation, AutomationTriggerType::OutsideHours, $message);
+                }
+                $automationEngine->dispatch($conversation, AutomationTriggerType::Keyword, $message);
             }
 
             // Dispatch media download if message has media

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AssignmentRuleController;
+use App\Http\Controllers\Api\V1\AutomationController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ContactController;
@@ -85,4 +86,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     // Metrics
     Route::get('/metrics/agents', [MetricsController::class, 'agents'])->name('metrics.agents');
     Route::get('/metrics/export', [MetricsController::class, 'export'])->name('metrics.export');
+
+    // Automations
+    Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
+    Route::post('/automations', [AutomationController::class, 'store'])->name('automations.store');
+    Route::put('/automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
+    Route::delete('/automations/{automation}', [AutomationController::class, 'destroy'])->name('automations.destroy');
+    Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
 });

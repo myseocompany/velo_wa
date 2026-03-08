@@ -55,6 +55,14 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         return Inertia::render('Settings/AssignmentRules');
     })->name('settings.assignment-rules');
 
+    Route::get('/settings/quick-replies', function () {
+        return Inertia::render('Settings/QuickReplies');
+    })->name('settings.quick-replies');
+
+    Route::get('/settings/automations', function () {
+        return Inertia::render('Settings/Automations');
+    })->name('settings.automations');
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

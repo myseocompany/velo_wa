@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CheckInstanceHealth;
+use App\Jobs\ProcessNoResponseTimeout;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -11,3 +12,6 @@ Artisan::command('inspire', function () {
 
 // Check WhatsApp instance health every 5 minutes
 Schedule::job(new CheckInstanceHealth)->everyFiveMinutes();
+
+// Fire no-response-timeout automations every minute
+Schedule::job(new ProcessNoResponseTimeout)->everyMinute();

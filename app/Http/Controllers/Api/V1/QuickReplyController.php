@@ -21,9 +21,9 @@ class QuickReplyController extends Controller
         $search = trim($request->string('search')->toString());
         if ($search !== '') {
             $query->where(function ($q) use ($search): void {
-                $q->where('shortcut', 'like', '%' . $search . '%')
-                    ->orWhere('title', 'like', '%' . $search . '%')
-                    ->orWhere('body', 'like', '%' . $search . '%');
+                $q->where('shortcut', 'ilike', '%' . $search . '%')
+                    ->orWhere('title', 'ilike', '%' . $search . '%')
+                    ->orWhere('body', 'ilike', '%' . $search . '%');
             });
         }
 

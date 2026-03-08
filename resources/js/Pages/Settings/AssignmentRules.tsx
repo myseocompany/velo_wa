@@ -508,7 +508,7 @@ export default function AssignmentRules() {
     }
 
     return (
-        <AppLayout header={<h2 className="text-xl font-semibold text-gray-800">Reglas de asignación</h2>}>
+        <AppLayout title="Reglas de asignación">
             <Head title="Reglas de asignación" />
 
             <div className="max-w-2xl mx-auto py-8 px-4">

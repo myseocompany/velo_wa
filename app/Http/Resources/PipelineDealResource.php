@@ -25,6 +25,8 @@ class PipelineDealResource extends JsonResource
             'negotiation_at'  => $this->negotiation_at?->toIso8601String(),
             'assigned_to'     => $this->assigned_to,
             'notes'           => $this->notes,
+            'won_product'     => $this->won_product,
+            'lost_reason'     => $this->lost_reason,
             'closed_at'       => $this->closed_at?->toIso8601String(),
             'updated_at'      => $this->updated_at->toIso8601String(),
             'contact'         => $this->whenLoaded('contact', fn () => new ContactResource($this->contact)),

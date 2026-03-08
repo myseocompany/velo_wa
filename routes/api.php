@@ -73,6 +73,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::delete('/quick-replies/{quickReply}', [QuickReplyController::class, 'destroy'])->name('quick-replies.destroy');
 
     // Pipeline deals
+    Route::get('/pipeline/deals/summary', [PipelineDealController::class, 'summary'])->name('pipeline.deals.summary');
     Route::get('/pipeline/deals', [PipelineDealController::class, 'index'])->name('pipeline.deals.index');
+    Route::post('/pipeline/deals', [PipelineDealController::class, 'store'])->name('pipeline.deals.store');
+    Route::get('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'show'])->name('pipeline.deals.show');
+    Route::put('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'update'])->name('pipeline.deals.update');
+    Route::delete('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'destroy'])->name('pipeline.deals.destroy');
     Route::patch('/pipeline/deals/{pipelineDeal}/stage', [PipelineDealController::class, 'updateStage'])->name('pipeline.deals.update-stage');
 });

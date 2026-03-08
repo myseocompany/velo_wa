@@ -11,7 +11,7 @@ use App\Models\Conversation;
 
 class CreateOrUpdateConversation
 {
-    public function handle(Contact $contact): Conversation
+    public function handle(Contact $contact, bool &$isNew = false): Conversation
     {
         // Find an existing open or pending conversation for this contact
         /** @var Conversation|null $conversation */
@@ -23,14 +23,17 @@ class CreateOrUpdateConversation
             ->first();
 
         if ($conversation) {
+            $isNew = false;
             return $conversation;
         }
 
+        $isNew = true;
+
         return Conversation::create([
-            'tenant_id'       => $contact->tenant_id,
-            'contact_id'      => $contact->id,
-            'status'          => ConversationStatus::Open,
-            'channel'         => Channel::WhatsApp,
+            'tenant_id'        => $contact->tenant_id,
+            'contact_id'       => $contact->id,
+            'status'           => ConversationStatus::Open,
+            'channel'          => Channel::WhatsApp,
             'first_message_at' => now(),
             'last_message_at'  => now(),
         ]);

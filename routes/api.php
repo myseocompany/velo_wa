@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\AssignmentRuleController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ContactController;
@@ -53,6 +54,17 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // Contacts
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/tags', [ContactController::class, 'tags'])->name('contacts.tags');
+    Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
+    Route::patch('/contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
+    Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');
+
+    // Assignment rules
+    Route::get('/assignment-rules', [AssignmentRuleController::class, 'index'])->name('assignment-rules.index');
+    Route::post('/assignment-rules', [AssignmentRuleController::class, 'store'])->name('assignment-rules.store');
+    Route::put('/assignment-rules/{assignmentRule}', [AssignmentRuleController::class, 'update'])->name('assignment-rules.update');
+    Route::patch('/assignment-rules/{assignmentRule}/toggle', [AssignmentRuleController::class, 'toggle'])->name('assignment-rules.toggle');
+    Route::delete('/assignment-rules/{assignmentRule}', [AssignmentRuleController::class, 'destroy'])->name('assignment-rules.destroy');
 
     // Quick replies
     Route::get('/quick-replies', [QuickReplyController::class, 'index'])->name('quick-replies.index');

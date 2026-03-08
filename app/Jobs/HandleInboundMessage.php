@@ -9,7 +9,9 @@ use App\Actions\WhatsApp\CreateOrUpdateConversation;
 use App\Actions\WhatsApp\StoreInboundMessage;
 use App\Events\ConversationUpdated;
 use App\Events\MessageReceived;
+use App\Models\Conversation;
 use App\Models\Tenant;
+use App\Services\AssignmentEngineService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,6 +37,7 @@ class HandleInboundMessage implements ShouldQueue
         CreateOrUpdateContact $createContact,
         CreateOrUpdateConversation $createConversation,
         StoreInboundMessage $storeMessage,
+        AssignmentEngineService $assignmentEngine,
     ): void {
         $tenant = Tenant::find($this->tenantId);
 
@@ -51,7 +54,7 @@ class HandleInboundMessage implements ShouldQueue
         }
 
         foreach ($messages as $msgPayload) {
-            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage);
+            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine);
         }
     }
 
@@ -61,6 +64,7 @@ class HandleInboundMessage implements ShouldQueue
         CreateOrUpdateContact $createContact,
         CreateOrUpdateConversation $createConversation,
         StoreInboundMessage $storeMessage,
+        AssignmentEngineService $assignmentEngine,
     ): void {
         $key       = $msgPayload['key'] ?? [];
         $fromMe    = (bool) ($key['fromMe'] ?? false);
@@ -79,7 +83,8 @@ class HandleInboundMessage implements ShouldQueue
         ];
 
         $contact      = $createContact->handle($tenant, $waData);
-        $conversation = $createConversation->handle($contact);
+        $isNewConversation = false;
+        $conversation = $createConversation->handle($contact, $isNewConversation);
 
         $msgData = $this->extractMessageData($key, $msgPayload);
 
@@ -90,6 +95,12 @@ class HandleInboundMessage implements ShouldQueue
         $message = $storeMessage->handle($conversation, $msgData, $fromMe);
 
         if ($message) {
+            // Auto-assign new conversations if no agent assigned yet
+            if ($isNewConversation) {
+                $assignmentEngine->autoAssign($conversation);
+                $conversation->refresh();
+            }
+
             // Dispatch media download if message has media
             if ($msgData['mediaType'] && $tenant->wa_instance_id) {
                 DownloadMessageMedia::dispatch(

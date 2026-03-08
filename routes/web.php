@@ -28,10 +28,14 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         return Inertia::render('Inbox/Index', ['activeConversationId' => $conversation->id]);
     })->name('inbox.conversation');
 
-    // Contacts (Phase 2)
+    // Contacts
     Route::get('/contacts', function () {
         return Inertia::render('Contacts/Index');
     })->name('contacts');
+
+    Route::get('/contacts/{contact}', function (string $contact) {
+        return Inertia::render('Contacts/Show', ['contactId' => $contact]);
+    })->name('contacts.show');
 
     // Pipeline (Phase 3)
     Route::get('/pipeline', function () {
@@ -46,6 +50,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('/settings/whatsapp', function () {
         return Inertia::render('Settings/WhatsApp');
     })->name('settings.whatsapp');
+
+    Route::get('/settings/assignment-rules', function () {
+        return Inertia::render('Settings/AssignmentRules');
+    })->name('settings.assignment-rules');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

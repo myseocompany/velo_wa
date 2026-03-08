@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Conversations\AssignConversation;
+use App\Actions\Conversations\CloseConversation;
+use App\Actions\Conversations\ReopenConversation;
 use App\Enums\ConversationStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\AssignConversationRequest;
 use App\Http\Resources\ConversationResource;
 use App\Models\Conversation;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -68,5 +73,38 @@ class ConversationController extends Controller
         ]);
 
         return new ConversationResource($conversation);
+    }
+
+    public function assign(AssignConversationRequest $request, Conversation $conversation, AssignConversation $action): ConversationResource
+    {
+        $agent = $request->filled('assigned_to')
+            ? User::find($request->input('assigned_to'))
+            : null;
+
+        $conversation = $action->handle($conversation, $agent);
+
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+    }
+
+    public function close(Request $request, Conversation $conversation, CloseConversation $action): ConversationResource
+    {
+        if ($conversation->status === ConversationStatus::Closed) {
+            abort(422, 'La conversación ya está cerrada.');
+        }
+
+        $conversation = $action->handle($conversation, $request->user());
+
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+    }
+
+    public function reopen(Conversation $conversation, ReopenConversation $action): ConversationResource
+    {
+        if ($conversation->status !== ConversationStatus::Closed) {
+            abort(422, 'Solo se pueden reabrir conversaciones cerradas.');
+        }
+
+        $conversation = $action->handle($conversation);
+
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
     }
 }

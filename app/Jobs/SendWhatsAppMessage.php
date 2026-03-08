@@ -49,7 +49,17 @@ class SendWhatsAppMessage implements ShouldQueue
         $phone        = $contact->phone;
 
         try {
-            $result = $client->sendText($instanceName, $phone, $message->body ?? '');
+            if ($message->hasMedia() && $message->media_url) {
+                $result = $client->sendMedia(
+                    $instanceName,
+                    $phone,
+                    $message->media_type,
+                    $message->media_url,
+                    $message->body,
+                );
+            } else {
+                $result = $client->sendText($instanceName, $phone, $message->body ?? '');
+            }
 
             $waMessageId = $result['key']['id'] ?? null;
 

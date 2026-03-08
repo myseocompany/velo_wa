@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
+use App\Http\Controllers\Api\V1\QuickReplyController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
@@ -33,14 +35,30 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/disconnect', [WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
     });
 
-    // Conversations + messages
+    // Conversations
     Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
+    Route::patch('/conversations/{conversation}/assign', [ConversationController::class, 'assign'])->name('conversations.assign');
+    Route::patch('/conversations/{conversation}/close', [ConversationController::class, 'close'])->name('conversations.close');
+    Route::patch('/conversations/{conversation}/reopen', [ConversationController::class, 'reopen'])->name('conversations.reopen');
+
+    // Messages
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->name('messages.store-media');
+    Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->name('messages.store-quick-reply');
+
+    // Team members (for assignment dropdowns)
+    Route::get('/team/members', [TeamController::class, 'members'])->name('team.members');
 
     // Contacts
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+
+    // Quick replies
+    Route::get('/quick-replies', [QuickReplyController::class, 'index'])->name('quick-replies.index');
+    Route::post('/quick-replies', [QuickReplyController::class, 'store'])->name('quick-replies.store');
+    Route::put('/quick-replies/{quickReply}', [QuickReplyController::class, 'update'])->name('quick-replies.update');
+    Route::delete('/quick-replies/{quickReply}', [QuickReplyController::class, 'destroy'])->name('quick-replies.destroy');
 
     // Pipeline deals
     Route::get('/pipeline/deals', [PipelineDealController::class, 'index'])->name('pipeline.deals.index');

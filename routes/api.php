@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\MessageController;
+use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\QuickReplyController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
@@ -80,4 +81,8 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::put('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'update'])->name('pipeline.deals.update');
     Route::delete('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'destroy'])->name('pipeline.deals.destroy');
     Route::patch('/pipeline/deals/{pipelineDeal}/stage', [PipelineDealController::class, 'updateStage'])->name('pipeline.deals.update-stage');
+
+    // Metrics
+    Route::get('/metrics/agents', [MetricsController::class, 'agents'])->name('metrics.agents');
+    Route::get('/metrics/export', [MetricsController::class, 'export'])->name('metrics.export');
 });

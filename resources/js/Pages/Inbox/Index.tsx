@@ -4,7 +4,7 @@ import { Conversation, Message, PageProps } from '@/types';
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { MessageSquare } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ContactAvatar from './Partials/ContactAvatar';
 import ConversationList from './Partials/ConversationList';
 import MessageThread from './Partials/MessageThread';
@@ -28,6 +28,20 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [messages, setMessages]                       = useState<Message[]>([]);
     const [loadingConvs, setLoadingConvs]               = useState(true);
     const [loadingMessages, setLoadingMessages]         = useState(false);
+
+    // Ref espejo del estado — permite leer conversations fuera de updaters sin stale closures
+    const conversationsRef = useRef<Conversation[]>([]);
+    useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+
+    // Refetch con guard anti-duplicado (message.received y conversation.updated llegan casi juntos)
+    const refetchingRef = useRef(false);
+    const refetchConversations = useCallback(() => {
+        if (refetchingRef.current) return;
+        refetchingRef.current = true;
+        axios.get<{ data: Conversation[] }>('/api/v1/conversations')
+            .then((res) => setConversations(res.data.data))
+            .finally(() => { refetchingRef.current = false; });
+    }, []);
 
     // Load conversation list
     useEffect(() => {
@@ -57,28 +71,32 @@ export default function InboxIndex({ activeConversationId }: Props) {
     // Real-time: new / updated message
     const handleMessageReceived = useCallback((data: unknown) => {
         const payload = data as MessageReceivedPayload;
+        const idx = conversationsRef.current.findIndex((c) => c.id === payload.conversation_id);
 
-        setConversations((prev) => {
-            const idx = prev.findIndex((c) => c.id === payload.conversation_id);
-            if (idx === -1) {
-                return prev;
-            }
+        if (idx === -1) {
+            // Conversación nueva — conversation.updated la insertará desde el payload completo,
+            // pero hacemos refetch como red de seguridad (p.ej. si el evento se pierde)
+            refetchConversations();
+        } else {
+            setConversations((prev) => {
+                const i = prev.findIndex((c) => c.id === payload.conversation_id);
+                if (i === -1) return prev;
 
-            const updated: Conversation = {
-                ...prev[idx],
-                last_message_at: payload.created_at,
-                last_message: {
-                    body: payload.body,
-                    direction: payload.direction,
-                    created_at: payload.created_at,
-                    media_type: payload.media_type,
-                },
-            };
-            const next = [...prev];
-            next.splice(idx, 1);
-
-            return [updated, ...next];
-        });
+                const updated: Conversation = {
+                    ...prev[i],
+                    last_message_at: payload.created_at,
+                    last_message: {
+                        body: payload.body,
+                        direction: payload.direction,
+                        created_at: payload.created_at,
+                        media_type: payload.media_type,
+                    },
+                };
+                const next = [...prev];
+                next.splice(i, 1);
+                return [updated, ...next];
+            });
+        }
 
         // Add to thread if viewing that conversation
         if (activeConv?.id === payload.conversation_id) {
@@ -90,7 +108,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                 return [...prev, payload as Message];
             });
         }
-    }, [activeConv?.id]);
+    }, [activeConv?.id, refetchConversations]);
 
     // Real-time: conversation list update
     const handleConversationUpdated = useCallback((data: unknown) => {

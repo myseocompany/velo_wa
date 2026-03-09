@@ -3,7 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import {
     Inbox, Users, MessageSquare, Timer, CheckCheck,
-    TrendingUp, Trophy, Download, ChevronRight,
+    TrendingUp, Trophy, Download, ChevronRight, Clock,
 } from 'lucide-react';
 import {
     Bar, BarChart, CartesianGrid, ResponsiveContainer,
@@ -84,6 +84,7 @@ interface DashboardProps {
     messages_chart: MessagesChart;
     pipeline_summary: PipelineSummary;
     recent_conversations: RecentConv[];
+    business_hours_active: boolean;
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -220,15 +221,31 @@ function AgentTable({ range }: { range: string }) {
 
 export default function Dashboard({
     stats, dt1_stats, conversation_chart, messages_chart, pipeline_summary, recent_conversations,
+    business_hours_active,
 }: DashboardProps) {
     const { auth } = usePage<PageProps>().props;
     const [range, setRange] = useState(conversation_chart.range);
+    const [bhActive, setBhActive] = useState(business_hours_active);
     const rangeRef = useRef(range);
+
+    function navigate(newRange: string, newBh: boolean) {
+        router.get(
+            route('dashboard'),
+            { range: newRange, ...(newBh ? { business_hours: '1' } : {}) },
+            { preserveState: true, replace: true },
+        );
+    }
 
     function changeRange(key: string) {
         setRange(key);
         rangeRef.current = key;
-        router.get(route('dashboard'), { range: key }, { preserveState: true, replace: true });
+        navigate(key, bhActive);
+    }
+
+    function toggleBusinessHours() {
+        const next = !bhActive;
+        setBhActive(next);
+        navigate(rangeRef.current, next);
     }
 
     function downloadCsv(type: string) {
@@ -253,8 +270,22 @@ export default function Dashboard({
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5">Resumen del equipo</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <RangeTabs ranges={conversation_chart.ranges} active={range} onChange={changeRange} />
+                        {/* Business hours toggle */}
+                        <button
+                            onClick={toggleBusinessHours}
+                            title="Filtrar Dt1 por horario laboral (Lun–Vie 09:00–18:00 si no hay configuración)"
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition ${
+                                bhActive
+                                    ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                            <Clock size={12} />
+                            Hor. laboral
+                        </button>
+                        {/* CSV export */}
                         <div className="relative group">
                             <button className="p-2 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50">
                                 <Download size={15} />
@@ -285,6 +316,12 @@ export default function Dashboard({
 
                 {/* KPI row 2 — Dt1 */}
                 <div className="grid grid-cols-3 gap-3">
+                    {bhActive && (
+                        <div className="col-span-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-200 text-xs text-brand-700">
+                            <Clock size={12} />
+                            Dt1 filtrado por horario laboral — sólo conversaciones iniciadas en días/horas configurados
+                        </div>
+                    )}
                     <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                         <p className="text-xs text-gray-500">Dt1 promedio</p>
                         <p className="text-2xl font-bold text-gray-900 mt-0.5">{fmtDt1(dt1_stats.avg)}</p>

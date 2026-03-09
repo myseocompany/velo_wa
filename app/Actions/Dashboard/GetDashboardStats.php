@@ -12,6 +12,7 @@ use App\Models\Message;
 use App\Models\PipelineDeal;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class GetDashboardStats
@@ -27,9 +28,15 @@ class GetDashboardStats
         'ano'       => 'ano',
     ];
 
-    public function handle(User $user, string $range): array
+    /** @var array<string, int> */
+    private const DAY_MAP = [
+        'sun' => 0, 'mon' => 1, 'tue' => 2,
+        'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6,
+    ];
+
+    public function handle(User $user, string $range, bool $businessHoursOnly = false): array
     {
-        $timezone = $user->tenant?->timezone ?: self::DEFAULT_TIMEZONE;
+        $timezone = $this->safeTimezone($user->tenant?->timezone);
         $range    = $this->sanitizeRange($range);
 
         [$startAtLocal, $endAtLocal, $bucket] = $this->resolveRangeWindow($range, $timezone);
@@ -38,12 +45,15 @@ class GetDashboardStats
         $endUtc   = $endAtLocal->setTimezone('UTC');
 
         return [
-            'stats'                => $this->computeStats($timezone, $startUtc, $endUtc),
-            'dt1_stats'            => $this->computeDt1Stats($startUtc, $endUtc),
-            'conversation_chart'   => $this->buildConversationChart($startAtLocal, $endAtLocal, $bucket, $range, $timezone),
-            'messages_chart'       => $this->buildMessagesChart($startAtLocal, $endAtLocal, $bucket, $timezone),
-            'pipeline_summary'     => $this->buildPipelineSummary(),
-            'recent_conversations' => $this->buildRecentConversations($timezone),
+            'stats'                  => $this->computeStats($timezone, $startUtc, $endUtc),
+            'dt1_stats'              => $businessHoursOnly
+                ? $this->computeDt1StatsBusinessHours($startUtc, $endUtc, $user->tenant?->business_hours, $timezone)
+                : $this->computeDt1Stats($startUtc, $endUtc),
+            'conversation_chart'     => $this->buildConversationChart($startAtLocal, $endAtLocal, $bucket, $range, $timezone),
+            'messages_chart'         => $this->buildMessagesChart($startAtLocal, $endAtLocal, $bucket, $timezone),
+            'pipeline_summary'       => $this->buildPipelineSummary(),
+            'recent_conversations'   => $this->buildRecentConversations($timezone),
+            'business_hours_active'  => $businessHoursOnly,
         ];
     }
 
@@ -108,7 +118,98 @@ class GetDashboardStats
         ];
     }
 
-    // ─── Conversations chart ──────────────────────────────────────────────────
+    /**
+     * Dt1 filtered to conversations that started within business hours.
+     * Uses the tenant's business_hours config or defaults to Mon–Fri 09:00–18:00.
+     *
+     * @param array<string, array{open: string, close: string}>|null $businessHours
+     */
+    private function computeDt1StatsBusinessHours(
+        CarbonImmutable $startUtc,
+        CarbonImmutable $endUtc,
+        ?array $businessHours,
+        string $timezone,
+    ): array {
+        $conditions = $this->buildBusinessHoursConditions($businessHours, $timezone);
+
+        if (empty($conditions)) {
+            return $this->computeDt1Stats($startUtc, $endUtc);
+        }
+
+        $whereClause = '(' . implode(' OR ', $conditions) . ')';
+
+        $row = Conversation::query()
+            ->whereNotNull('first_message_at')
+            ->whereNotNull('first_response_at')
+            ->whereBetween('created_at', [$startUtc, $endUtc])
+            ->whereRaw($whereClause)
+            ->selectRaw("
+                COUNT(*) as total,
+                ROUND(AVG(EXTRACT(EPOCH FROM (first_response_at - first_message_at))))::int AS avg_dt1,
+                PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_message_at))) AS median_dt1,
+                PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_message_at))) AS p95_dt1
+            ")
+            ->first();
+
+        if (! $row || (int) $row->total === 0) {
+            return ['avg' => null, 'median' => null, 'p95' => null, 'total' => 0];
+        }
+
+        return [
+            'avg'    => (int) round((float) $row->avg_dt1),
+            'median' => (int) round((float) $row->median_dt1),
+            'p95'    => (int) round((float) $row->p95_dt1),
+            'total'  => (int) $row->total,
+        ];
+    }
+
+    /**
+     * Builds SQL OR conditions for each configured business-hours slot.
+     *
+     * @param  array<string, array{open: string, close: string}>|null $businessHours
+     * @return list<string>
+     */
+    private function buildBusinessHoursConditions(?array $businessHours, string $timezone): array
+    {
+        // Default: Mon–Fri, 09:00–18:00
+        $schedule = $businessHours && count($businessHours) > 0
+            ? $businessHours
+            : ['mon' => ['open' => '09:00', 'close' => '18:00'],
+               'tue' => ['open' => '09:00', 'close' => '18:00'],
+               'wed' => ['open' => '09:00', 'close' => '18:00'],
+               'thu' => ['open' => '09:00', 'close' => '18:00'],
+               'fri' => ['open' => '09:00', 'close' => '18:00']];
+
+        $conditions = [];
+
+        foreach ($schedule as $day => $hours) {
+            $dow = self::DAY_MAP[strtolower($day)] ?? null;
+            if ($dow === null) {
+                continue;
+            }
+            $open  = $hours['open']  ?? null;
+            $close = $hours['close'] ?? null;
+
+            if (! $open || ! $close) {
+                continue;
+            }
+            // Validate time format to prevent SQL injection
+            if (! preg_match('/^\d{2}:\d{2}$/', $open) || ! preg_match('/^\d{2}:\d{2}$/', $close)) {
+                continue;
+            }
+
+            // PostgreSQL: EXTRACT(DOW FROM ...) → 0=Sunday, 1=Monday … 6=Saturday
+            $conditions[] = sprintf(
+                "(EXTRACT(DOW FROM (first_message_at AT TIME ZONE 'UTC' AT TIME ZONE '%s'))::int = %d"
+                . " AND CAST(first_message_at AT TIME ZONE 'UTC' AT TIME ZONE '%s' AS TIME) BETWEEN '%s'::time AND '%s'::time)",
+                addslashes($timezone), $dow, addslashes($timezone), $open, $close,
+            );
+        }
+
+        return $conditions;
+    }
+
+    // ─── Conversations chart (SQL aggregation) ────────────────────────────────
 
     private function buildConversationChart(
         CarbonImmutable $startAt,
@@ -141,41 +242,38 @@ class GetDashboardStats
         string $range,
         string $timezone,
     ): array {
+        $truncUnit = $this->pgTruncUnit($bucket);
+
+        // SQL-side aggregation — avoids loading all rows into PHP
+        $rows = DB::table('conversations')
+            ->selectRaw(
+                "DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?) AS bkt, COUNT(*) AS cnt",
+                [$truncUnit, $timezone],
+            )
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
+            ->whereNull('deleted_at')
+            ->groupByRaw("DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?)", [$truncUnit, $timezone])
+            ->get()
+            ->keyBy(fn ($r) => CarbonImmutable::parse($r->bkt)->setTimezone($timezone)->format('Y-m-d H:i:s'));
+
         $series = [];
         $cursor = $this->truncateToBucket($startAt, $bucket);
 
         while ($cursor->lessThanOrEqualTo($endAt)) {
-            $key          = $cursor->format('Y-m-d H:i:s');
-            $series[$key] = [
+            $key      = $cursor->format('Y-m-d H:i:s');
+            $series[] = [
                 'bucket_start'  => $cursor->toIso8601String(),
                 'label'         => $this->formatLabel($cursor, $bucket, $range),
-                'conversations' => 0,
+                'conversations' => (int) ($rows->get($key)?->cnt ?? 0),
             ];
             $cursor = $this->advanceBucket($cursor, $bucket);
         }
 
-        $conversations = Conversation::query()
-            ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
-            ->get(['created_at']);
-
-        foreach ($conversations as $conversation) {
-            if (! $conversation->created_at) {
-                continue;
-            }
-            $bucketStart = $this->truncateToBucket(
-                CarbonImmutable::instance($conversation->created_at)->setTimezone($timezone),
-                $bucket,
-            );
-            $key = $bucketStart->format('Y-m-d H:i:s');
-            if (isset($series[$key])) {
-                $series[$key]['conversations']++;
-            }
-        }
-
-        return array_values($series);
+        return $series;
     }
 
-    // ─── Messages in/out chart ────────────────────────────────────────────────
+    // ─── Messages in/out chart (SQL aggregation) ──────────────────────────────
 
     private function buildMessagesChart(
         CarbonImmutable $startAt,
@@ -183,43 +281,40 @@ class GetDashboardStats
         string $bucket,
         string $timezone,
     ): array {
+        $truncUnit = $this->pgTruncUnit($bucket);
+
+        // SQL-side aggregation grouped by bucket + direction
+        $rows = DB::table('messages')
+            ->selectRaw(
+                "DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?) AS bkt, direction, COUNT(*) AS cnt",
+                [$truncUnit, $timezone],
+            )
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
+            ->groupByRaw("DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?), direction", [$truncUnit, $timezone])
+            ->get();
+
+        // Index by bucket → direction → count
+        $indexed = [];
+        foreach ($rows as $row) {
+            $bktKey = CarbonImmutable::parse($row->bkt)->setTimezone($timezone)->format('Y-m-d H:i:s');
+            $indexed[$bktKey][$row->direction] = (int) $row->cnt;
+        }
+
         $series = [];
         $cursor = $this->truncateToBucket($startAt, $bucket);
 
         while ($cursor->lessThanOrEqualTo($endAt)) {
-            $key          = $cursor->format('Y-m-d H:i:s');
-            $series[$key] = [
+            $key      = $cursor->format('Y-m-d H:i:s');
+            $series[] = [
                 'label'    => $this->formatLabel($cursor, $bucket, 'messages'),
-                'inbound'  => 0,
-                'outbound' => 0,
+                'inbound'  => $indexed[$key]['in']  ?? 0,
+                'outbound' => $indexed[$key]['out'] ?? 0,
             ];
             $cursor = $this->advanceBucket($cursor, $bucket);
         }
 
-        $messages = Message::query()
-            ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
-            ->get(['created_at', 'direction']);
-
-        foreach ($messages as $msg) {
-            if (! $msg->created_at) {
-                continue;
-            }
-            $bucketStart = $this->truncateToBucket(
-                CarbonImmutable::instance($msg->created_at)->setTimezone($timezone),
-                $bucket,
-            );
-            $key = $bucketStart->format('Y-m-d H:i:s');
-            if (! isset($series[$key])) {
-                continue;
-            }
-            if ($msg->direction === 'in') {
-                $series[$key]['inbound']++;
-            } else {
-                $series[$key]['outbound']++;
-            }
-        }
-
-        $flat = array_values($series);
+        $flat = $series;
 
         return [
             'series'         => $flat,
@@ -293,6 +388,15 @@ class GetDashboardStats
         return array_key_exists($range, self::ALLOWED_RANGES) ? $range : 'semana';
     }
 
+    private function safeTimezone(?string $tz): string
+    {
+        if ($tz && in_array($tz, timezone_identifiers_list(), true)) {
+            return $tz;
+        }
+
+        return self::DEFAULT_TIMEZONE;
+    }
+
     /** @return array{CarbonImmutable, CarbonImmutable, string} */
     private function resolveRangeWindow(string $range, string $timezone): array
     {
@@ -305,6 +409,16 @@ class GetDashboardStats
             'trimestre' => [$now->subMonthsNoOverflow(2)->startOfMonth(),  $now->endOfDay(), 'week'],
             'ano'       => [$now->subMonthsNoOverflow(11)->startOfMonth(), $now->endOfDay(), 'month'],
             default     => [$now->subDays(6)->startOfDay(),                $now->endOfDay(), 'day'],
+        };
+    }
+
+    private function pgTruncUnit(string $bucket): string
+    {
+        return match ($bucket) {
+            'hour'  => 'hour',
+            'week'  => 'week',
+            'month' => 'month',
+            default => 'day',
         };
     }
 

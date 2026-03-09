@@ -2,6 +2,7 @@
 
 use App\Jobs\CheckInstanceHealth;
 use App\Jobs\ProcessNoResponseTimeout;
+use App\Jobs\RecalculateMetrics;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -15,3 +16,6 @@ Schedule::job(new CheckInstanceHealth)->everyFiveMinutes();
 
 // Fire no-response-timeout automations every minute
 Schedule::job(new ProcessNoResponseTimeout)->everyMinute();
+
+// Pre-compute and cache dashboard stats for all tenants every hour
+Schedule::job(new RecalculateMetrics)->hourly()->onOneServer();

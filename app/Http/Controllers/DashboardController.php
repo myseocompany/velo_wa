@@ -13,9 +13,10 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request, GetDashboardStats $action): Response
     {
-        $range = $request->string('range', 'horas')->toString();
+        $range         = $request->string('range', 'horas')->toString();
+        $businessHours = $request->boolean('business_hours', false);
 
-        $data = $action->handle($request->user(), $range);
+        $data = $action->handle($request->user(), $range, $businessHours);
 
         return Inertia::render('Dashboard', $data);
     }

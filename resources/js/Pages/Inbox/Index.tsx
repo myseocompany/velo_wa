@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { useTenantChannel } from '@/hooks/useEcho';
+import { useTenantChannel, useTenantPresence } from '@/hooks/useEcho';
 import { Conversation, ConversationStatus, Message, PageProps, User } from '@/types';
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
@@ -33,15 +33,43 @@ const STATUS_TABS: { value: ConversationStatus | 'all'; label: string }[] = [
     { value: 'closed',  label: 'Cerradas' },
 ];
 
+// ─── Notification sound (Web Audio API) ───────────────────────────────────────
+
+function playNotificationSound() {
+    try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.1);
+
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+
+        osc.onended = () => ctx.close();
+    } catch {
+        // AudioContext not supported or blocked — silently ignore
+    }
+}
+
 // ─── Assign dropdown ──────────────────────────────────────────────────────────
 
 interface AssignDropdownProps {
     conversation: Conversation;
     agents: User[];
+    onlineUserIds: Set<string>;
     onAssigned: (conv: Conversation) => void;
 }
 
-function AssignDropdown({ conversation, agents, onAssigned }: AssignDropdownProps) {
+function AssignDropdown({ conversation, agents, onlineUserIds, onAssigned }: AssignDropdownProps) {
     const [open, setOpen]       = useState(false);
     const [loading, setLoading] = useState(false);
     const dropRef               = useRef<HTMLDivElement>(null);
@@ -93,20 +121,23 @@ function AssignDropdown({ conversation, agents, onAssigned }: AssignDropdownProp
                         Sin asignar
                     </button>
                     <div className="h-px bg-gray-100" />
-                    {agents.map((agent) => (
-                        <button
-                            key={agent.id}
-                            onClick={() => assign(agent.id)}
-                            className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 ${
-                                conversation.assigned_to === agent.id ? 'font-semibold text-brand-600' : 'text-gray-800'
-                            }`}
-                        >
-                            <span
-                                className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${agent.is_online ? 'bg-green-500' : 'bg-gray-300'}`}
-                            />
-                            {agent.name}
-                        </button>
-                    ))}
+                    {agents.map((agent) => {
+                        const isOnline = onlineUserIds.has(agent.id);
+                        return (
+                            <button
+                                key={agent.id}
+                                onClick={() => assign(agent.id)}
+                                className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 ${
+                                    conversation.assigned_to === agent.id ? 'font-semibold text-brand-600' : 'text-gray-800'
+                                }`}
+                            >
+                                <span
+                                    className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}
+                                />
+                                {agent.name}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -128,9 +159,13 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [search, setSearch]                   = useState('');
     const [agents, setAgents]                   = useState<User[]>([]);
     const [showContactPanel, setShowContactPanel] = useState(false);
+    const [unreadCounts, setUnreadCounts]       = useState<Record<string, number>>({});
+    const [onlineUserIds, setOnlineUserIds]     = useState<Set<string>>(new Set());
 
     const conversationsRef = useRef<Conversation[]>([]);
+    const activeConvRef    = useRef<Conversation | null>(null);
     useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+    useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
     const refetchingRef = useRef(false);
     const refetchConversations = useCallback(() => {
@@ -174,11 +209,17 @@ export default function InboxIndex({ activeConversationId }: Props) {
         setLoadingMessages(true);
         setMessages([]);
         setNextCursor(null);
+        // Clear unread count when opening conversation
+        setUnreadCounts((prev) => {
+            if (!prev[conv.id]) return prev;
+            const next = { ...prev };
+            delete next[conv.id];
+            return next;
+        });
         try {
             const res = await axios.get<{ data: Message[]; links: { next: string | null } }>(
                 `/api/v1/conversations/${conv.id}/messages`,
             );
-            // API returns DESC (newest first) — reverse for chronological display
             setMessages([...res.data.data].reverse());
             const next = res.data.links.next
                 ? new URL(res.data.links.next).searchParams.get('cursor')
@@ -192,6 +233,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
     // Real-time: message received
     const handleMessageReceived = useCallback((data: unknown) => {
         const payload = data as MessageReceivedPayload;
+
         if (conversationsRef.current.findIndex((c) => c.id === payload.conversation_id) === -1) {
             refetchConversations();
         } else {
@@ -208,14 +250,25 @@ export default function InboxIndex({ activeConversationId }: Props) {
                 return [updated, ...next];
             });
         }
-        if (activeConv?.id === payload.conversation_id) {
+
+        // Increment unread + play sound for inbound messages on inactive conversations
+        const isActiveConv = activeConvRef.current?.id === payload.conversation_id;
+        if (payload.direction === 'in' && !isActiveConv) {
+            setUnreadCounts((prev) => ({
+                ...prev,
+                [payload.conversation_id]: (prev[payload.conversation_id] ?? 0) + 1,
+            }));
+            playNotificationSound();
+        }
+
+        if (isActiveConv) {
             setMessages((prev) => {
                 const exists = prev.some((m) => m.id === payload.id);
                 if (exists) return prev.map((m) => (m.id === payload.id ? (payload as Message) : m));
                 return [...prev, payload as Message];
             });
         }
-    }, [activeConv?.id, refetchConversations]);
+    }, [refetchConversations]);
 
     // Real-time: conversation updated
     const handleConversationUpdated = useCallback((data: unknown) => {
@@ -228,12 +281,29 @@ export default function InboxIndex({ activeConversationId }: Props) {
             next.splice(idx, 1);
             return [updated, ...next];
         });
-        // Update active conversation if it's the one updated
         setActiveConv((prev) => (prev?.id === payload.id ? { ...prev, ...payload } : prev));
     }, []);
 
     useTenantChannel(auth.tenant.id, 'message.received', handleMessageReceived);
     useTenantChannel(auth.tenant.id, 'conversation.updated', handleConversationUpdated);
+
+    // Online presence
+    useTenantPresence(
+        auth.tenant.id,
+        useCallback((user: { id: string }) => {
+            setOnlineUserIds((prev) => new Set([...prev, user.id]));
+        }, []),
+        useCallback((user: { id: string }) => {
+            setOnlineUserIds((prev) => {
+                const next = new Set(prev);
+                next.delete(user.id);
+                return next;
+            });
+        }, []),
+        useCallback((users: { id: string }[]) => {
+            setOnlineUserIds(new Set(users.map((u) => u.id)));
+        }, []),
+    );
 
     function handleMessageSent(message: Message) {
         setMessages((prev) => [...prev, message]);
@@ -311,6 +381,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                             <ConversationList
                                 conversations={conversations}
                                 activeId={activeConv?.id ?? null}
+                                unreadCounts={unreadCounts}
                                 onSelect={selectConversation}
                             />
                         )}
@@ -343,6 +414,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                     <AssignDropdown
                                         conversation={activeConv}
                                         agents={agents}
+                                        onlineUserIds={onlineUserIds}
                                         onAssigned={handleAssigned}
                                     />
 

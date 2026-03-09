@@ -22,3 +22,16 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
         ->where('tenant_id', $user->tenant_id)
         ->exists();
 });
+
+// Presence channel per tenant (for online agent tracking)
+Broadcast::channel('presence-tenant.{tenantId}', function ($user, $tenantId) {
+    if ($user->tenant_id !== $tenantId) {
+        return false;
+    }
+
+    return [
+        'id'   => $user->id,
+        'name' => $user->name,
+        'role' => $user->role->value,
+    ];
+});

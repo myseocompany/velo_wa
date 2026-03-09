@@ -7,6 +7,7 @@ import ContactAvatar from './ContactAvatar';
 interface Props {
     conversations: Conversation[];
     activeId: string | null;
+    unreadCounts: Record<string, number>;
     onSelect: (conversation: Conversation) => void;
 }
 
@@ -29,7 +30,7 @@ function getLastMessagePreview(conversation: Conversation): string {
     return 'Mensaje sin texto';
 }
 
-export default function ConversationList({ conversations, activeId, onSelect }: Props) {
+export default function ConversationList({ conversations, activeId, unreadCounts, onSelect }: Props) {
     if (conversations.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-gray-400">
@@ -45,6 +46,7 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
                 const contact     = conv.contact;
                 const displayName = contact?.name ?? contact?.push_name ?? contact?.phone ?? 'Desconocido';
                 const isActive    = conv.id === activeId;
+                const unread      = unreadCounts[conv.id] ?? 0;
 
                 return (
                     <li key={conv.id}>
@@ -59,19 +61,26 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
                             />
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between">
-                                    <span className="truncate text-sm font-medium text-gray-900">
+                                    <span className={`truncate text-sm ${unread > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-900'}`}>
                                         {displayName}
                                     </span>
-                                    {conv.last_message_at && (
-                                        <span className="ml-2 flex-shrink-0 text-xs text-gray-400">
-                                            {formatDistanceToNow(new Date(conv.last_message_at), {
-                                                addSuffix: true,
-                                                locale: es,
-                                            })}
-                                        </span>
-                                    )}
+                                    <div className="ml-2 flex flex-shrink-0 items-center gap-1.5">
+                                        {conv.last_message_at && (
+                                            <span className="text-xs text-gray-400">
+                                                {formatDistanceToNow(new Date(conv.last_message_at), {
+                                                    addSuffix: true,
+                                                    locale: es,
+                                                })}
+                                            </span>
+                                        )}
+                                        {unread > 0 && (
+                                            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">
+                                                {unread > 99 ? '99+' : unread}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <p className="mt-0.5 truncate text-xs text-gray-500">
+                                <p className={`mt-0.5 truncate text-xs ${unread > 0 ? 'font-medium text-gray-700' : 'text-gray-500'}`}>
                                     {getLastMessagePreview(conv)}
                                 </p>
                             </div>

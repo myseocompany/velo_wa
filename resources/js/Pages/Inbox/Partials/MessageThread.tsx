@@ -1,3 +1,5 @@
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import { Message, MessageStatus, QuickReply } from '@/types';
 import axios from 'axios';
 import {
@@ -9,6 +11,7 @@ import {
     Mic,
     Paperclip,
     Send,
+    Smile,
     X,
     Zap,
 } from 'lucide-react';
@@ -211,18 +214,34 @@ export default function MessageThread({
     const [selectedQuickReply, setSelectedQuickReply] = useState<QuickReply | null>(null);
     const [showQR, setShowQR]           = useState(false);
     const [qrQuery, setQrQuery]         = useState('');
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const bottomRef      = useRef<HTMLDivElement>(null);
     const topSentinelRef = useRef<HTMLDivElement>(null);
     const fileInputRef   = useRef<HTMLInputElement>(null);
     const listRef        = useRef<HTMLDivElement>(null);
     const textareaRef    = useRef<HTMLTextAreaElement>(null);
+    const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+    // Close emoji picker when clicking outside
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+                setShowEmojiPicker(false);
+            }
+        }
+        if (showEmojiPicker) {
+            document.addEventListener('mousedown', handleClick);
+            return () => document.removeEventListener('mousedown', handleClick);
+        }
+    }, [showEmojiPicker]);
 
     // Scroll to bottom and focus textarea when conversation first loads
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'instant' });
         textareaRef.current?.focus();
         setSelectedQuickReply(null);
+        setShowEmojiPicker(false);
     }, [conversationId]);
 
     // Scroll to bottom on new message (only if user is near bottom)
@@ -232,7 +251,6 @@ export default function MessageThread({
             const container = listRef.current;
             if (container) {
                 const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-                // Auto-scroll only if user is within 200px of bottom
                 if (distanceFromBottom < 200) {
                     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }
@@ -269,7 +287,6 @@ export default function MessageThread({
         if (loadingOlder || !nextCursor) return;
         setLoadingOlder(true);
 
-        // Remember scroll position before prepending
         const container = listRef.current;
         const prevScrollHeight = container?.scrollHeight ?? 0;
 
@@ -285,7 +302,6 @@ export default function MessageThread({
 
             onLoadOlderMessages(olderMessages, newNextCursor);
 
-            // Restore scroll position after DOM update
             requestAnimationFrame(() => {
                 if (container) {
                     container.scrollTop = container.scrollHeight - prevScrollHeight;
@@ -320,6 +336,24 @@ export default function MessageThread({
         setQrQuery('');
     }
 
+    function handleEmojiSelect(emoji: { native: string }) {
+        const textarea = textareaRef.current;
+        if (!textarea) {
+            setBody((prev) => prev + emoji.native);
+            return;
+        }
+        const start = textarea.selectionStart ?? body.length;
+        const end   = textarea.selectionEnd ?? body.length;
+        const newBody = body.slice(0, start) + emoji.native + body.slice(end);
+        setBody(newBody);
+        // Restore cursor after emoji
+        requestAnimationFrame(() => {
+            const pos = start + emoji.native.length;
+            textarea.setSelectionRange(pos, pos);
+            textarea.focus();
+        });
+    }
+
     function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (file) setMediaFile(file);
@@ -337,12 +371,12 @@ export default function MessageThread({
         setBody('');
         setMediaFile(null);
         setSelectedQuickReply(null);
+        setShowEmojiPicker(false);
 
         try {
             let res: { data: { data: Message } };
             let quickReplyToSend: QuickReply | null = savedQuickReply;
 
-            // Support direct slash commands like "/horario" without selecting from picker.
             if (!quickReplyToSend && !savedFile && text.startsWith('/')) {
                 const shortcut = text.slice(1).trim().toLowerCase();
                 const isExactSlashCommand = shortcut !== '' && !shortcut.includes(' ');
@@ -389,8 +423,9 @@ export default function MessageThread({
             e.preventDefault();
             sendMessage();
         }
-        if (e.key === 'Escape' && showQR) {
-            setShowQR(false);
+        if (e.key === 'Escape') {
+            if (showQR) setShowQR(false);
+            if (showEmojiPicker) setShowEmojiPicker(false);
         }
     }
 
@@ -428,7 +463,7 @@ export default function MessageThread({
                     <MediaPreview file={mediaFile} onRemove={() => setMediaFile(null)} />
                 )}
 
-                {/* Quick replies picker (above composer) */}
+                {/* Quick replies picker + emoji picker (above composer) */}
                 <div className="relative">
                     {showQR && quickReplies !== null && (
                         <QuickReplyPicker
@@ -437,6 +472,22 @@ export default function MessageThread({
                             onSelect={handleQuickReplySelect}
                             onClose={() => setShowQR(false)}
                         />
+                    )}
+
+                    {showEmojiPicker && (
+                        <div
+                            ref={emojiPickerRef}
+                            className="absolute bottom-full left-0 z-20 mb-2"
+                        >
+                            <Picker
+                                data={data}
+                                onEmojiSelect={handleEmojiSelect}
+                                locale="es"
+                                theme="light"
+                                previewPosition="none"
+                                skinTonePosition="none"
+                            />
+                        </div>
                     )}
 
                     <div className="flex items-end gap-2">
@@ -455,6 +506,15 @@ export default function MessageThread({
                             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
                             onChange={handleFileChange}
                         />
+
+                        {/* Emoji button */}
+                        <button
+                            onClick={() => setShowEmojiPicker((v) => !v)}
+                            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 ${showEmojiPicker ? 'bg-gray-100 text-brand-500' : ''}`}
+                            title="Emojis"
+                        >
+                            <Smile className="h-5 w-5" />
+                        </button>
 
                         {/* Text input */}
                         <textarea

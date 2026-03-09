@@ -10,6 +10,8 @@ import {
     ArrowUpDown,
     ChevronLeft,
     ChevronRight,
+    GitMerge,
+    Plus,
     Search,
     Tag,
     UserCheck,
@@ -34,6 +36,245 @@ function SortIcon({ field, current, dir }: { field: SortField; current: SortFiel
         : <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-brand-600" />;
 }
 
+// ─── Create contact modal ─────────────────────────────────────────────────────
+
+interface CreateModalProps {
+    agents: User[];
+    onClose: () => void;
+    onCreated: (contact: Contact) => void;
+}
+
+function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
+    const [phone, setPhone]     = useState('');
+    const [name, setName]       = useState('');
+    const [email, setEmail]     = useState('');
+    const [company, setCompany] = useState('');
+    const [assignedTo, setAssignedTo] = useState('');
+    const [saving, setSaving]   = useState(false);
+    const [errors, setErrors]   = useState<Record<string, string>>({});
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true);
+        setErrors({});
+        try {
+            const res = await axios.post<{ data: Contact }>('/api/v1/contacts', {
+                phone:       phone.trim(),
+                name:        name.trim() || null,
+                email:       email.trim() || null,
+                company:     company.trim() || null,
+                assigned_to: assignedTo || null,
+            });
+            onCreated(res.data.data);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err) && err.response?.data?.errors) {
+                const errs: Record<string, string> = {};
+                for (const [k, v] of Object.entries(err.response.data.errors)) {
+                    errs[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+                }
+                setErrors(errs);
+            }
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                    <h3 className="font-semibold text-gray-900">Nuevo contacto</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">
+                            Teléfono <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="+57 300 0000000"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        />
+                        {errors.phone && <p className="mt-0.5 text-xs text-red-500">{errors.phone}</p>}
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
+                        <input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">Email</label>
+                            <input
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                type="email"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">Empresa</label>
+                            <input
+                                value={company}
+                                onChange={(e) => setCompany(e.target.value)}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">Asignar a</label>
+                        <select
+                            value={assignedTo}
+                            onChange={(e) => setAssignedTo(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        >
+                            <option value="">Sin asignar</option>
+                            {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button type="button" onClick={onClose}
+                            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" disabled={saving || !phone.trim()}
+                            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                            {saving
+                                ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                : <Plus className="h-4 w-4" />}
+                            Crear contacto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ─── Merge modal ──────────────────────────────────────────────────────────────
+
+interface MergeModalProps {
+    source: Contact;
+    onClose: () => void;
+    onMerged: () => void;
+}
+
+function MergeModal({ source, onClose, onMerged }: MergeModalProps) {
+    const [phone, setPhone]         = useState('');
+    const [candidates, setCandidates] = useState<Contact[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [target, setTarget]       = useState<Contact | null>(null);
+    const [merging, setMerging]     = useState(false);
+    const sourceDisplayName = source.name ?? source.push_name ?? source.phone ?? 'Sin nombre';
+
+    async function search() {
+        if (!phone.trim()) return;
+        setSearching(true);
+        const res = await axios.get<PaginatedData<Contact>>('/api/v1/contacts', {
+            params: { search: phone.trim(), per_page: 10 },
+        });
+        setCandidates(res.data.data.filter((c) => c.id !== source.id));
+        setSearching(false);
+    }
+
+    async function doMerge() {
+        if (!target) return;
+        setMerging(true);
+        try {
+            await axios.post(`/api/v1/contacts/${source.id}/merge`, { merge_into_id: target.id });
+            onMerged();
+        } finally {
+            setMerging(false);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                    <h3 className="font-semibold text-gray-900">Combinar contacto</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="px-5 py-4 space-y-4">
+                    <p className="text-sm text-gray-600">
+                        Fusionar <span className="font-medium text-gray-900">{sourceDisplayName}</span> en otro contacto.
+                        Las conversaciones y deals se transferirán al destino, y el origen se eliminará.
+                    </p>
+
+                    {/* Search */}
+                    <div className="flex gap-2">
+                        <input
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && search()}
+                            placeholder="Buscar por nombre o teléfono…"
+                            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        />
+                        <button onClick={search} disabled={searching}
+                            className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+                            {searching ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" /> : <Search className="h-4 w-4" />}
+                        </button>
+                    </div>
+
+                    {/* Candidates */}
+                    {candidates.length > 0 && (
+                        <ul className="max-h-48 divide-y divide-gray-100 overflow-y-auto rounded-xl border border-gray-200">
+                            {candidates.map((c) => (
+                                <li key={c.id}>
+                                    <button
+                                        onClick={() => setTarget(c)}
+                                        className={`flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 ${target?.id === c.id ? 'bg-brand-50' : ''}`}
+                                    >
+                                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                                            {(c.name ?? c.push_name ?? c.phone ?? '?').charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-gray-900 truncate">{c.name ?? c.push_name ?? 'Sin nombre'}</p>
+                                            <p className="text-xs text-gray-400">{c.phone}</p>
+                                        </div>
+                                        {target?.id === c.id && <span className="ml-auto text-xs font-medium text-brand-600">Seleccionado</span>}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {candidates.length === 0 && phone && !searching && (
+                        <p className="text-center text-sm text-gray-400">Sin resultados.</p>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3">
+                    <button onClick={onClose}
+                        className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button onClick={doMerge} disabled={!target || merging}
+                        className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50">
+                        {merging
+                            ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            : <GitMerge className="h-4 w-4" />}
+                        Combinar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function ContactsIndex() {
     const [search, setSearch]                     = useState('');
     const [loading, setLoading]                   = useState(true);
@@ -48,6 +289,8 @@ export default function ContactsIndex() {
     const [selectedTags, setSelectedTags]         = useState<string[]>([]);
     const [assignedFilter, setAssignedFilter]     = useState('');
     const [showTagPicker, setShowTagPicker]       = useState(false);
+    const [showCreateModal, setShowCreateModal]   = useState(false);
+    const [mergeContact, setMergeContact]         = useState<Contact | null>(null);
     const tagPickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -113,6 +356,20 @@ export default function ContactsIndex() {
         setPage(1);
     }
 
+    function handleCreated(contact: Contact) {
+        setShowCreateModal(false);
+        setTotal((t) => t + 1);
+        setContacts((prev) => [contact, ...prev]);
+    }
+
+    function handleMerged() {
+        setMergeContact(null);
+        // Reload contacts list
+        setPage(1);
+        setSearch('');
+        setSelectedTags([]);
+    }
+
     return (
         <AppLayout title="Contactos">
             <div className="space-y-5 p-6">
@@ -121,6 +378,13 @@ export default function ContactsIndex() {
                         <h1 className="text-2xl font-semibold text-gray-900">Contactos</h1>
                         <p className="mt-1 text-sm text-gray-500">{total} contacto{total !== 1 ? 's' : ''} en total</p>
                     </div>
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Nuevo contacto
+                    </button>
                 </div>
 
                 {/* Filters */}
@@ -205,22 +469,23 @@ export default function ContactsIndex() {
                                         </button>
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Asignado</th>
+                                    <th className="px-4 py-3" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
-                                    <tr><td colSpan={5} className="py-12 text-center">
+                                    <tr><td colSpan={6} className="py-12 text-center">
                                         <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
                                     </td></tr>
                                 ) : contacts.length === 0 ? (
-                                    <tr><td colSpan={5} className="px-4 py-10">
+                                    <tr><td colSpan={6} className="px-4 py-10">
                                         <div className="flex flex-col items-center justify-center gap-2 text-gray-400">
                                             <Users className="h-8 w-8" />
                                             <p className="text-sm">{search || selectedTags.length || assignedFilter ? 'Sin resultados para los filtros aplicados.' : 'Aún no hay contactos.'}</p>
                                         </div>
                                     </td></tr>
                                 ) : contacts.map((contact) => (
-                                    <tr key={contact.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.visit(`/contacts/${contact.id}`)}>
+                                    <tr key={contact.id} className="group cursor-pointer hover:bg-gray-50" onClick={() => router.visit(`/contacts/${contact.id}`)}>
                                         <td className="px-4 py-3">
                                             <p className="text-sm font-medium text-gray-900">
                                                 {contact.name ?? contact.push_name ?? contact.phone ?? 'Sin nombre'}
@@ -253,6 +518,15 @@ export default function ContactsIndex() {
                                                 <span className="text-sm text-gray-400">Sin asignar</span>
                                             )}
                                         </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setMergeContact(contact); }}
+                                                className="invisible rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 group-hover:visible"
+                                                title="Combinar contacto"
+                                            >
+                                                <GitMerge className="h-4 w-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -274,6 +548,13 @@ export default function ContactsIndex() {
                     )}
                 </div>
             </div>
+
+            {showCreateModal && (
+                <CreateContactModal agents={agents} onClose={() => setShowCreateModal(false)} onCreated={handleCreated} />
+            )}
+            {mergeContact && (
+                <MergeModal source={mergeContact} onClose={() => setMergeContact(null)} onMerged={handleMerged} />
+            )}
         </AppLayout>
     );
 }

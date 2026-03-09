@@ -6,6 +6,7 @@ import {
     LayoutDashboard,
     LogOut,
     Settings,
+    UsersRound,
     Users,
 } from 'lucide-react';
 import { PropsWithChildren, useState } from 'react';
@@ -43,6 +44,12 @@ const navItems: NavItem[] = [
         href: '/pipeline',
         icon: <BarChart2 size={18} />,
         routeName: 'pipeline',
+    },
+    {
+        label: 'Equipo',
+        href: '/team',
+        icon: <UsersRound size={18} />,
+        routeName: 'team',
     },
     {
         label: 'Configuración',

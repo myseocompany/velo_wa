@@ -51,15 +51,18 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->name('messages.store-media');
     Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->name('messages.store-quick-reply');
 
-    // Team members (for assignment dropdowns)
+    // Team members + workload
     Route::get('/team/members', [TeamController::class, 'members'])->name('team.members');
+    Route::get('/team/workload', [TeamController::class, 'workload'])->name('team.workload');
 
     // Contacts
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::post('/contacts', [ContactController::class, 'store'])->name('contacts.store');
     Route::get('/contacts/tags', [ContactController::class, 'tags'])->name('contacts.tags');
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
     Route::patch('/contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
     Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');
+    Route::post('/contacts/{contact}/merge', [ContactController::class, 'merge'])->name('contacts.merge');
 
     // Assignment rules
     Route::get('/assignment-rules', [AssignmentRuleController::class, 'index'])->name('assignment-rules.index');

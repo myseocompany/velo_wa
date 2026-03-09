@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ContactSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ContactRequest;
+use App\Http\Requests\Api\StoreContactRequest;
 use App\Http\Resources\ContactResource;
 use App\Models\Contact;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class ContactController extends Controller
 {
@@ -25,8 +29,11 @@ class ContactController extends Controller
             $query->where(function ($q) use ($search, $phoneSearch): void {
                 $q->where('name', 'ilike', '%' . $search . '%')
                     ->orWhere('push_name', 'ilike', '%' . $search . '%')
-                    ->orWhere('phone', 'ilike', '%' . $phoneSearch . '%')
                     ->orWhere('email', 'ilike', '%' . $search . '%');
+
+                if ($phoneSearch !== '') {
+                    $q->orWhere('phone', 'ilike', '%' . $phoneSearch . '%');
+                }
             });
         }
 
@@ -61,6 +68,67 @@ class ContactController extends Controller
         return ContactResource::collection(
             $query->orderBy($sortBy, $direction)->paginate($perPage)
         );
+    }
+
+    public function store(StoreContactRequest $request): ContactResource
+    {
+        $phone = preg_replace('/[\s\-\(\)]+/', '', $request->string('phone')->toString());
+
+        $contact = Contact::create([
+            'phone'       => $phone,
+            'name'        => $request->input('name'),
+            'email'       => $request->input('email'),
+            'company'     => $request->input('company'),
+            'notes'       => $request->input('notes'),
+            'tags'        => $request->input('tags', []),
+            'assigned_to' => $request->input('assigned_to'),
+            'source'      => ContactSource::Manual,
+        ]);
+
+        return new ContactResource($contact->fresh('assignee'));
+    }
+
+    /** Merge $source into $target: transfer relationships, merge tags, soft-delete source. */
+    public function merge(Contact $contact, Request $request): ContactResource
+    {
+        $request->validate([
+            'merge_into_id' => ['required', 'uuid', 'exists:contacts,id'],
+        ]);
+
+        $target = Contact::findOrFail($request->input('merge_into_id'));
+
+        // Ensure both contacts belong to same tenant
+        if ($contact->tenant_id !== $target->tenant_id || $target->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        DB::transaction(function () use ($contact, $target): void {
+            // Transfer conversations
+            $contact->conversations()->update(['contact_id' => $target->id]);
+
+            // Transfer deals
+            $contact->deals()->update(['contact_id' => $target->id]);
+
+            // Merge tags (union, deduplicated)
+            $mergedTags = array_values(array_unique(array_merge(
+                $target->tags ?? [],
+                $contact->tags ?? [],
+            )));
+            $target->update(['tags' => $mergedTags]);
+
+            // Carry over fields missing from target
+            $updates = [];
+            if (! $target->email    && $contact->email)    $updates['email']    = $contact->email;
+            if (! $target->company  && $contact->company)  $updates['company']  = $contact->company;
+            if (! $target->name     && $contact->name)     $updates['name']     = $contact->name;
+            if (! $target->notes    && $contact->notes)    $updates['notes']    = $contact->notes;
+            if ($updates) $target->update($updates);
+
+            // Soft-delete the source
+            $contact->delete();
+        });
+
+        return new ContactResource($target->fresh(['assignee', 'conversations']));
     }
 
     public function show(Contact $contact): ContactResource

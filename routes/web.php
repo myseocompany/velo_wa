@@ -38,6 +38,11 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     })->name('contacts.show');
 
     // Pipeline (Phase 3)
+    // Team workload
+    Route::get('/team', function () {
+        return Inertia::render('Team/Index');
+    })->name('team');
+
     Route::get('/pipeline', function () {
         return Inertia::render('Pipeline/Index');
     })->name('pipeline');

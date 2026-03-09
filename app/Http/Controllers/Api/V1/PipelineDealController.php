@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class PipelineDealController extends Controller
 {
@@ -42,6 +43,32 @@ class PipelineDealController extends Controller
             $query->whereNull('assigned_to');
         } elseif ($assignedTo !== '') {
             $query->where('assigned_to', $assignedTo);
+        }
+
+        // Contact filter (used by inbox contact panel)
+        $contactId = $request->string('contact_id')->toString();
+        if ($contactId !== '') {
+            $query->where('contact_id', $contactId);
+        }
+
+        // Value range filters
+        $valueMin = $request->input('value_min');
+        if ($valueMin !== null && is_numeric($valueMin)) {
+            $query->where('value', '>=', (float) $valueMin);
+        }
+        $valueMax = $request->input('value_max');
+        if ($valueMax !== null && is_numeric($valueMax)) {
+            $query->where('value', '<=', (float) $valueMax);
+        }
+
+        // Date range filters (on created_at)
+        $dateFrom = $request->string('date_from')->toString();
+        if ($dateFrom !== '') {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+        $dateTo = $request->string('date_to')->toString();
+        if ($dateTo !== '') {
+            $query->whereDate('created_at', '<=', $dateTo);
         }
 
         // Build ORDER BY CASE from enum definition — stays in sync automatically
@@ -153,11 +180,31 @@ class PipelineDealController extends Controller
             ->whereNotIn('stage', ['closed_won', 'closed_lost'])
             ->sum('total_value');
 
+        // Average time spent in each stage (hours) across all tenant deals
+        $tenantId = $request->user()->tenant_id;
+        $dur = DB::selectOne("
+            SELECT
+                AVG(EXTRACT(EPOCH FROM (qualified_at   - lead_at))        / 3600) AS lead_hrs,
+                AVG(EXTRACT(EPOCH FROM (proposal_at    - qualified_at))   / 3600) AS qualified_hrs,
+                AVG(EXTRACT(EPOCH FROM (negotiation_at - proposal_at))    / 3600) AS proposal_hrs,
+                AVG(EXTRACT(EPOCH FROM (closed_at      - negotiation_at)) / 3600) AS negotiation_hrs
+            FROM pipeline_deals
+            WHERE tenant_id = ? AND deleted_at IS NULL
+        ", [$tenantId]);
+
+        $stageDurations = [
+            'lead'        => $dur && $dur->lead_hrs        !== null ? (float) round($dur->lead_hrs, 1)        : null,
+            'qualified'   => $dur && $dur->qualified_hrs   !== null ? (float) round($dur->qualified_hrs, 1)   : null,
+            'proposal'    => $dur && $dur->proposal_hrs    !== null ? (float) round($dur->proposal_hrs, 1)    : null,
+            'negotiation' => $dur && $dur->negotiation_hrs !== null ? (float) round($dur->negotiation_hrs, 1) : null,
+        ];
+
         return response()->json([
             'by_stage'        => $summary->values(),
             'active_pipeline' => $activePipeline,
             'total_won'       => (float) ($rows->get('closed_won')?->total_value ?? 0),
             'total_lost'      => (float) ($rows->get('closed_lost')?->total_value ?? 0),
+            'stage_durations' => $stageDurations,
         ]);
     }
 }

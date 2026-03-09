@@ -1,4 +1,4 @@
-import { Contact, Conversation, User } from '@/types';
+import { Contact, Conversation, PipelineDeal, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -10,7 +10,12 @@ import {
     Tag,
     User as UserIcon,
     X,
+    Briefcase,
+    Trophy,
+    AlertCircle,
 } from 'lucide-react';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 import ContactAvatar from './ContactAvatar';
 
 interface Props {
@@ -31,9 +36,31 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
     );
 }
 
+const STAGE_LABELS: Record<string, string> = {
+    lead: 'Lead', qualified: 'Calificado', proposal: 'Propuesta',
+    negotiation: 'Negociación', closed_won: 'Ganado', closed_lost: 'Perdido',
+};
+
+function fmtValue(v: number, currency = 'COP') {
+    if (v >= 1_000_000) return `${currency} ${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000)     return `${currency} ${(v / 1_000).toFixed(0)}K`;
+    return `${currency} ${v.toLocaleString('es-CO')}`;
+}
+
 export default function ContactPanel({ conversation, onClose }: Props) {
     const contact  = conversation.contact as Contact | undefined;
     const assignee = conversation.assignee as User | undefined;
+
+    const [deals, setDeals]           = useState<PipelineDeal[]>([]);
+    const [dealsLoading, setDealsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!contact?.id) { setDeals([]); return; }
+        setDealsLoading(true);
+        axios.get('/api/v1/pipeline/deals', { params: { contact_id: contact.id, per_page: 5 } })
+            .then(r => setDeals(r.data.data ?? []))
+            .finally(() => setDealsLoading(false));
+    }, [contact?.id]);
 
     const displayName =
         contact?.name ?? contact?.push_name ?? contact?.phone ?? 'Desconocido';
@@ -164,7 +191,7 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                 </div>
 
                 {/* Activity */}
-                <div className="px-4 py-2">
+                <div className="border-b border-gray-100 px-4 py-2">
                     <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">Actividad</p>
                     <div className="text-xs text-gray-500">
                         <p>{conversation.message_count} mensajes en esta conversación</p>
@@ -178,6 +205,32 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                             </p>
                         )}
                     </div>
+                </div>
+
+                {/* Deals */}
+                <div className="px-4 py-2">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-1">
+                        <Briefcase size={10} /> Deals
+                    </p>
+                    {dealsLoading && <p className="text-xs text-gray-400">Cargando…</p>}
+                    {!dealsLoading && deals.length === 0 && (
+                        <p className="text-xs text-gray-400">Sin deals asociados</p>
+                    )}
+                    {!dealsLoading && deals.map(deal => (
+                        <div key={deal.id} className="mb-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                            <div className="flex items-start justify-between gap-1">
+                                <p className="text-xs font-medium text-gray-800 line-clamp-1 flex-1">{deal.title}</p>
+                                {deal.stage === 'closed_won'  && <Trophy size={11} className="text-emerald-500 shrink-0 mt-0.5" />}
+                                {deal.stage === 'closed_lost' && <AlertCircle size={11} className="text-rose-400 shrink-0 mt-0.5" />}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400">
+                                <span>{STAGE_LABELS[deal.stage] ?? deal.stage}</span>
+                                {deal.value && (
+                                    <span className="font-semibold text-gray-600">{fmtValue(Number(deal.value), deal.currency)}</span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 

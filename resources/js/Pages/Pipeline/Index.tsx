@@ -6,19 +6,42 @@ import axios from 'axios';
 import {
     Plus, Pencil, Trash2, X, Search, ChevronDown,
     TrendingUp, Trophy, AlertCircle, Briefcase,
-    GripVertical, User as UserIcon,
+    GripVertical, User as UserIcon, BarChart2, ChevronUp, Timer,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import {
+    Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface StageSummary { stage: DealStage; label: string; count: number; total_value: number; }
-interface PipelineSummary { by_stage: StageSummary[]; active_pipeline: number; total_won: number; total_lost: number; }
+interface PipelineSummary {
+    by_stage: StageSummary[];
+    active_pipeline: number;
+    total_won: number;
+    total_lost: number;
+    stage_durations?: Record<string, number | null>;
+}
 interface ApiResponse extends PaginatedData<PipelineDeal> {}
 
 type BoardState = Record<DealStage, PipelineDeal[]>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+// Hex colors matching Tailwind classes (for recharts)
+const STAGE_HEX: Record<string, string> = {
+    lead:        '#94a3b8', // slate-400
+    qualified:   '#38bdf8', // sky-400
+    proposal:    '#fbbf24', // amber-400
+    negotiation: '#a78bfa', // violet-400
+    closed_won:  '#10b981', // emerald-500
+    closed_lost: '#f87171', // rose-400
+};
+
+const STAGE_WEIGHTS: Record<string, number> = {
+    lead: 0.10, qualified: 0.25, proposal: 0.50, negotiation: 0.75,
+};
 
 const STAGES: { key: DealStage; label: string; color: string; dot: string; header: string }[] = [
     { key: 'lead',        label: 'Lead',        color: 'text-slate-600',   dot: 'bg-slate-400',    header: 'bg-slate-100 border-slate-200' },
@@ -350,15 +373,20 @@ function SummaryBar({ summary }: { summary: PipelineSummary }) {
     const total = summary.total_won + summary.total_lost;
     const winRate = total > 0 ? Math.round((summary.total_won / total) * 100) : null;
 
+    const weighted = summary.by_stage
+        .filter(s => STAGE_WEIGHTS[s.stage] !== undefined)
+        .reduce((acc, s) => acc + s.total_value * STAGE_WEIGHTS[s.stage], 0);
+
     const cards = [
-        { label: 'Pipeline activo', value: fmtValue(summary.active_pipeline), icon: <Briefcase size={16} />, bg: 'bg-white', text: 'text-gray-900', sub: 'text-gray-500' },
-        { label: 'Ganado',          value: fmtValue(summary.total_won),       icon: <Trophy size={16} />,    bg: 'bg-emerald-50', text: 'text-emerald-800', sub: 'text-emerald-600' },
-        { label: 'Perdido',         value: fmtValue(summary.total_lost),      icon: <AlertCircle size={16} />, bg: 'bg-rose-50', text: 'text-rose-800', sub: 'text-rose-500' },
-        { label: 'Tasa de cierre',  value: winRate !== null ? `${winRate}%` : '—', icon: <TrendingUp size={16} />, bg: 'bg-white', text: 'text-gray-900', sub: 'text-gray-500' },
+        { label: 'Pipeline activo',  value: fmtValue(summary.active_pipeline), icon: <Briefcase size={16} />,    bg: 'bg-white',       text: 'text-gray-900',    sub: 'text-gray-500' },
+        { label: 'Pronóstico pond.', value: fmtValue(weighted),                 icon: <TrendingUp size={16} />,   bg: 'bg-violet-50',   text: 'text-violet-900',  sub: 'text-violet-500' },
+        { label: 'Ganado',           value: fmtValue(summary.total_won),        icon: <Trophy size={16} />,       bg: 'bg-emerald-50',  text: 'text-emerald-800', sub: 'text-emerald-600' },
+        { label: 'Perdido',          value: fmtValue(summary.total_lost),       icon: <AlertCircle size={16} />,  bg: 'bg-rose-50',     text: 'text-rose-800',    sub: 'text-rose-500' },
+        { label: 'Tasa de cierre',   value: winRate !== null ? `${winRate}%` : '—', icon: <BarChart2 size={16} />, bg: 'bg-white',      text: 'text-gray-900',    sub: 'text-gray-500' },
     ];
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {cards.map(c => (
                 <div key={c.label} className={`${c.bg} rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm`}>
                     <span className={c.sub}>{c.icon}</span>
@@ -368,6 +396,119 @@ function SummaryBar({ summary }: { summary: PipelineSummary }) {
                     </div>
                 </div>
             ))}
+        </div>
+    );
+}
+
+// ─── Funnel Section ───────────────────────────────────────────────────────────
+
+function formatDuration(hours: number | null | undefined): string {
+    if (hours == null || hours <= 0) return '—';
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    if (hours < 24) return `${hours.toFixed(1)}h`;
+    return `${(hours / 24).toFixed(1)}d`;
+}
+
+function FunnelSection({ summary, open, onToggle }: { summary: PipelineSummary; open: boolean; onToggle: () => void }) {
+    const activeStages = STAGES.filter(s => s.key !== 'closed_won' && s.key !== 'closed_lost');
+
+    const chartData = activeStages.map(s => {
+        const row = summary.by_stage.find(b => b.stage === s.key);
+        return { label: s.label, key: s.key, count: row?.count ?? 0 };
+    });
+
+    const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
+    const durationLabels: Record<string, string> = {
+        lead: 'Lead → Calificado',
+        qualified: 'Calificado → Propuesta',
+        proposal: 'Propuesta → Negociación',
+        negotiation: 'Negociación → Cierre',
+    };
+
+    return (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition"
+            >
+                <div className="flex items-center gap-2">
+                    <BarChart2 size={15} className="text-gray-400" />
+                    <span className="text-sm font-semibold text-gray-700">Embudo de conversión</span>
+                </div>
+                {open ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+            </button>
+
+            {open && (
+                <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Horizontal bar chart */}
+                    <div>
+                        <ResponsiveContainer width="100%" height={160}>
+                            <BarChart data={chartData} layout="vertical" margin={{ left: 4, right: 32, top: 4, bottom: 4 }}>
+                                <XAxis type="number" hide domain={[0, maxCount]} />
+                                <YAxis dataKey="label" type="category" width={90} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                <Tooltip
+                                    cursor={{ fill: '#f3f4f6' }}
+                                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                                    content={({ payload }) => {
+                                        if (!payload?.length) return null;
+                                        const entry = payload[0];
+                                        const value = entry.value as number;
+                                        const label = (entry.payload as { label: string }).label;
+                                        const idx = chartData.findIndex(d => d.label === label);
+                                        const prev = idx > 0 ? chartData[idx - 1].count : null;
+                                        const pct = prev && prev > 0 ? ` · ${Math.round((value / prev) * 100)}% conv.` : '';
+                                        return (
+                                            <div className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs shadow-sm">
+                                                <span className="font-medium">{label}</span>: {value} deals{pct}
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={24} label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}>
+                                    {chartData.map(entry => (
+                                        <Cell key={entry.key} fill={STAGE_HEX[entry.key]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+
+                        {/* Conversion % between stages */}
+                        <div className="flex justify-around mt-1">
+                            {chartData.slice(1).map((d, i) => {
+                                const prev = chartData[i].count;
+                                const pct = prev > 0 ? Math.round((d.count / prev) * 100) : null;
+                                return (
+                                    <div key={d.key} className="text-center">
+                                        <p className="text-[10px] text-gray-400">{chartData[i].label}→</p>
+                                        <p className={`text-xs font-bold ${pct !== null && pct >= 50 ? 'text-emerald-600' : 'text-amber-500'}`}>
+                                            {pct !== null ? `${pct}%` : '—'}
+                                        </p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Stage durations */}
+                    <div>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1">
+                            <Timer size={12} /> Tiempo promedio por etapa
+                        </p>
+                        <div className="space-y-2">
+                            {Object.entries(durationLabels).map(([stage, label]) => {
+                                const hours = summary.stage_durations?.[stage] ?? null;
+                                return (
+                                    <div key={stage} className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">{label}</span>
+                                        <span className="font-semibold text-gray-800 tabular-nums">{formatDuration(hours)}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -385,7 +526,14 @@ export default function PipelineIndex() {
     // Filters
     const [search, setSearch]           = useState('');
     const [agentFilter, setAgentFilter] = useState('');
+    const [dateFrom, setDateFrom]       = useState('');
+    const [dateTo, setDateTo]           = useState('');
+    const [valueMin, setValueMin]       = useState('');
+    const [valueMax, setValueMax]       = useState('');
     const filterRef = useRef<ReturnType<typeof setTimeout>>();
+
+    // UI state
+    const [funnelOpen, setFunnelOpen]   = useState(false);
 
     // Modal
     const [modalOpen, setModalOpen]       = useState(false);
@@ -418,11 +566,15 @@ export default function PipelineIndex() {
         clearTimeout(filterRef.current);
         filterRef.current = setTimeout(() => {
             const p: Record<string, string> = {};
-            if (search) p.search = search;
+            if (search)      p.search      = search;
             if (agentFilter) p.assigned_to = agentFilter;
+            if (dateFrom)    p.date_from   = dateFrom;
+            if (dateTo)      p.date_to     = dateTo;
+            if (valueMin)    p.value_min   = valueMin;
+            if (valueMax)    p.value_max   = valueMax;
             load(p);
         }, 320);
-    }, [search, agentFilter]);
+    }, [search, agentFilter, dateFrom, dateTo, valueMin, valueMax]);
 
     // ── Drag & drop ────────────────────────────────────────────────────────────
 
@@ -495,10 +647,12 @@ export default function PipelineIndex() {
             <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-gray-50 overflow-hidden">
 
                 {/* Top bar */}
-                <div className="shrink-0 px-5 pt-5 pb-3 bg-white border-b border-gray-200 flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                        <h1 className="text-lg font-bold text-gray-900">Pipeline</h1>
-                        <p className="text-xs text-gray-400 mt-0.5">Arrastra las tarjetas para cambiar de etapa</p>
+                <div className="shrink-0 px-5 pt-4 pb-3 bg-white border-b border-gray-200">
+                    <div className="flex items-center justify-between gap-4 mb-3">
+                        <div>
+                            <h1 className="text-lg font-bold text-gray-900">Pipeline</h1>
+                            <p className="text-xs text-gray-400 mt-0.5">Arrastra las tarjetas para cambiar de etapa</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Search */}
@@ -506,7 +660,7 @@ export default function PipelineIndex() {
                             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input value={search} onChange={e => setSearch(e.target.value)}
                                 placeholder="Buscar deal…"
-                                className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-44" />
+                                className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-40" />
                         </div>
                         {/* Agent filter */}
                         <div className="relative">
@@ -519,12 +673,36 @@ export default function PipelineIndex() {
                             </select>
                             <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         </div>
+                        {/* Date range */}
+                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                            title="Desde"
+                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36" />
+                        <span className="text-xs text-gray-400">–</span>
+                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                            title="Hasta"
+                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36" />
+                        {/* Value range */}
+                        <input type="number" min="0" value={valueMin} onChange={e => setValueMin(e.target.value)}
+                            placeholder="Valor mín."
+                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-28" />
+                        <input type="number" min="0" value={valueMax} onChange={e => setValueMax(e.target.value)}
+                            placeholder="Valor máx."
+                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-28" />
+                        {/* Clear filters */}
+                        {(search || agentFilter || dateFrom || dateTo || valueMin || valueMax) && (
+                            <button onClick={() => { setSearch(''); setAgentFilter(''); setDateFrom(''); setDateTo(''); setValueMin(''); setValueMax(''); }}
+                                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition">
+                                <X size={12} /> Limpiar
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
                     {/* Summary */}
                     {summary && <SummaryBar summary={summary} />}
+                    {/* Funnel */}
+                    {summary && <FunnelSection summary={summary} open={funnelOpen} onToggle={() => setFunnelOpen(o => !o)} />}
 
                     {/* Error */}
                     {error && (

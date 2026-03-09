@@ -73,14 +73,12 @@ class MessageController extends Controller
             ['ContentType' => $mimeType]
         );
 
-        $mediaUrl = Storage::disk('s3')->url($path);
-
         $message = Message::create([
             'conversation_id'  => $conversation->id,
             'tenant_id'        => $conversation->tenant_id,
             'direction'        => MessageDirection::Out,
             'body'             => $request->input('body'),
-            'media_url'        => $mediaUrl,
+            'media_url'        => $path,
             'media_type'       => $mediaType,
             'media_mime_type'  => $mimeType,
             'media_filename'   => $filename,

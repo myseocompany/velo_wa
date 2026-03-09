@@ -208,6 +208,7 @@ export default function MessageThread({
     const [mediaFile, setMediaFile]     = useState<File | null>(null);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [quickReplies, setQuickReplies] = useState<QuickReply[] | null>(null);
+    const [selectedQuickReply, setSelectedQuickReply] = useState<QuickReply | null>(null);
     const [showQR, setShowQR]           = useState(false);
     const [qrQuery, setQrQuery]         = useState('');
 
@@ -221,6 +222,7 @@ export default function MessageThread({
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'instant' });
         textareaRef.current?.focus();
+        setSelectedQuickReply(null);
     }, [conversationId]);
 
     // Scroll to bottom on new message (only if user is near bottom)
@@ -297,6 +299,9 @@ export default function MessageThread({
     function handleBodyChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
         const value = e.target.value;
         setBody(value);
+        if (selectedQuickReply && value !== selectedQuickReply.body) {
+            setSelectedQuickReply(null);
+        }
 
         if (value.startsWith('/')) {
             const query = value.slice(1);
@@ -310,6 +315,7 @@ export default function MessageThread({
 
     function handleQuickReplySelect(qr: QuickReply) {
         setBody(qr.body);
+        setSelectedQuickReply(qr);
         setShowQR(false);
         setQrQuery('');
     }
@@ -327,13 +333,37 @@ export default function MessageThread({
         setSending(true);
         const savedBody = body;
         const savedFile = mediaFile;
+        const savedQuickReply = selectedQuickReply;
         setBody('');
         setMediaFile(null);
+        setSelectedQuickReply(null);
 
         try {
             let res: { data: { data: Message } };
+            let quickReplyToSend: QuickReply | null = savedQuickReply;
 
-            if (savedFile) {
+            // Support direct slash commands like "/horario" without selecting from picker.
+            if (!quickReplyToSend && !savedFile && text.startsWith('/')) {
+                const shortcut = text.slice(1).trim().toLowerCase();
+                const isExactSlashCommand = shortcut !== '' && !shortcut.includes(' ');
+
+                if (isExactSlashCommand) {
+                    let pool = quickReplies;
+                    if (pool === null) {
+                        const qrRes = await axios.get<{ data: QuickReply[] }>('/api/v1/quick-replies');
+                        pool = qrRes.data.data;
+                        setQuickReplies(pool);
+                    }
+
+                    quickReplyToSend = pool.find((qr) => qr.shortcut.toLowerCase() === shortcut) ?? null;
+                }
+            }
+
+            if (quickReplyToSend && !savedFile) {
+                res = await axios.post(
+                    `/api/v1/conversations/${conversationId}/messages/quick-reply/${quickReplyToSend.id}`,
+                );
+            } else if (savedFile) {
                 const form = new FormData();
                 form.append('media', savedFile);
                 if (text) form.append('body', text);
@@ -348,6 +378,7 @@ export default function MessageThread({
         } catch {
             setBody(savedBody);
             setMediaFile(savedFile);
+            setSelectedQuickReply(savedQuickReply);
         } finally {
             setSending(false);
         }

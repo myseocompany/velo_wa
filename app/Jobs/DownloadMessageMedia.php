@@ -77,10 +77,8 @@ class DownloadMessageMedia implements ShouldQueue
                 'ContentType' => $this->mediaMimeType ?? 'application/octet-stream',
             ]);
 
-            $url = Storage::disk('s3')->url($path);
-
             $message->update([
-                'media_url'       => $url,
+                'media_url'       => $path,
                 'media_type'      => $this->mediaType,
                 'media_mime_type' => $this->mediaMimeType,
                 'media_filename'  => $this->mediaFilename,

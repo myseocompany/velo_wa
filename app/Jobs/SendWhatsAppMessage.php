@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class SendWhatsAppMessage implements ShouldQueue
@@ -50,11 +51,17 @@ class SendWhatsAppMessage implements ShouldQueue
 
         try {
             if ($message->hasMedia() && $message->media_url) {
+                // Evolution API runs in Docker and cannot reach the host MinIO URL.
+                // Read the file from S3 and pass it as a base64 data URI instead.
+                $s3Path   = $this->resolveS3Path($message->media_url);
+                $binary   = Storage::disk('s3')->get($s3Path);
+                $mediaB64 = base64_encode($binary);
+
                 $result = $client->sendMedia(
                     $instanceName,
                     $phone,
                     $message->media_type,
-                    $message->media_url,
+                    $mediaB64,
                     $message->body,
                 );
             } else {
@@ -94,5 +101,24 @@ class SendWhatsAppMessage implements ShouldQueue
         }
 
         $this->message->update($updates);
+    }
+
+    /**
+     * Extract the S3 path from either a stored path or a legacy full URL.
+     * New records store "tenantId/media/YYYY-MM/file.ext".
+     * Legacy records may store "http://host/bucket/tenantId/media/...".
+     */
+    private function resolveS3Path(string $mediaUrl): string
+    {
+        if (! str_starts_with($mediaUrl, 'http')) {
+            return $mediaUrl;
+        }
+
+        $bucket = config('filesystems.disks.s3.bucket', 'velo-media');
+        if (preg_match('~/' . preg_quote($bucket, '~') . '/(.+)~', $mediaUrl, $m)) {
+            return $m[1];
+        }
+
+        return $mediaUrl;
     }
 }

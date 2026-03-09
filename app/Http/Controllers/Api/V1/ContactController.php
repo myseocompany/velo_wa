@@ -20,10 +20,12 @@ class ContactController extends Controller
 
         $search = trim($request->string('search')->toString());
         if ($search !== '') {
-            $query->where(function ($q) use ($search): void {
+            $phoneSearch = preg_replace('/[\s\+\-\(\)]+/', '', $search);
+
+            $query->where(function ($q) use ($search, $phoneSearch): void {
                 $q->where('name', 'ilike', '%' . $search . '%')
                     ->orWhere('push_name', 'ilike', '%' . $search . '%')
-                    ->orWhere('phone', 'ilike', '%' . $search . '%')
+                    ->orWhere('phone', 'ilike', '%' . $phoneSearch . '%')
                     ->orWhere('email', 'ilike', '%' . $search . '%');
             });
         }

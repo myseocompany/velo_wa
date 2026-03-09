@@ -44,11 +44,14 @@ class ConversationController extends Controller
 
         $search = trim($request->string('search')->toString());
         if ($search !== '') {
-            $query->whereHas('contact', function ($contactQuery) use ($search): void {
-                $contactQuery->where(function ($q) use ($search): void {
+            // Normalize phone search: strip +, spaces, dashes so "+57 301 5639627" matches "573015639627"
+            $phoneSearch = preg_replace('/[\s\+\-\(\)]+/', '', $search);
+
+            $query->whereHas('contact', function ($contactQuery) use ($search, $phoneSearch): void {
+                $contactQuery->where(function ($q) use ($search, $phoneSearch): void {
                     $q->where('name', 'ilike', '%' . $search . '%')
                         ->orWhere('push_name', 'ilike', '%' . $search . '%')
-                        ->orWhere('phone', 'ilike', '%' . $search . '%');
+                        ->orWhere('phone', 'ilike', '%' . $phoneSearch . '%');
                 });
             });
         }

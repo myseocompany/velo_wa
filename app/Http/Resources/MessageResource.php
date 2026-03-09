@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class MessageResource extends JsonResource
 {
@@ -15,7 +16,7 @@ class MessageResource extends JsonResource
             'id'             => $this->id,
             'direction'      => $this->direction->value,
             'body'           => $this->body,
-            'media_url'      => $this->media_url,
+            'media_url'      => $this->resolveMediaUrl(),
             'media_type'     => $this->media_type,
             'media_mime_type' => $this->media_mime_type,
             'media_filename' => $this->media_filename,
@@ -26,5 +27,41 @@ class MessageResource extends JsonResource
             'error_message'  => $this->error_message,
             'created_at'     => $this->created_at->toIso8601String(),
         ];
+    }
+
+    private function resolveMediaUrl(): ?string
+    {
+        $stored = $this->media_url;
+
+        if (! $stored) {
+            return null;
+        }
+
+        // Resolve the S3 path, whether stored as a relative path or a legacy full URL
+        // (e.g. "http://minio:9000/velo-media/..." from previous versions).
+        $path = $this->extractS3Path($stored);
+
+        if (! $path) {
+            return null;
+        }
+
+        return Storage::disk('s3')->temporaryUrl($path, now()->addHours(6));
+    }
+
+    private function extractS3Path(string $stored): ?string
+    {
+        // Already a relative path — use directly.
+        if (! str_starts_with($stored, 'http')) {
+            return $stored;
+        }
+
+        // Legacy full URL: strip scheme + host + "/bucket/" prefix.
+        $bucket = config('filesystems.disks.s3.bucket', 'velo-media');
+
+        if (preg_match('~/' . preg_quote($bucket, '~') . '/(.+)~', $stored, $m)) {
+            return $m[1];
+        }
+
+        return null;
     }
 }

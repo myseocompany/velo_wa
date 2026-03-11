@@ -32,24 +32,33 @@ class SendWhatsAppMessage implements ShouldQueue
 
     public function handle(WhatsAppClientService $client): void
     {
-        $message      = $this->message->load(['conversation.contact.tenant']);
-        $conversation = $message->conversation;
-        $contact      = $conversation->contact;
-        $tenant       = $contact->tenant;
-
-        if (! $tenant?->wa_instance_id) {
-            Log::warning('SendWhatsAppMessage: tenant has no WA instance', [
-                'message_id' => $message->id,
-                'tenant_id'  => $message->tenant_id,
-            ]);
-            $this->updateStatus(MessageStatus::Failed, 'Tenant has no WhatsApp instance configured');
-            return;
-        }
-
-        $instanceName = WhatsAppClientService::instanceName($tenant->id);
-        $phone        = $contact->phone;
-
         try {
+            $message      = $this->message->load(['conversation.contact.tenant']);
+            $conversation = $message->conversation;
+            $contact      = $conversation->contact;
+            $tenant       = $contact?->tenant;
+
+            if (! $contact || ! $tenant) {
+                Log::warning('SendWhatsAppMessage: contact or tenant not found (soft-deleted?)', [
+                    'message_id'      => $message->id,
+                    'conversation_id' => $conversation?->id,
+                ]);
+                $this->updateStatus(MessageStatus::Failed, 'Contact or tenant not found');
+                return;
+            }
+
+            if (! $tenant->wa_instance_id) {
+                Log::warning('SendWhatsAppMessage: tenant has no WA instance', [
+                    'message_id' => $message->id,
+                    'tenant_id'  => $message->tenant_id,
+                ]);
+                $this->updateStatus(MessageStatus::Failed, 'Tenant has no WhatsApp instance configured');
+                return;
+            }
+
+            $instanceName = WhatsAppClientService::instanceName($tenant->id);
+            $phone        = $contact->phone;
+
             if ($message->hasMedia() && $message->media_url) {
                 // Evolution API runs in Docker and cannot reach the host MinIO URL.
                 // Read the file from S3 and pass it as a base64 data URI instead.
@@ -78,7 +87,7 @@ class SendWhatsAppMessage implements ShouldQueue
             broadcast(new MessageReceived($message->fresh()));
         } catch (Throwable $e) {
             Log::error('SendWhatsAppMessage: failed to send', [
-                'message_id' => $message->id,
+                'message_id' => $this->message->id,
                 'error'      => $e->getMessage(),
             ]);
 

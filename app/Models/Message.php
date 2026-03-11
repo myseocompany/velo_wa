@@ -30,6 +30,8 @@ class Message extends Model
         'error_message',
         'sent_by',
         'is_automated',
+        // Allow explicit timestamp override for inbound messages (WhatsApp timestamp)
+        'created_at',
     ];
 
     protected function casts(): array

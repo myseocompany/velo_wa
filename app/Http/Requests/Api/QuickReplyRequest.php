@@ -14,6 +14,13 @@ class QuickReplyRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('shortcut')) {
+            $this->merge(['shortcut' => strtolower(trim($this->string('shortcut')->toString()))]);
+        }
+    }
+
     public function rules(): array
     {
         $tenantId = $this->user()->tenant_id;

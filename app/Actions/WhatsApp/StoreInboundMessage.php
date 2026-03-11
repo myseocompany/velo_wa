@@ -54,18 +54,15 @@ class StoreInboundMessage
             'updated_at'       => now(),
         ]);
 
-        // Update conversation counters
-        $updates = [
-            'last_message_at' => $message->created_at,
-        ];
-        $updates['message_count'] = $conversation->message_count + 1;
+        // Update conversation counters atomically to prevent race conditions
+        $extraUpdates = ['last_message_at' => $message->created_at];
 
         // Set Dt1 first_response_at: first outbound message on a conversation that started with inbound
         if ($fromMe && $conversation->first_response_at === null && $conversation->first_message_at !== null) {
-            $updates['first_response_at'] = $message->created_at;
+            $extraUpdates['first_response_at'] = $message->created_at;
         }
 
-        $conversation->update($updates);
+        $conversation->increment('message_count', 1, $extraUpdates);
 
         return $message;
     }

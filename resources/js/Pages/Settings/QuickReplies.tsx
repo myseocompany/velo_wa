@@ -19,7 +19,7 @@ interface QuickReplyModalProps {
 }
 
 function normalizeShortcut(value: string): string {
-    return value.trim().replace(/^\/+/, '');
+    return value.trim().replace(/^\/+/, '').toLowerCase();
 }
 
 function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps) {

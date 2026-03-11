@@ -50,8 +50,11 @@ class ConversationController extends Controller
             $query->whereHas('contact', function ($contactQuery) use ($search, $phoneSearch): void {
                 $contactQuery->where(function ($q) use ($search, $phoneSearch): void {
                     $q->where('name', 'ilike', '%' . $search . '%')
-                        ->orWhere('push_name', 'ilike', '%' . $search . '%')
-                        ->orWhere('phone', 'ilike', '%' . $phoneSearch . '%');
+                        ->orWhere('push_name', 'ilike', '%' . $search . '%');
+
+                    if ($phoneSearch !== '') {
+                        $q->orWhere('phone', 'ilike', '%' . $phoneSearch . '%');
+                    }
                 });
             });
         }

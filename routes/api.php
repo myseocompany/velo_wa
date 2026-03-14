@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\AssignmentRuleController;
 use App\Http\Controllers\Api\V1\AutomationController;
 use App\Http\Controllers\Api\V1\ConversationController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\QuickReplyController;
+use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
@@ -51,9 +53,16 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->name('messages.store-media');
     Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->name('messages.store-quick-reply');
 
-    // Team — all authenticated users
+    // Team — members/workload readable by all; management admin+
     Route::get('/team/members', [TeamController::class, 'members'])->name('team.members');
     Route::get('/team/workload', [TeamController::class, 'workload'])->name('team.workload');
+    Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/team/invite', [TeamController::class, 'invite'])->name('team.invite');
+        Route::patch('/team/{member}', [TeamController::class, 'update'])->name('team.update');
+        Route::patch('/team/{member}/deactivate', [TeamController::class, 'deactivate'])->name('team.deactivate');
+        Route::patch('/team/{member}/reactivate', [TeamController::class, 'reactivate'])->name('team.reactivate');
+    });
 
     // Contacts — read open to all; destructive operations admin+
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
@@ -106,4 +115,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::delete('/automations/{automation}', [AutomationController::class, 'destroy'])->name('automations.destroy');
         Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
     });
+
+    // Tenant settings — owner only
+    Route::get('/tenant/settings', [TenantSettingsController::class, 'show'])->name('tenant.settings.show');
+    Route::patch('/tenant/settings', [TenantSettingsController::class, 'update'])->middleware('role:owner')->name('tenant.settings.update');
+
+    // Activity log — admin+
+    Route::get('/activity', [ActivityController::class, 'index'])->middleware('role:admin')->name('activity.index');
 });

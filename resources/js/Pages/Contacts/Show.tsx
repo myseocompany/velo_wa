@@ -311,19 +311,29 @@ export default function ContactShow({ contactId }: Props) {
                         <div className="space-y-4 px-5 py-4">
                             <div>
                                 <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
-                                <input value={editName} onChange={(e) => setEditName(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+                                <input
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="mb-1 block text-xs font-medium text-gray-700">Email</label>
-                                    <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email"
-                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+                                    <input
+                                        value={editEmail}
+                                        onChange={(e) => setEditEmail(e.target.value)}
+                                        type="email"
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                    />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-xs font-medium text-gray-700">Empresa</label>
-                                    <input value={editCompany} onChange={(e) => setEditCompany(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+                                    <input
+                                        value={editCompany}
+                                        onChange={(e) => setEditCompany(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                    />
                                 </div>
                             </div>
                             <div>
@@ -332,18 +342,28 @@ export default function ContactShow({ contactId }: Props) {
                             </div>
                             <div>
                                 <label className="mb-1 block text-xs font-medium text-gray-700">Agente asignado</label>
-                                <select value={editAssigned} onChange={(e) => setEditAssigned(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                <select
+                                    value={editAssigned}
+                                    onChange={(e) => setEditAssigned(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                >
                                     <option value="">Sin asignar</option>
-                                    {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                    {agents.map((a) => (
+                                        <option key={a.id} value={a.id}>
+                                            {a.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
                                 <label className="mb-1 block text-xs font-medium text-gray-700">Notas</label>
-                                <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3}
-                                    className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+                                <textarea
+                                    value={editNotes}
+                                    onChange={(e) => setEditNotes(e.target.value)}
+                                    rows={3}
+                                    className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                />
                             </div>
-                        </div>
                             <div>
                                 <div className="mb-1 flex items-center justify-between">
                                     <label className="text-xs font-medium text-gray-700">Campos adicionales</label>

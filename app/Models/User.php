@@ -30,6 +30,8 @@ class User extends Authenticatable
         'last_seen_at',
         'max_concurrent_conversations',
         'specialties',
+        'avatar_url',
+        'notification_preferences',
     ];
 
     protected $hidden = [
@@ -48,6 +50,7 @@ class User extends Authenticatable
             'is_online' => 'boolean',
             'max_concurrent_conversations' => 'integer',
             'specialties' => 'array',
+            'notification_preferences' => 'array',
         ];
     }
 

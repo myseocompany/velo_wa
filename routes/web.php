@@ -37,12 +37,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         return Inertia::render('Contacts/Show', ['contactId' => $contact]);
     })->name('contacts.view');
 
-    // Pipeline (Phase 3)
-    // Team workload
+    // Team
     Route::get('/team', function () {
         return Inertia::render('Team/Index');
     })->name('team');
 
+    // Pipeline
     Route::get('/pipeline', function () {
         return Inertia::render('Pipeline/Index');
     })->name('pipeline');
@@ -51,6 +51,18 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('/settings', function () {
         return Inertia::render('Settings/Index');
     })->name('settings');
+
+    Route::get('/settings/general', function () {
+        return Inertia::render('Settings/General');
+    })->name('settings.general');
+
+    Route::get('/settings/team', function () {
+        return Inertia::render('Settings/Team');
+    })->name('settings.team');
+
+    Route::get('/settings/activity', function () {
+        return Inertia::render('Settings/ActivityLog');
+    })->name('settings.activity');
 
     Route::get('/settings/whatsapp', function () {
         return Inertia::render('Settings/WhatsApp');
@@ -75,6 +87,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
+    Route::patch('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 

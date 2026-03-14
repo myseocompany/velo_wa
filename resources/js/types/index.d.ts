@@ -14,6 +14,12 @@ export type ContactSource = 'whatsapp' | 'manual' | 'import';
 
 // ─── Models ──────────────────────────────────────────────────────────────────
 
+export interface BusinessHourDay {
+    enabled: boolean;
+    start: string;
+    end: string;
+}
+
 export interface Tenant {
     id: string;
     name: string;
@@ -22,13 +28,21 @@ export interface Tenant {
     wa_status: WaStatus;
     wa_phone: string | null;
     wa_connected_at: string | null;
-    max_agents: number;
-    max_contacts: number;
+    max_agents: number | null;
+    max_contacts: number | null;
     timezone: string;
-    business_hours: Record<string, { open: string; close: string }> | null;
-    auto_close_hours: number;
+    business_hours: Record<string, BusinessHourDay> | null;
+    auto_close_hours: number | null;
     created_at: string;
     updated_at: string;
+}
+
+export interface NotificationPreferences {
+    new_message?: boolean;
+    new_conversation?: boolean;
+    assignment?: boolean;
+    deal_stage_change?: boolean;
+    sound_enabled?: boolean;
 }
 
 export interface User {
@@ -43,6 +57,9 @@ export interface User {
     last_seen_at: string | null;
     max_concurrent_conversations: number;
     specialties: string[] | null;
+    avatar_url: string | null;
+    notification_preferences: NotificationPreferences | null;
+    created_at?: string;
     tenant?: Tenant;
 }
 

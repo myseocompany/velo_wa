@@ -245,15 +245,13 @@ class GetDashboardStats
         $truncUnit = $this->pgTruncUnit($bucket);
 
         // SQL-side aggregation — avoids loading all rows into PHP
+        $expr = "DATE_TRUNC('{$truncUnit}', created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$timezone}')";
+
         $rows = DB::table('conversations')
-            ->selectRaw(
-                "DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?) AS bkt, COUNT(*) AS cnt",
-                [$truncUnit, $timezone],
-            )
+            ->selectRaw("{$expr} AS bkt, COUNT(*) AS cnt")
             ->where('tenant_id', auth()->user()->tenant_id)
             ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
-            ->whereNull('deleted_at')
-            ->groupByRaw("DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?)", [$truncUnit, $timezone])
+            ->groupByRaw($expr)
             ->get()
             ->keyBy(fn ($r) => CarbonImmutable::parse($r->bkt)->setTimezone($timezone)->format('Y-m-d H:i:s'));
 
@@ -284,14 +282,13 @@ class GetDashboardStats
         $truncUnit = $this->pgTruncUnit($bucket);
 
         // SQL-side aggregation grouped by bucket + direction
+        $expr = "DATE_TRUNC('{$truncUnit}', created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$timezone}')";
+
         $rows = DB::table('messages')
-            ->selectRaw(
-                "DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?) AS bkt, direction, COUNT(*) AS cnt",
-                [$truncUnit, $timezone],
-            )
+            ->selectRaw("{$expr} AS bkt, direction, COUNT(*) AS cnt")
             ->where('tenant_id', auth()->user()->tenant_id)
             ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
-            ->groupByRaw("DATE_TRUNC(?, created_at AT TIME ZONE 'UTC' AT TIME ZONE ?), direction", [$truncUnit, $timezone])
+            ->groupByRaw("{$expr}, direction")
             ->get();
 
         // Index by bucket → direction → count

@@ -44,7 +44,8 @@ class ContactSearchTest extends TestCase
         $this->createContact(['name' => 'María López', 'phone' => '571111111111', 'wa_id' => '571111111111']);
         $this->createContact(['name' => 'Carlos García', 'phone' => '572222222222', 'wa_id' => '572222222222']);
 
-        $response = $this->actingAs($this->agent)->getJson('/api/v1/contacts?search=María');
+        $search = mb_convert_encoding('María', 'UTF-8', 'UTF-8');
+        $response = $this->actingAs($this->agent)->getJson('/api/v1/contacts?search=' . rawurlencode($search));
 
         $response->assertOk();
         $response->assertJsonCount(1, 'data');

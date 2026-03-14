@@ -88,6 +88,7 @@ export default function ContactShow({ contactId }: Props) {
     const [editNotes, setEditNotes]       = useState('');
     const [editTags, setEditTags]         = useState<string[]>([]);
     const [editAssigned, setEditAssigned] = useState('');
+    const [editCustomFields, setEditCustomFields] = useState<Record<string, string>>({});
 
     useEffect(() => {
         axios.get<{ data: User[] }>('/api/v1/team/members').then((r) => setAgents(r.data.data));
@@ -108,6 +109,8 @@ export default function ContactShow({ contactId }: Props) {
         setEditNotes(contact.notes ?? '');
         setEditTags(contact.tags ?? []);
         setEditAssigned(contact.assigned_to ?? '');
+        const cf = (contact.custom_fields ?? {}) as Record<string, string>;
+        setEditCustomFields(Object.fromEntries(Object.entries(cf).map(([k, v]) => [k, String(v ?? '')])));
         setEditing(true);
     }
 
@@ -121,6 +124,7 @@ export default function ContactShow({ contactId }: Props) {
                 company:     editCompany || null,
                 notes:       editNotes || null,
                 tags:        editTags,
+                custom_fields: editCustomFields,
                 assigned_to: editAssigned || null,
             });
             setContact(res.data.data);
@@ -209,6 +213,19 @@ export default function ContactShow({ contactId }: Props) {
                                     </div>
                                 )}
                             </div>
+                            {Object.keys(contact.custom_fields ?? {}).length > 0 && (
+                                <div className="border-t border-gray-100 px-4 py-3">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Campos adicionales</p>
+                                    <dl className="space-y-1">
+                                        {Object.entries(contact.custom_fields ?? {}).map(([k, v]) => (
+                                            <div key={k} className="flex gap-2 text-sm">
+                                                <dt className="font-medium text-gray-500 capitalize">{k}:</dt>
+                                                <dd className="text-gray-700">{String(v)}</dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </div>
+                            )}
 
                             <div className="border-t border-gray-100 px-4 py-3">
                                 <button
@@ -325,6 +342,61 @@ export default function ContactShow({ contactId }: Props) {
                                 <label className="mb-1 block text-xs font-medium text-gray-700">Notas</label>
                                 <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3}
                                     className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+                            </div>
+                        </div>
+                            <div>
+                                <div className="mb-1 flex items-center justify-between">
+                                    <label className="text-xs font-medium text-gray-700">Campos adicionales</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const key = `campo_${Object.keys(editCustomFields).length + 1}`;
+                                            setEditCustomFields({ ...editCustomFields, [key]: '' });
+                                        }}
+                                        className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+                                    >
+                                        + Añadir campo
+                                    </button>
+                                </div>
+                                {Object.keys(editCustomFields).length === 0 ? (
+                                    <p className="text-xs text-gray-400">Sin campos adicionales.</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {Object.entries(editCustomFields).map(([k, v]) => (
+                                            <div key={k} className="flex gap-2">
+                                                <input
+                                                    value={k}
+                                                    onChange={(e) => {
+                                                        const newKey = e.target.value;
+                                                        const entries = Object.entries(editCustomFields).map(([ek, ev]) =>
+                                                            ek === k ? [newKey, ev] : [ek, ev]
+                                                        );
+                                                        setEditCustomFields(Object.fromEntries(entries));
+                                                    }}
+                                                    placeholder="clave"
+                                                    className="w-1/3 rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-brand-500 focus:outline-none"
+                                                />
+                                                <input
+                                                    value={v}
+                                                    onChange={(e) => setEditCustomFields({ ...editCustomFields, [k]: e.target.value })}
+                                                    placeholder="valor"
+                                                    className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-brand-500 focus:outline-none"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const next = { ...editCustomFields };
+                                                        delete next[k];
+                                                        setEditCustomFields(next);
+                                                    }}
+                                                    className="text-gray-400 hover:text-red-500"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

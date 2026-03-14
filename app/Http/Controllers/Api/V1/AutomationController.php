@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AutomationRequest;
+use App\Http\Resources\AutomationLogResource;
 use App\Http\Resources\AutomationResource;
 use App\Models\Automation;
 use Illuminate\Http\JsonResponse;
@@ -64,5 +65,15 @@ class AutomationController extends Controller
         $automation->update(['is_active' => ! $automation->is_active]);
 
         return response()->json(['data' => new AutomationResource($automation->fresh())]);
+    }
+
+    public function logs(Automation $automation): AnonymousResourceCollection
+    {
+        $logs = $automation->logs()
+            ->orderByDesc('triggered_at')
+            ->limit(50)
+            ->get();
+
+        return AutomationLogResource::collection($logs);
     }
 }

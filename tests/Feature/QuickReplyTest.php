@@ -16,6 +16,7 @@ class QuickReplyTest extends TestCase
 
     private Tenant $tenant;
     private User $agent;
+    private User $admin;
 
     protected function setUp(): void
     {
@@ -27,6 +28,7 @@ class QuickReplyTest extends TestCase
         ]);
 
         $this->agent = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->admin = User::factory()->admin()->create(['tenant_id' => $this->tenant->id]);
     }
 
     public function test_can_list_quick_replies(): void
@@ -46,7 +48,7 @@ class QuickReplyTest extends TestCase
 
     public function test_can_create_quick_reply(): void
     {
-        $response = $this->actingAs($this->agent)->postJson('/api/v1/quick-replies', [
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/quick-replies', [
             'shortcut' => 'horario',
             'title'    => 'Horario de atención',
             'body'     => 'Atendemos de lunes a viernes de 8am a 6pm.',
@@ -61,7 +63,7 @@ class QuickReplyTest extends TestCase
 
     public function test_shortcut_is_normalized_to_lowercase_on_create(): void
     {
-        $response = $this->actingAs($this->agent)->postJson('/api/v1/quick-replies', [
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/quick-replies', [
             'shortcut' => 'HORARIO',
             'title'    => 'Horario',
             'body'     => 'Atendemos de lunes a viernes.',
@@ -87,7 +89,7 @@ class QuickReplyTest extends TestCase
             'body'      => 'Hola!',
         ]);
 
-        $response = $this->actingAs($this->agent)->postJson('/api/v1/quick-replies', [
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/quick-replies', [
             'shortcut' => 'hola',
             'title'    => 'Otro saludo',
             'body'     => 'Hola de nuevo!',
@@ -107,7 +109,7 @@ class QuickReplyTest extends TestCase
         ]);
 
         // Backend normalizes "HOLA" → "hola" before uniqueness check
-        $response = $this->actingAs($this->agent)->postJson('/api/v1/quick-replies', [
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/quick-replies', [
             'shortcut' => 'HOLA',
             'title'    => 'Saludo mayúsculas',
             'body'     => 'Hola en mayúsculas!',
@@ -126,7 +128,7 @@ class QuickReplyTest extends TestCase
             'body'      => 'Hola!',
         ]);
 
-        $response = $this->actingAs($this->agent)->putJson("/api/v1/quick-replies/{$qr->id}", [
+        $response = $this->actingAs($this->admin)->putJson("/api/v1/quick-replies/{$qr->id}", [
             'shortcut' => 'hola',
             'title'    => 'Saludo actualizado',
             'body'     => 'Hola actualizado!',
@@ -145,7 +147,7 @@ class QuickReplyTest extends TestCase
             'body'       => 'Este se borra.',
         ]);
 
-        $response = $this->actingAs($this->agent)->deleteJson("/api/v1/quick-replies/{$qr->id}");
+        $response = $this->actingAs($this->admin)->deleteJson("/api/v1/quick-replies/{$qr->id}");
 
         $response->assertNoContent();
         $this->assertDatabaseMissing('quick_replies', ['id' => $qr->id]);
@@ -153,7 +155,7 @@ class QuickReplyTest extends TestCase
 
     public function test_shortcut_requires_alpha_dash_characters(): void
     {
-        $response = $this->actingAs($this->agent)->postJson('/api/v1/quick-replies', [
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/quick-replies', [
             'shortcut' => 'hola mundo',
             'title'    => 'Saludo con espacio',
             'body'     => 'Hola!',
@@ -161,6 +163,17 @@ class QuickReplyTest extends TestCase
 
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['shortcut']);
+    }
+
+    public function test_agent_cannot_create_quick_reply(): void
+    {
+        $response = $this->actingAs($this->agent)->postJson('/api/v1/quick-replies', [
+            'shortcut' => 'horario',
+            'title'    => 'Horario',
+            'body'     => 'Atendemos de lunes a viernes.',
+        ]);
+
+        $response->assertForbidden();
     }
 
     public function test_quick_replies_are_tenant_isolated(): void

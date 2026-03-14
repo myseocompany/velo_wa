@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Enums\AutomationTriggerType;
 use App\Enums\ConversationStatus;
 use App\Models\Automation;
+use App\Models\AutomationLog;
 use App\Models\Conversation;
 use App\Services\AutomationEngineService;
 use Illuminate\Bus\Queueable;
@@ -41,8 +42,24 @@ class ProcessNoResponseTimeout implements ShouldQueue
                 ->where('first_message_at', '<=', now()->subMinutes($minutes))
                 ->get();
 
+            // Pre-load conversation IDs that already fired successfully for this automation
+            $alreadyFired = AutomationLog::query()
+                ->withoutGlobalScopes()
+                ->where('automation_id', $automation->id)
+                ->where('status', 'success')
+                ->pluck('conversation_id')
+                ->flip();
+
             foreach ($conversations as $conversation) {
-                $engine->dispatch($conversation, AutomationTriggerType::NoResponseTimeout);
+                if (isset($alreadyFired[$conversation->id])) {
+                    continue;
+                }
+
+                $engine->dispatchAutomation(
+                    $automation,
+                    $conversation,
+                    AutomationTriggerType::NoResponseTimeout,
+                );
             }
         }
     }

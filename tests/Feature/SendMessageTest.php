@@ -138,6 +138,56 @@ class SendMessageTest extends TestCase
         $response->assertUnauthorized();
     }
 
+    public function test_first_response_at_is_set_on_first_outbound_message(): void
+    {
+        Queue::fake();
+
+        // Conversation started with an inbound message (first_message_at is set)
+        $this->conversation->update(['first_message_at' => now()->subMinutes(5)]);
+
+        $this->actingAs($this->agent)->postJson(
+            "/api/v1/conversations/{$this->conversation->id}/messages",
+            ['body' => 'Primera respuesta del agente']
+        );
+
+        $this->assertNotNull($this->conversation->fresh()->first_response_at);
+    }
+
+    public function test_first_response_at_is_not_overwritten_on_second_outbound_message(): void
+    {
+        Queue::fake();
+
+        $this->conversation->update([
+            'first_message_at'  => now()->subMinutes(10),
+            'first_response_at' => $original = now()->subMinutes(5),
+        ]);
+
+        $this->actingAs($this->agent)->postJson(
+            "/api/v1/conversations/{$this->conversation->id}/messages",
+            ['body' => 'Segunda respuesta']
+        );
+
+        $this->assertEquals(
+            $original->toDateTimeString(),
+            $this->conversation->fresh()->first_response_at->toDateTimeString()
+        );
+    }
+
+    public function test_first_response_at_is_not_set_when_conversation_has_no_inbound_message(): void
+    {
+        Queue::fake();
+
+        // first_message_at is null — agent-initiated conversation (outbound first)
+        $this->assertNull($this->conversation->first_message_at);
+
+        $this->actingAs($this->agent)->postJson(
+            "/api/v1/conversations/{$this->conversation->id}/messages",
+            ['body' => 'Mensaje saliente inicial']
+        );
+
+        $this->assertNull($this->conversation->fresh()->first_response_at);
+    }
+
     public function test_send_message_fails_gracefully_when_contact_soft_deleted(): void
     {
         Queue::fake();
@@ -159,9 +209,15 @@ class SendMessageTest extends TestCase
 
         // Simulate job execution — should mark message as failed, not throw
         $job = new SendWhatsAppMessage($message);
-        $this->assertDoesNotThrow(fn () => app()->call([$job, 'handle'], [
-            \App\Services\WhatsAppClientService::class => $this->createMock(\App\Services\WhatsAppClientService::class),
-        ]));
+        $threw = false;
+        try {
+            app()->call([$job, 'handle'], [
+                \App\Services\WhatsAppClientService::class => $this->createMock(\App\Services\WhatsAppClientService::class),
+            ]);
+        } catch (\Throwable) {
+            $threw = true;
+        }
+        $this->assertFalse($threw, 'SendWhatsAppMessage::handle() should not throw');
 
         $this->assertEquals(
             MessageStatus::Failed->value,

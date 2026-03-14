@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\QuickReplyRequest;
 use App\Http\Resources\QuickReplyResource;
 use App\Models\QuickReply;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -20,10 +21,11 @@ class QuickReplyController extends Controller
 
         $search = trim($request->string('search')->toString());
         if ($search !== '') {
-            $query->where(function ($q) use ($search): void {
-                $q->where('shortcut', 'ilike', '%' . $search . '%')
-                    ->orWhere('title', 'ilike', '%' . $search . '%')
-                    ->orWhere('body', 'ilike', '%' . $search . '%');
+            $lower = mb_strtolower($search);
+            $query->where(function ($q) use ($lower): void {
+                $q->whereRaw('LOWER(shortcut) LIKE ?', ['%' . $lower . '%'])
+                    ->orWhereRaw('LOWER(title) LIKE ?', ['%' . $lower . '%'])
+                    ->orWhereRaw('LOWER(body) LIKE ?', ['%' . $lower . '%']);
             });
         }
 
@@ -34,7 +36,7 @@ class QuickReplyController extends Controller
         return QuickReplyResource::collection($query->get());
     }
 
-    public function store(QuickReplyRequest $request): QuickReplyResource
+    public function store(QuickReplyRequest $request): JsonResponse
     {
         $quickReply = QuickReply::create([
             'tenant_id'     => $request->user()->tenant_id,
@@ -42,11 +44,11 @@ class QuickReplyController extends Controller
             'title'         => $request->input('title'),
             'body'          => $request->input('body'),
             'has_variables' => str_contains($request->input('body'), '{{'),
-            'category'      => $request->input('category'),
+            'category'      => $request->input('category', 'general'),
             'usage_count'   => 0,
         ]);
 
-        return new QuickReplyResource($quickReply);
+        return (new QuickReplyResource($quickReply))->response()->setStatusCode(201);
     }
 
     public function update(QuickReplyRequest $request, QuickReply $quickReply): QuickReplyResource
@@ -56,7 +58,7 @@ class QuickReplyController extends Controller
             'title'         => $request->input('title'),
             'body'          => $request->input('body'),
             'has_variables' => str_contains($request->input('body'), '{{'),
-            'category'      => $request->input('category'),
+            'category'      => $request->input('category', $quickReply->category),
         ]);
 
         return new QuickReplyResource($quickReply);

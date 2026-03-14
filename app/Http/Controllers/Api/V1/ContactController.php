@@ -21,18 +21,20 @@ class ContactController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Contact::query()->with('assignee');
+        $driver = DB::connection()->getDriverName();
 
-        $search = trim($request->string('search')->toString());
+        $search = $this->sanitizeSearchTerm(trim($request->string('search')->toString()));
         if ($search !== '') {
             $phoneSearch = preg_replace('/[\s\+\-\(\)]+/', '', $search);
+            $operator    = $driver === 'pgsql' ? 'ilike' : 'like';
 
-            $query->where(function ($q) use ($search, $phoneSearch): void {
-                $q->where('name', 'ilike', '%' . $search . '%')
-                    ->orWhere('push_name', 'ilike', '%' . $search . '%')
-                    ->orWhere('email', 'ilike', '%' . $search . '%');
+            $query->where(function ($q) use ($operator, $search, $phoneSearch): void {
+                $q->where('name', $operator, '%' . $search . '%')
+                    ->orWhere('push_name', $operator, '%' . $search . '%')
+                    ->orWhere('email', $operator, '%' . $search . '%');
 
                 if ($phoneSearch !== '') {
-                    $q->orWhere('phone', 'ilike', '%' . $phoneSearch . '%');
+                    $q->orWhere('phone', $operator, '%' . $phoneSearch . '%');
                 }
             });
         }
@@ -70,17 +72,31 @@ class ContactController extends Controller
         );
     }
 
+    private function sanitizeSearchTerm(string $search): string
+    {
+        if ($search === '') {
+            return $search;
+        }
+
+        if (! mb_check_encoding($search, 'UTF-8')) {
+            $search = mb_convert_encoding($search, 'UTF-8', ['UTF-8', 'ISO-8859-1', 'Windows-1252']);
+        }
+
+        $sanitized = iconv('UTF-8', 'UTF-8//IGNORE', $search);
+
+        return $sanitized === false ? $search : $sanitized;
+    }
+
     public function store(StoreContactRequest $request): ContactResource
     {
-        $phone = preg_replace('/[\s\-\(\)]+/', '', $request->string('phone')->toString());
-
         $contact = Contact::create([
-            'phone'       => $phone,
+            'phone'       => $request->string('phone')->toString(),
             'name'        => $request->input('name'),
             'email'       => $request->input('email'),
             'company'     => $request->input('company'),
             'notes'       => $request->input('notes'),
             'tags'        => $request->input('tags', []),
+            'custom_fields' => $request->input('custom_fields', []),
             'assigned_to' => $request->input('assigned_to'),
             'source'      => ContactSource::Manual,
         ]);
@@ -118,10 +134,17 @@ class ContactController extends Controller
 
             // Carry over fields missing from target
             $updates = [];
-            if (! $target->email    && $contact->email)    $updates['email']    = $contact->email;
-            if (! $target->company  && $contact->company)  $updates['company']  = $contact->company;
-            if (! $target->name     && $contact->name)     $updates['name']     = $contact->name;
-            if (! $target->notes    && $contact->notes)    $updates['notes']    = $contact->notes;
+            if (! $target->wa_id            && $contact->wa_id)           $updates['wa_id']           = $contact->wa_id;
+            if (! $target->push_name        && $contact->push_name)       $updates['push_name']       = $contact->push_name;
+            if (! $target->profile_pic_url  && $contact->profile_pic_url) $updates['profile_pic_url'] = $contact->profile_pic_url;
+            if (! $target->email            && $contact->email)           $updates['email']           = $contact->email;
+            if (! $target->company          && $contact->company)         $updates['company']         = $contact->company;
+            if (! $target->name             && $contact->name)            $updates['name']            = $contact->name;
+            if (! $target->notes            && $contact->notes)           $updates['notes']           = $contact->notes;
+            // Keep the earliest first_contact_at
+            if ($contact->first_contact_at && (! $target->first_contact_at || $contact->first_contact_at < $target->first_contact_at)) {
+                $updates['first_contact_at'] = $contact->first_contact_at;
+            }
             if ($updates) $target->update($updates);
 
             // Soft-delete the source
@@ -141,7 +164,7 @@ class ContactController extends Controller
     public function update(ContactRequest $request, Contact $contact): ContactResource
     {
         $contact->update($request->only([
-            'name', 'email', 'company', 'notes', 'tags', 'assigned_to',
+            'name', 'email', 'company', 'notes', 'tags', 'custom_fields', 'assigned_to',
         ]));
 
         return new ContactResource($contact->fresh('assignee'));
@@ -152,6 +175,44 @@ class ContactController extends Controller
         $contact->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * Contacts grouped by duplicate normalized phone within the tenant.
+     * Returns groups where more than one contact shares the same digits-only phone.
+     */
+    public function duplicates(): JsonResponse
+    {
+        $tenantId = request()->user()->tenant_id;
+
+        $duplicatePhones = DB::table('contacts')
+            ->selectRaw("REGEXP_REPLACE(phone, '[^0-9]', '', 'g') AS np")
+            ->where('tenant_id', $tenantId)
+            ->whereNull('deleted_at')
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->groupByRaw("REGEXP_REPLACE(phone, '[^0-9]', '', 'g')")
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('np');
+
+        if ($duplicatePhones->isEmpty()) {
+            return response()->json(['data' => []]);
+        }
+
+        $contacts = Contact::with('assignee')
+            ->whereIn(DB::raw("REGEXP_REPLACE(phone, '[^0-9]', '', 'g')"), $duplicatePhones->toArray())
+            ->orderBy('created_at')
+            ->get();
+
+        $groups = $contacts
+            ->groupBy(fn ($c) => preg_replace('/[^0-9]/', '', $c->phone ?? ''))
+            ->map(fn ($group, $phone) => [
+                'normalized_phone' => $phone,
+                'contacts'         => ContactResource::collection($group->values()),
+            ])
+            ->values();
+
+        return response()->json(['data' => $groups]);
     }
 
     /** All unique tags used across contacts in this tenant. */

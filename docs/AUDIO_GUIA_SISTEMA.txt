@@ -1,0 +1,361 @@
+GUÍA DE AUDIO: ENTENDIENDO VELO WA DE ARRIBA A ABAJO
+Narración completa para el fundador — Sistema AriCRM / Velo WA
+Duración estimada: 35 a 45 minutos
+
+---
+
+PARTE UNO: QUÉ ESTAMOS CONSTRUYENDO Y POR QUÉ
+
+Velo WA es una plataforma SaaS multi-tenant que conecta a empresas con WhatsApp para gestionar prospectos, conversaciones y ventas desde un solo lugar. Cada empresa que use la plataforma se llama "tenant". Cada tenant conecta su propio número de WhatsApp escaneando un código QR, y desde ese momento puede recibir mensajes de sus clientes, responderles, asignarlos a agentes, y hacer seguimiento de sus oportunidades comerciales.
+
+El producto resuelve un problema muy concreto: las empresas que venden por WhatsApp pierden prospectos porque los mensajes llegan a un celular personal, sin orden, sin métricas y sin colaboración en equipo. Velo WA convierte eso en un inbox profesional, similar a lo que sería un CRM con WhatsApp nativo.
+
+El nombre comercial que usamos internamente para el proyecto es AriCRM, aunque el producto puede lanzarse con cualquier nombre.
+
+---
+
+PARTE DOS: LOS SIETE COMPONENTES DEL SISTEMA
+
+El sistema está compuesto por siete piezas que trabajan juntas.
+
+El primero es el navegador web, donde viven las interfaces de usuario: el inbox, el pipeline de ventas, los contactos, el dashboard de métricas y la configuración. Está construido con React y TypeScript, usando Inertia.js para la navegación entre páginas, y Tailwind CSS con Shadcn UI para los componentes visuales.
+
+El segundo es Laravel, el corazón del sistema. Es el backend en PHP que contiene toda la lógica de negocio. Aquí viven las reglas de asignación de conversaciones, el cálculo de métricas, el procesamiento de mensajes entrantes y salientes, y la gestión de datos.
+
+El tercero es Evolution API, un servicio externo que corre en Docker y hace de puente con WhatsApp. Es quien mantiene las sesiones de WhatsApp activas, genera los códigos QR para conectar números, recibe los mensajes de la red de WhatsApp y los manda a Laravel como webhooks.
+
+El cuarto es PostgreSQL, la base de datos relacional donde se guarda todo: tenants, usuarios, contactos, conversaciones, mensajes, deals del pipeline, automatizaciones. Es una sola base de datos compartida, pero los datos de cada tenant están completamente aislados.
+
+El quinto es Redis, una base de datos en memoria que cumple varios roles a la vez: almacena la caché de configuraciones, gestiona las colas de trabajo asíncrono, guarda las sesiones de usuario, y también lo usa Evolution API para mantener sus sesiones de WhatsApp.
+
+El sexto es S3, o MinIO en desarrollo local. Es el almacenamiento de archivos para todos los medios: imágenes, audios, videos, documentos que los contactos envían por WhatsApp. Los archivos nunca se guardan en el servidor de la aplicación, siempre en S3.
+
+El séptimo es Laravel Reverb, el servidor de WebSockets. Es quien le dice al navegador en tiempo real "llegó un nuevo mensaje" o "tu conversación fue asignada", sin necesidad de que la página se recargue.
+
+---
+
+PARTE TRES: CÓMO FLUYE UN MENSAJE ENTRANTE
+
+Imagina que un prospecto le escribe al número de WhatsApp del tenant. Este es el camino que recorre ese mensaje:
+
+Primero, el mensaje llega a la red de WhatsApp. Evolution API lo recibe usando el protocolo de WhatsApp llamado Baileys. Evolution API entonces hace una llamada HTTP POST al endpoint de webhook de Laravel, enviando toda la información del mensaje.
+
+Laravel recibe ese webhook en el controlador de webhooks. Lo primero que hace es validar que el request viene de Evolution API con la llave API correcta. Luego identifica a qué tenant pertenece este mensaje, buscando el ID de instancia de WhatsApp en la tabla de tenants.
+
+A continuación, Laravel busca o crea el contacto en la base de datos. Si el número de teléfono ya existe para ese tenant, actualiza el contacto. Si no existe, lo crea con el nombre que aparece en el perfil de WhatsApp.
+
+Luego busca o crea la conversación. Si el contacto ya tenía una conversación abierta, se usa esa. Si no, se crea una nueva conversación y se registra el momento exacto del primer mensaje.
+
+El mensaje se guarda en la tabla de mensajes con dirección "entrante", el contenido del texto, el ID del mensaje en WhatsApp para evitar duplicados, y el timestamp.
+
+Inmediatamente después, el motor de asignación entra en acción. Si la conversación es nueva y no tiene agente asignado, se evalúan las reglas de asignación configuradas por el tenant para decidir a qué agente asignarla.
+
+Si es el primer mensaje de la conversación, se registra la métrica Dt1, que es el tiempo entre el primer mensaje del contacto y la primera respuesta del agente. Esta métrica es fundamental para el negocio porque mide la velocidad de respuesta.
+
+Finalmente, Laravel emite un evento en tiempo real a través de Reverb. El navegador del agente lo recibe instantáneamente, el inbox se actualiza, aparece el nuevo mensaje, y si el agente tiene el sonido activado, escucha la notificación.
+
+---
+
+PARTE CUATRO: CÓMO FLUYE UN MENSAJE SALIENTE
+
+Cuando un agente escribe una respuesta y la envía:
+
+El navegador hace una llamada HTTP POST a la API de Laravel, al endpoint de mensajes. Laravel valida que el agente tiene permiso para responder en esa conversación y que la conversación pertenece al tenant correcto.
+
+Laravel crea inmediatamente el registro del mensaje en la base de datos con estado "pendiente" y dirección "saliente". Luego despacha un job asíncrono a la cola de alta prioridad de Horizon para que sea procesado en segundos.
+
+Al mismo tiempo, Laravel emite un evento WebSocket al navegador para que el mensaje aparezca en pantalla inmediatamente, sin esperar a que WhatsApp lo confirme. Esto se llama actualización optimista: el usuario ve el mensaje al instante.
+
+En el fondo, Horizon procesa el job. Hace una llamada HTTP a Evolution API con el texto del mensaje. Evolution API lo envía por WhatsApp. Si la entrega es exitosa, el estado del mensaje cambia a "enviado". Si falla, se reintenta hasta tres veces con espera exponencial. Si los tres intentos fallan, el mensaje queda marcado como "fallido".
+
+Cuando el contacto recibe el mensaje en su teléfono, WhatsApp le manda un acuse de recibo a Evolution API, que lo manda como webhook a Laravel, que actualiza el estado a "entregado". Cuando el contacto lo lee, el proceso se repite y el estado cambia a "leído". El agente ve los ticks de confirmación actualizarse en tiempo real.
+
+---
+
+PARTE CINCO: CÓMO SE CONECTA UN NÚMERO DE WHATSAPP
+
+Cuando un tenant quiere conectar su número de WhatsApp por primera vez:
+
+Hace clic en "Conectar WhatsApp" en la página de configuración. El navegador llama a Laravel, que a su vez llama a Evolution API para crear una nueva instancia de WhatsApp con el nombre único del tenant. Evolution API responde con un código QR en formato base64.
+
+Laravel manda ese QR al navegador, que lo muestra en pantalla. El usuario abre WhatsApp en su celular, va a "Dispositivos vinculados", escanea el QR, y la sesión queda activa.
+
+Evolution API detecta que la sesión se estableció exitosamente y manda un webhook a Laravel con el evento "connection.update" y el estado "open". Laravel actualiza la tabla de tenants: marca el WhatsApp como conectado, guarda el número de teléfono, y registra el momento de conexión.
+
+Reverb emite el evento en tiempo real al navegador, que actualiza la pantalla de configuración mostrando "Conectado" con el número de teléfono.
+
+A partir de ese momento, todos los mensajes que lleguen al número van directo al inbox del tenant.
+
+---
+
+PARTE SEIS: EL MODELO DE MULTI-TENENCIA
+
+Esta es probablemente la decisión arquitectónica más importante del sistema, y la que más impacta en la seguridad.
+
+Usamos un modelo llamado "base de datos única con columna tenant underscore id". Esto significa que todos los tenants comparten la misma base de datos, pero cada fila en cada tabla sabe a qué tenant pertenece gracias a una columna llamada tenant_id.
+
+¿Por qué esta decisión? Porque es más fácil de operar que tener una base de datos separada por tenant, y más económico. La desventaja es que hay que ser muy disciplinado para nunca mezclar datos de tenants distintos.
+
+Para garantizar el aislamiento, Laravel tiene un "scope global" en todos los modelos que son del tenant. Un scope global es como un filtro automático que se agrega a todas las consultas de base de datos. Cuando un agente del Tenant A hace una consulta de contactos, Laravel automáticamente agrega "WHERE tenant_id = ID del Tenant A" sin que nadie tenga que recordarlo. Es automático e invisible.
+
+El middleware que resuelve el tenant se llama EnsureTenantContext. En cada request web o de API, este middleware identifica cuál es el tenant activo leyendo el tenant_id del usuario autenticado. Para los webhooks de Evolution API, el tenant se identifica por el ID de instancia de WhatsApp que viene en el payload.
+
+Una regla crítica: en ningún endpoint del sistema se puede cruzar información entre tenants. Es la vulnerabilidad más grave que podría tener la plataforma.
+
+---
+
+PARTE SIETE: EL MODELO DE DATOS EN DETALLE
+
+Vamos tabla por tabla por las más importantes.
+
+La tabla "tenants" guarda la información de cada empresa cliente. Tiene el nombre, el slug que es el identificador único en URL, el plan contratado que puede ser gratuito, starter, pro o enterprise, los datos de la conexión de WhatsApp, los límites del plan como máximo de agentes y máximo de contactos, la zona horaria, el horario de atención en formato JSON, y el tiempo de auto-cierre de conversaciones inactivas.
+
+La tabla "users" guarda a los miembros de cada tenant. Cada usuario pertenece a un tenant. Los roles posibles son owner, que es el dueño, admin, y agent. Cada usuario tiene su estado de online o no, cuántas conversaciones puede manejar simultáneamente, y sus especialidades como ventas, soporte o cobranza, que sirven para el motor de asignación.
+
+La tabla "contacts" guarda a los prospectos y clientes de cada tenant. El campo más importante es wa_id, que es el identificador único del número de WhatsApp en formato internacional más la extensión de WhatsApp. Este campo es único por tenant, lo que evita duplicados. También guarda el nombre, el nombre que el contacto tiene configurado en WhatsApp, foto de perfil, email, empresa, notas, etiquetas en formato JSON, y campos personalizados que cada tenant puede definir. Registra el momento del primer contacto y del último mensaje.
+
+La tabla "conversations" guarda cada hilo de conversación entre un contacto y el tenant. El estado puede ser abierta, pendiente o cerrada. Guarda quién está atendiendo la conversación, cuándo fue el primer mensaje, cuándo fue la primera respuesta del agente, cuándo fue el último mensaje, y la cantidad total de mensajes. También guarda cuántas veces fue reabierta y quién la cerró.
+
+La tabla "messages" guarda cada mensaje individual dentro de una conversación. Tiene la dirección, que puede ser "in" para entrante o "out" para saliente, el cuerpo del texto, la URL del archivo en S3 si es un medio, el tipo de medio, el estado de entrega, el ID del mensaje en WhatsApp para deduplicación, y quién lo envió si fue un agente.
+
+La tabla "pipeline_deals" guarda las oportunidades comerciales. Cada deal está vinculado a un contacto y opcionalmente a una conversación. Tiene las etapas del embudo de ventas, el valor monetario en la moneda del tenant, y un timestamp por cada etapa para calcular cuánto tiempo pasó el deal en cada fase.
+
+La tabla "assignment_rules" guarda las reglas de asignación automática de conversaciones. Cada regla tiene un tipo: round robin, least busy, tag-based o manual. Tiene una prioridad numérica que determina cuál se evalúa primero, y una configuración en JSON que varía según el tipo.
+
+La tabla "quick_replies" guarda las respuestas rápidas predefinidas. Cada una tiene un shortcut que el agente puede escribir en el chat como barra precio, el título, y el cuerpo con variables como el nombre del contacto o el nombre del agente.
+
+La tabla "automations" guarda las reglas de automatización. Tiene un tipo de disparador y un tipo de acción. Los disparadores pueden ser nueva conversación, palabra clave detectada, fuera de horario de atención, o tiempo sin respuesta. Las acciones pueden ser enviar un mensaje, asignar a un agente, agregar una etiqueta, o mover un deal a otra etapa.
+
+La tabla "webhook_logs" guarda todos los webhooks que llegan de Evolution API para propósitos de auditoría y depuración. Esto permite reproducir eventos si algo falla.
+
+---
+
+PARTE OCHO: EL MOTOR DE ASIGNACIÓN
+
+Cuando llega una conversación nueva sin agente asignado, el motor de asignación evalúa las reglas en orden de prioridad.
+
+La regla Round Robin toma la lista de agentes configurados y rota entre ellos de forma circular. Si el último mensaje fue asignado al agente número dos, el próximo va al agente número tres. Así se distribuye la carga equitativamente sin importar cuántas conversaciones tenga cada uno.
+
+La regla Least Busy cuenta cuántas conversaciones abiertas tiene cada agente actualmente y asigna la nueva al que tenga menos. Esto garantiza que nadie esté sobrecargado mientras otros tienen poca carga.
+
+La regla Tag-based mira las etiquetas del contacto y las compara con las especialidades de los agentes. Si el contacto tiene la etiqueta "cobranza" y hay agentes especializados en cobranza, la conversación va a uno de ellos.
+
+La regla Manual no asigna automáticamente. La conversación queda sin asignar y todos los agentes disponibles reciben una notificación para que la tome quien pueda.
+
+Las reglas se evalúan en orden de prioridad. El número más bajo es la prioridad más alta. Si una regla no puede ejecutarse, por ejemplo porque ningún agente de la especialidad está disponible, se pasa a la siguiente regla.
+
+---
+
+PARTE NUEVE: LAS AUTOMATIZACIONES
+
+El sistema de automatizaciones permite que los tenants configuren respuestas y acciones automáticas sin necesidad de escribir código.
+
+El disparador "nueva conversación" se activa cuando alguien escribe por primera vez. Útil para mandar un mensaje de bienvenida que llegue de inmediato, antes de que haya un agente disponible.
+
+El disparador "palabra clave" analiza el texto del mensaje entrante. Si contiene palabras como "precio" o "cotizar", puede activar una respuesta automática con la información de precios, o redirigir la conversación al equipo de ventas.
+
+El disparador "fuera de horario" se activa cuando llega un mensaje fuera del horario de atención configurado en la cuenta del tenant. Manda un mensaje automático explicando cuándo estará disponible el equipo.
+
+El disparador "tiempo sin respuesta" se activa cuando una conversación lleva cierta cantidad de minutos sin que el agente haya respondido. Puede mandar un follow-up al contacto o escalar internamente.
+
+Las acciones posibles son enviar un mensaje de texto con variables interpoladas como el nombre del contacto, asignar la conversación a un agente específico, agregar una etiqueta al contacto, o mover el deal asociado a otra etapa del pipeline.
+
+Todas las ejecuciones de automatizaciones se registran en la tabla de logs de automatizaciones, lo que permite auditar qué pasó y cuándo.
+
+---
+
+PARTE DIEZ: EL PIPELINE DE VENTAS Y LAS MÉTRICAS DEL EMBUDO
+
+El pipeline sigue el modelo de embudo de ventas tipo bowtie, que tiene dos fases principales.
+
+La fase de adquisición va de Lead a Calificado, luego a Propuesta, luego a Negociación, y termina en Ganado o Perdido.
+
+La fase de expansión continúa con los clientes ganados hacia Upsell y finalmente a Advocate, que son clientes que recomiendan activamente el producto.
+
+Cada transición de etapa registra automáticamente el timestamp. Esto permite calcular cuánto tiempo promedio pasa un deal en cada etapa, cuál es la tasa de conversión entre etapas, y cuál es el valor total del pipeline por etapa.
+
+La métrica de pronóstico ponderado multiplica el valor de cada deal por la probabilidad de cierre de su etapa. Un deal en propuesta puede tener un treinta por ciento de probabilidad, mientras uno en negociación tiene un setenta por ciento.
+
+---
+
+PARTE ONCE: LA MÉTRICA ESTRELLA — DT1
+
+Dt1 es la métrica más importante del sistema. Mide cuánto tiempo tarda el equipo en responder el primer mensaje de un nuevo prospecto.
+
+Se calcula como la diferencia entre el campo "first_message_at" y el campo "first_response_at" en la tabla de conversaciones. El sistema calcula el promedio, la mediana, y el percentil noventa y cinco de todos los Dt1 en el período seleccionado.
+
+El filtro de horario de atención es importante aquí: si un mensaje llega un domingo a las diez de la noche, el Dt1 no debería penalizar al equipo por no responder fuera de horario. El sistema puede excluir ese tiempo del cálculo.
+
+Una empresa que responde en menos de cinco minutos convierte muchas más conversaciones en ventas que una que tarda una hora. Mejorar el Dt1 es directamente mejorar los ingresos.
+
+---
+
+PARTE DOCE: LAS CAPAS DE SEGURIDAD
+
+El sistema tiene ocho capas de seguridad.
+
+La primera es HTTPS en todos lados. Toda comunicación entre el navegador y el servidor, y entre Laravel y Evolution API, va cifrada.
+
+La segunda es Laravel Sanctum para la autenticación. Cada sesión de usuario está vinculada a un token seguro. Las solicitudes de API también usan tokens de Sanctum.
+
+La tercera es el middleware de tenant. Cada request pasa por EnsureTenantContext que verifica que el usuario tiene acceso al tenant correcto.
+
+La cuarta es el control de acceso basado en roles. Los propietarios pueden hacer todo. Los admins pueden gestionar el equipo y la configuración. Los agentes solo pueden ver y responder conversaciones asignadas a ellos o al tenant.
+
+La quinta es el rate limiting por usuario y por tenant para evitar abusos o ataques de fuerza bruta.
+
+La sexta es la validación de firma en los webhooks de Evolution API. Los webhooks sin la llave API correcta son rechazados con un error 401.
+
+La séptima son las URLs pre-firmadas de S3. Ningún archivo de media está accesible públicamente. Cada URL tiene una expiración de tiempo y solo funciona para quien la reciba.
+
+La octava es la sanitización de inputs para prevenir inyección de código o XSS en todos los campos del sistema.
+
+---
+
+PARTE TRECE: QUÉ PASA CUANDO ALGO FALLA
+
+El sistema está diseñado para degradarse de forma controlada cuando hay problemas.
+
+Cuando Evolution API no está disponible, los mensajes salientes que los agentes envían no se pierden. El job queda en la cola de Redis y se reintenta automáticamente hasta tres veces con espera exponencial entre intentos. Si los tres fallan, el mensaje queda marcado como fallido y el agente lo ve en pantalla. El job de verificación de salud de las instancias de WhatsApp corre cada cinco minutos y detecta desconexiones.
+
+Cuando un webhook falla en procesarse, el payload completo está guardado en la tabla de webhook_logs. Esto permite reproducir el evento manualmente o automáticamente si se desarrolla esa funcionalidad. Evolution API también reintenta los webhooks tres veces si no recibe un HTTP 200 de respuesta.
+
+Cuando hay picos de carga, Laravel Horizon gestiona la cola de jobs. Los mensajes tienen la prioridad más alta. El trabajo de medias y métricas va en colas de menor prioridad. Si la cola de alta prioridad supera cincuenta jobs acumulados, el sistema genera una alerta.
+
+El sistema tiene límites de rate para mensajes salientes de WhatsApp de máximo treinta mensajes por minuto por instancia, para respetar los límites no oficiales de WhatsApp y evitar que el número sea bloqueado. Si se detecta que WhatsApp marcó la instancia como baneada, el tenant recibe una notificación inmediata.
+
+---
+
+PARTE CATORCE: LOS SERVICIOS INTERNOS DE LARAVEL
+
+Dentro de Laravel hay una serie de servicios organizados por responsabilidad.
+
+WhatsAppClientService es el cliente HTTP que habla con Evolution API. Encapsula todas las llamadas: crear instancias, obtener QR, enviar mensajes de texto, enviar medios.
+
+WebhookHandlerService recibe los eventos de Evolution API y los enruta al manejador correcto según el tipo de evento.
+
+AssignmentService contiene el motor de asignación que evalúa las reglas y asigna conversaciones.
+
+MetricsService calcula el Dt1, las tasas de conversión, y otras métricas que se muestran en el dashboard.
+
+MediaService gestiona la descarga de medios desde Evolution API y la subida a S3.
+
+AutomationEngineService evalúa qué automatizaciones aplican para cada evento y ejecuta las acciones correspondientes.
+
+Los jobs de la cola son SendWhatsAppMessage para enviar mensajes, DownloadMessageMedia para bajar archivos de media, CheckInstanceHealth para verificar la salud de las conexiones de WhatsApp, CalculateMetrics para recalcular métricas periódicamente, y ProcessNoResponseTimeout para el disparador de tiempo sin respuesta en automatizaciones.
+
+---
+
+PARTE QUINCE: EL ESTADO ACTUAL DEL DESARROLLO
+
+El proyecto está dividido en ocho fases más una fase intermedia.
+
+La fase cero está completa. Fue la base: el scaffolding del proyecto, Docker Compose con todos los servicios, autenticación, multi-tenancia, el esquema de la base de datos, y la interfaz base.
+
+La fase uno está completa. Fue la conexión con WhatsApp: la integración con Evolution API, el flujo de conexión QR, los webhooks, recibir y enviar mensajes, y el inbox básico en tiempo real.
+
+La fase dos está completa. Fue el inbox completo: lista de conversaciones, hilo de mensajes, compositor con emojis, soporte de medios, respuestas rápidas, indicadores de estado de mensajes, badges de mensajes no leídos, sonido de notificación, y scroll infinito.
+
+La fase tres está completa. Fue la gestión de contactos y el motor de asignación: lista de contactos con búsqueda y filtros, vista de detalle, etiquetado, reglas de asignación, y los cuatro tipos de motor.
+
+La fase cuatro está completa. Fue el pipeline de ventas: tablero Kanban con arrastrar y soltar, CRUD de deals, transiciones de etapa con timestamps, filtros, métricas de embudo, y tarjetas de resumen.
+
+La fase cinco está completa. Fue el dashboard de métricas: cálculo de Dt1, gráficas de conversaciones y mensajes, tasas de conversión del pipeline, filtro de rango de fechas, y filtro de horario de atención.
+
+La fase seis está completa. Fue el sistema de automatizaciones: los cuatro tipos de disparadores, las cuatro acciones, el CRUD en la interfaz de configuración, los logs de ejecución, y el toggle de activación.
+
+La fase siete está pendiente. Será la gestión del equipo: invitar usuarios, roles, configuración avanzada del tenant, notificaciones por usuario, y límites del plan.
+
+La fase siete punto cinco está pendiente. Será el panel de administración de la plataforma, separado del contexto de tenant. Permitirá a los operadores de la plataforma ver todos los tenants, impersonarlos para soporte, y gestionar instancias de WhatsApp.
+
+La fase ocho está pendiente. Será el lanzamiento a producción: despliegue en VPS, certificados SSL, backups automáticos, monitoreo, la landing page, integración de pagos, y los primeros usuarios beta.
+
+---
+
+PARTE DIECISÉIS: LO QUE FALTA Y LOS GAPS CONOCIDOS
+
+Hay algunas funcionalidades que están diseñadas pero no completamente implementadas en la interfaz.
+
+Los campos personalizados en contactos existen en el modelo de datos pero no tienen UI de edición funcional para que el tenant los configure.
+
+El desglose de Dt1 por agente individual no está construido todavía. El Dt1 global sí funciona.
+
+La vista de carga de trabajo por agente, que muestra cuántas conversaciones tiene cada uno, no está construida.
+
+La exportación de métricas a CSV no está implementada.
+
+El rate limiting per-tenant en la API no está completamente implementado.
+
+El control de acceso basado en roles está definido en el sistema pero no se ha aplicado de forma exhaustiva en todas las páginas y acciones.
+
+---
+
+PARTE DIECISIETE: EL PLAN DE ESCALADO
+
+El sistema está pensado para crecer en tres fases de infraestructura.
+
+En la primera fase, de cero a cincuenta tenants, todo corre en un solo servidor con Docker Compose. Un VPS con cuatro CPUs y ocho gigabytes de RAM es suficiente para el MVP.
+
+En la segunda fase, de cincuenta a quinientos tenants, Evolution API se separa a su propio servidor porque las sesiones de WhatsApp consumen mucha memoria. PostgreSQL y Redis pasan a servicios gestionados en la nube. Laravel sigue en un servidor dedicado.
+
+En la tercera fase, de quinientos tenants en adelante, se agregan múltiples nodos de Evolution API con balanceo de instancias, Laravel pasa a estar detrás de un balanceador de carga, PostgreSQL tiene réplicas de lectura para las consultas de métricas, los workers de cola se escalan automáticamente según la profundidad de la cola, y se agrega un CDN para la entrega de medios.
+
+En algún punto del futuro, hay posibilidad de migrar de Evolution API a una implementación directa de Baileys, que es el protocolo que usa Evolution API internamente. Esto daría más control y reduciría costos de infraestructura.
+
+---
+
+PARTE DIECIOCHO: LAS DECISIONES DE DISEÑO MÁS IMPORTANTES
+
+Hay cinco decisiones que vale la pena entender porque afectan todo lo demás.
+
+Primera: usar un solo base de datos multi-tenant en lugar de una base de datos por tenant. Facilita las operaciones, reduce costos, pero exige disciplina absoluta en el aislamiento a nivel de aplicación.
+
+Segunda: usar Evolution API como capa intermedia para WhatsApp en lugar de implementar el protocolo directamente. Reduce la complejidad inicial, pero agrega una dependencia externa y un punto de falla. La interfaz de webhooks está diseñada para que en el futuro se pueda reemplazar sin cambiar el resto del sistema.
+
+Tercera: usar colas de jobs para el envío de mensajes en lugar de hacerlo síncronamente. Esto hace que el sistema sea más resiliente porque los mensajes no se pierden si hay un pico de carga o si Evolution API tarda en responder.
+
+Cuarta: guardar todos los webhooks en una tabla de logs antes de procesarlos. Esto permite depurar problemas y reproducir eventos sin perder información.
+
+Quinta: usar UUIDs como llaves primarias en lugar de enteros secuenciales. Esto hace que los IDs sean seguros para exponer en URLs y APIs, porque no es posible adivinar el ID de otro tenant haciendo secuencias numéricas.
+
+---
+
+PARTE DIECINUEVE: LAS REGLAS DE NEGOCIO CRÍTICAS
+
+Hay seis reglas que nunca se pueden violar.
+
+La primera: ningún dato de un tenant puede ser visible para otro tenant. Es la regla número uno de seguridad.
+
+La segunda: los mensajes deben mostrarse siempre en orden cronológico correcto, sin importar el orden en que lleguen los webhooks.
+
+La tercera: las sesiones de WhatsApp deben reconectarse automáticamente si se cae la conexión. Un número desconectado significa que el tenant no recibe mensajes.
+
+La cuarta: se deben respetar los límites de velocidad de envío de mensajes de WhatsApp. Enviar demasiado rápido puede resultar en bloqueo del número del tenant.
+
+La quinta: el Dt1 se mide desde el primer mensaje del contacto hasta la primera respuesta del agente, y es fundamental para las decisiones de negocio del tenant.
+
+La sexta: las reglas de asignación se evalúan en orden de prioridad y deben ejecutarse de forma atómica para evitar asignar la misma conversación a dos agentes al mismo tiempo.
+
+---
+
+PARTE VEINTE: RESUMEN FINAL
+
+Velo WA es un sistema con siete componentes principales que trabajan en tres flujos críticos: mensaje entrante, mensaje saliente, y conexión QR.
+
+La base de datos tiene diez tablas principales, todas con el campo tenant_id para el aislamiento multi-tenant. Las más importantes son tenants, users, contacts, conversations, messages, y pipeline_deals.
+
+El sistema tiene seis fases completas de las nueve planificadas. Las fases pendientes son la gestión de equipo avanzada, el panel de administración de plataforma, y el lanzamiento a producción.
+
+Las métricas clave del negocio son el Dt1 como velocidad de respuesta, las tasas de conversión del pipeline, y el volumen de mensajes.
+
+La seguridad tiene ocho capas, siendo la más crítica el aislamiento de datos entre tenants.
+
+El sistema está diseñado para escalar desde un solo servidor hasta una arquitectura distribuida sin cambiar la lógica de negocio, solo la infraestructura.
+
+Si tu equipo opera con Dt1 menores a cinco minutos, conversiones de prospecto a cliente superiores al veinte por ciento, y los agentes tienen visibilidad completa de su pipeline, el producto está funcionando como fue diseñado.
+
+---
+
+FIN DEL DOCUMENTO DE AUDIO
+
+Este documento fue generado el 14 de marzo de 2026 basándose en los docs de arquitectura, base de datos, agentes, y el roadmap del proyecto Velo WA.

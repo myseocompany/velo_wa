@@ -7,9 +7,11 @@ namespace App\Models;
 use App\Enums\AutomationActionType;
 use App\Enums\AutomationTriggerType;
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Automation extends Model
 {
@@ -38,5 +40,31 @@ class Automation extends Model
             'priority' => 'integer',
             'execution_count' => 'integer',
         ];
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(AutomationLog::class);
+    }
+
+    protected function triggerConfig(): Attribute
+    {
+        return Attribute::make(
+            get: function (mixed $value): array {
+                $config = is_array($value)
+                    ? $value
+                    : (json_decode((string) ($value ?? '[]'), true) ?: []);
+
+                if (
+                    array_key_exists('case_sensitive', $config)
+                    && ! array_key_exists('case_insensitive', $config)
+                ) {
+                    $config['case_insensitive'] = ! (bool) $config['case_sensitive'];
+                    unset($config['case_sensitive']);
+                }
+
+                return $config;
+            },
+        );
     }
 }

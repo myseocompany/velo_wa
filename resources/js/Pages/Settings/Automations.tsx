@@ -6,6 +6,7 @@ import {
     ChevronDown,
     ChevronUp,
     GripVertical,
+    History,
     Loader2,
     Pencil,
     Play,
@@ -57,6 +58,17 @@ interface Agent {
     email: string;
 }
 
+interface AutomationLog {
+    id: string;
+    automation_id: string;
+    conversation_id: string | null;
+    trigger_type: TriggerType;
+    action_type: ActionType;
+    status: 'success' | 'failed';
+    error_message: string | null;
+    triggered_at: string;
+}
+
 // ─── Labels & colours ─────────────────────────────────────────────────────────
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -102,6 +114,122 @@ const DEAL_STAGES: { value: DealStage; label: string }[] = [
     { value: 'closed_won', label: 'Ganado' },
     { value: 'closed_lost', label: 'Perdido' },
 ];
+
+// ─── Logs drawer ──────────────────────────────────────────────────────────────
+
+interface LogsDrawerProps {
+    automation: Automation;
+    onClose: () => void;
+}
+
+function LogsDrawer({ automation, onClose }: LogsDrawerProps) {
+    const [logs, setLogs] = useState<AutomationLog[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        axios
+            .get<{ data: AutomationLog[] }>(`/api/v1/automations/${automation.id}/logs`)
+            .then((res) => setLogs(res.data.data))
+            .finally(() => setLoading(false));
+    }, [automation.id]);
+
+    function fmt(iso: string) {
+        return new Date(iso).toLocaleString('es-CO', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        });
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40">
+            <div className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-900">
+                            Historial de ejecuciones
+                        </h2>
+                        <p className="mt-0.5 text-xs text-gray-400 truncate max-w-xs">
+                            {automation.name}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                    {loading ? (
+                        <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-400">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Cargando logs…
+                        </div>
+                    ) : logs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                            <History className="h-8 w-8 text-gray-200" />
+                            <p className="text-sm text-gray-400">
+                                Esta automatización aún no se ha ejecutado.
+                            </p>
+                        </div>
+                    ) : (
+                        <ul className="space-y-2">
+                            {logs.map((log) => (
+                                <li
+                                    key={log.id}
+                                    className={`rounded-lg border px-4 py-3 text-sm ${
+                                        log.status === 'success'
+                                            ? 'border-emerald-100 bg-emerald-50'
+                                            : 'border-red-100 bg-red-50'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span
+                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                log.status === 'success'
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : 'bg-red-100 text-red-700'
+                                            }`}
+                                        >
+                                            {log.status === 'success' ? 'Exitoso' : 'Error'}
+                                        </span>
+                                        <span className="text-xs text-gray-400">
+                                            {fmt(log.triggered_at)}
+                                        </span>
+                                    </div>
+                                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                                        <span>
+                                            Disparador:{' '}
+                                            <strong>{TRIGGER_LABELS[log.trigger_type]}</strong>
+                                        </span>
+                                        <span>
+                                            Acción:{' '}
+                                            <strong>{ACTION_LABELS[log.action_type]}</strong>
+                                        </span>
+                                        {log.conversation_id && (
+                                            <span className="text-gray-400">
+                                                conv: {log.conversation_id.slice(0, 8)}…
+                                            </span>
+                                        )}
+                                    </div>
+                                    {log.error_message && (
+                                        <p className="mt-1.5 rounded bg-red-100 px-2 py-1 text-xs text-red-700">
+                                            {log.error_message}
+                                        </p>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                <div className="border-t border-gray-100 px-5 py-3 text-xs text-gray-400">
+                    Mostrando las últimas 50 ejecuciones.
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
@@ -536,6 +664,7 @@ interface CardProps {
     onToggle: () => void;
     onMoveUp: () => void;
     onMoveDown: () => void;
+    onLogs: () => void;
     isFirst: boolean;
     isLast: boolean;
 }
@@ -548,6 +677,7 @@ function AutomationCard({
     onToggle,
     onMoveUp,
     onMoveDown,
+    onLogs,
     isFirst,
     isLast,
 }: CardProps) {
@@ -643,14 +773,15 @@ function AutomationCard({
 
                     {/* Actions toolbar */}
                     <div className="flex shrink-0 items-center gap-0.5">
-                        {/* Execution count */}
-                        <span
-                            className="mr-1 flex items-center gap-1 text-xs text-gray-400"
-                            title="Ejecuciones totales"
+                        {/* Execution count + logs */}
+                        <button
+                            onClick={onLogs}
+                            className="mr-1 flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600"
+                            title="Ver historial de ejecuciones"
                         >
                             <Play className="h-3 w-3" />
                             {automation.execution_count}
-                        </span>
+                        </button>
 
                         {/* Toggle */}
                         <button
@@ -702,6 +833,7 @@ export default function AutomationsPage() {
     const [error, setError] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Automation | null>(null);
+    const [logsTarget, setLogsTarget] = useState<Automation | null>(null);
 
     useEffect(() => {
         Promise.all([
@@ -861,6 +993,7 @@ export default function AutomationsPage() {
                                 onToggle={() => void handleToggle(automation)}
                                 onMoveUp={() => void handleMove(index, 'up')}
                                 onMoveDown={() => void handleMove(index, 'down')}
+                                onLogs={() => setLogsTarget(automation)}
                                 isFirst={index === 0}
                                 isLast={index === automations.length - 1}
                             />
@@ -875,6 +1008,13 @@ export default function AutomationsPage() {
                     agents={agents}
                     onClose={() => setModalOpen(false)}
                     onSaved={handleSaved}
+                />
+            )}
+
+            {logsTarget && (
+                <LogsDrawer
+                    automation={logsTarget}
+                    onClose={() => setLogsTarget(null)}
                 />
             )}
         </AppLayout>

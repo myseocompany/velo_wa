@@ -14,18 +14,34 @@ class StoreContactRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('phone')) {
+            $this->merge([
+                'phone' => preg_replace('/[\s\+\-\(\)]+/', '', $this->string('phone')->toString()),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         $tenantId = $this->user()->tenant_id;
 
         return [
-            'phone'       => ['required', 'string', 'max:30'],
+            'phone' => [
+                'required', 'string', 'max:30',
+                Rule::unique('contacts', 'phone')
+                    ->where('tenant_id', $tenantId)
+                    ->whereNull('deleted_at'),
+            ],
             'name'        => ['nullable', 'string', 'max:120'],
             'email'       => ['nullable', 'email', 'max:254'],
             'company'     => ['nullable', 'string', 'max:120'],
             'notes'       => ['nullable', 'string', 'max:2000'],
             'tags'        => ['nullable', 'array'],
             'tags.*'      => ['string', 'max:50'],
+            'custom_fields'   => ['nullable', 'array'],
+            'custom_fields.*' => ['nullable', 'string', 'max:500'],
             'assigned_to' => [
                 'nullable',
                 'uuid',

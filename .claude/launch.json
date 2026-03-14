@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Laravel (artisan serve)",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["artisan", "serve", "--port=8000"],
+      "port": 8000
+    },
+    {
+      "name": "Vite (frontend)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "Laravel Reverb (WebSockets)",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["artisan", "reverb:start", "--port=6001"],
+      "port": 6001
+    },
+    {
+      "name": "Laravel Horizon (queue workers)",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["artisan", "horizon"],
+      "port": null
+    },
+    {
+      "name": "Docker Compose (postgres, redis, evolution-api, minio, mailpit)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "-d"],
+      "port": null
+    }
+  ]
+}

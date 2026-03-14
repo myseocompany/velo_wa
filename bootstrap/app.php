@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\EnsureTenantContext::class,
             'instrument.dashboard' => \App\Http\Middleware\InstrumentDashboardRequest::class,
+            'role' => \App\Http\Middleware\RequireRole::class,
         ]);
 
         $middleware->statefulApi();

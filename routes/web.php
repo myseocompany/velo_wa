@@ -68,6 +68,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         return Inertia::render('Settings/Automations');
     })->name('settings.automations');
 
+    Route::get('/settings/data-quality', function () {
+        return Inertia::render('Settings/DataQuality');
+    })->name('settings.data-quality');
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Actions\Dashboard\GetDashboardStats;
 use App\Models\User;
+use App\Support\DashboardMetricsCache;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,7 +28,6 @@ class RecalculateMetrics implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private const RANGES = ['horas', 'semana', 'mes', 'trimestre', 'ano'];
-    private const TTL_MINUTES = 70;
 
     public int $timeout = 120;
     public int $tries   = 1;
@@ -49,9 +49,9 @@ class RecalculateMetrics implements ShouldQueue
 
             try {
                 foreach (self::RANGES as $range) {
-                    $cacheKey = "dashboard:{$user->tenant_id}:{$range}:0";
+                    $cacheKey = DashboardMetricsCache::key((string) $user->tenant_id, $range, false);
                     $data     = $action->handle($user, $range, false);
-                    Cache::put($cacheKey, $data, now()->addMinutes(self::TTL_MINUTES));
+                    Cache::put($cacheKey, $data, now()->addMinutes(DashboardMetricsCache::TTL_MINUTES));
                     $warmed++;
                 }
             } catch (\Throwable $e) {

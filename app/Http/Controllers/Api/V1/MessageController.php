@@ -45,9 +45,7 @@ class MessageController extends Controller
             'is_automated'    => false,
         ]);
 
-        // Update conversation counters synchronously so the list reorders at once
-        $conversation->increment('message_count');
-        $conversation->update(['last_message_at' => $message->created_at]);
+        $this->updateConversationAfterOutbound($conversation, $message);
 
         broadcast(new ConversationUpdated($conversation->fresh(['contact', 'assignee', 'messages'])));
 
@@ -87,8 +85,7 @@ class MessageController extends Controller
             'is_automated'     => false,
         ]);
 
-        $conversation->increment('message_count');
-        $conversation->update(['last_message_at' => $message->created_at]);
+        $this->updateConversationAfterOutbound($conversation, $message);
 
         broadcast(new ConversationUpdated($conversation->fresh(['contact', 'assignee', 'messages'])));
 
@@ -118,14 +115,32 @@ class MessageController extends Controller
             'is_automated'    => false,
         ]);
 
-        $conversation->increment('message_count');
-        $conversation->update(['last_message_at' => $message->created_at]);
+        $this->updateConversationAfterOutbound($conversation, $message);
 
         broadcast(new ConversationUpdated($conversation->fresh(['contact', 'assignee', 'messages'])));
 
         SendWhatsAppMessage::dispatch($message);
 
         return new MessageResource($message);
+    }
+
+    /**
+     * Update conversation counters after any outbound message (text, media, quick reply).
+     *
+     * Sets first_response_at exactly once — on the first outbound message sent by a human
+     * or automation through this application. This is the authoritative write path for Dt1:
+     * the webhook echo from Evolution API arrives after wa_message_id is already set, so
+     * StoreInboundMessage skips that message and never has a chance to set it.
+     */
+    private function updateConversationAfterOutbound(Conversation $conversation, Message $message): void
+    {
+        $updates = ['last_message_at' => $message->created_at];
+
+        if ($conversation->first_response_at === null && $conversation->first_message_at !== null) {
+            $updates['first_response_at'] = $message->created_at;
+        }
+
+        $conversation->increment('message_count', 1, $updates);
     }
 
     private function detectMediaType(string $mimeType): string

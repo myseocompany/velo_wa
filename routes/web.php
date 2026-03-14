@@ -35,7 +35,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     Route::get('/contacts/{contact}', function (string $contact) {
         return Inertia::render('Contacts/Show', ['contactId' => $contact]);
-    })->name('contacts.show');
+    })->name('contacts.view');
 
     // Pipeline (Phase 3)
     // Team workload

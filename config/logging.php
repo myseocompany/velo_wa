@@ -53,8 +53,9 @@ return [
     'channels' => [
 
         'stack' => [
-            'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'driver'            => 'stack',
+            // In production set LOG_STACK=daily,slack to fan out to both channels
+            'channels'          => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
@@ -74,11 +75,12 @@ return [
         ],
 
         'slack' => [
-            'driver' => 'slack',
-            'url' => env('LOG_SLACK_WEBHOOK_URL'),
-            'username' => env('LOG_SLACK_USERNAME', 'Laravel Log'),
-            'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
-            'level' => env('LOG_LEVEL', 'critical'),
+            'driver'              => 'slack',
+            'url'                 => env('LOG_SLACK_WEBHOOK_URL'),
+            'username'            => env('LOG_SLACK_USERNAME', 'AriCRM Errors'),
+            'emoji'               => env('LOG_SLACK_EMOJI', ':rotating_light:'),
+            // Only critical errors fan out to Slack (error and above in prod)
+            'level'               => env('LOG_SLACK_LEVEL', 'error'),
             'replace_placeholders' => true,
         ],
 

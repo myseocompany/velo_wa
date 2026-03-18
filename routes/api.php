@@ -24,10 +24,12 @@ Route::get('/health', function () {
 });
 
 // Webhook endpoint (no auth — signed with Evolution API key in header)
-Route::post('/webhooks/evolution', [WebhookController::class, 'evolution'])->name('webhooks.evolution');
+Route::post('/webhooks/evolution', [WebhookController::class, 'evolution'])
+    ->middleware('throttle:webhooks')
+    ->name('webhooks.evolution');
 
 // Authenticated API routes
-Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function () {
     // Current user
     Route::get('/me', function (Request $request) {
         return response()->json($request->user()->load('tenant'));
@@ -35,7 +37,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     // WhatsApp — status readable by all; connect/disconnect owner only
     Route::get('/whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
-    Route::middleware('role:owner')->group(function () {
+    Route::middleware(['role:owner', 'throttle:whatsapp-control'])->group(function () {
         Route::post('/whatsapp/connect', [WhatsAppController::class, 'connect'])->name('whatsapp.connect');
         Route::post('/whatsapp/disconnect', [WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
     });
@@ -47,11 +49,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::patch('/conversations/{conversation}/close', [ConversationController::class, 'close'])->name('conversations.close');
     Route::patch('/conversations/{conversation}/reopen', [ConversationController::class, 'reopen'])->name('conversations.reopen');
 
-    // Messages — all authenticated users
+    // Messages — all authenticated users (message sends have dedicated throttle)
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index'])->name('messages.index');
-    Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->name('messages.store');
-    Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->name('messages.store-media');
-    Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->name('messages.store-quick-reply');
+    Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->middleware('throttle:messages')->name('messages.store');
+    Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->middleware('throttle:messages')->name('messages.store-media');
+    Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->middleware('throttle:messages')->name('messages.store-quick-reply');
 
     // Team — members/workload readable by all; management admin+
     Route::get('/team/members', [TeamController::class, 'members'])->name('team.members');

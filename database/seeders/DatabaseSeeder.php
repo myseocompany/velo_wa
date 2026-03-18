@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Models\PlatformAdmin;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -47,6 +48,16 @@ class DatabaseSeeder extends Seeder
                 'name'      => 'Agent Demo',
                 'password'  => bcrypt('password'),
                 'role'      => UserRole::Agent,
+                'is_active' => true,
+            ],
+        );
+
+        // Platform admin (superadmin@velo.test / password)
+        PlatformAdmin::firstOrCreate(
+            ['email' => 'superadmin@velo.test'],
+            [
+                'name'      => 'Super Admin',
+                'password'  => bcrypt('password'),
                 'is_active' => true,
             ],
         );

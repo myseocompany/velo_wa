@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Cashier\Billable;
 
 class Tenant extends Model
 {
-    use HasUuids, SoftDeletes;
+    // NOTE: Run `composer require laravel/cashier` before deploying
+    use Billable, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -27,6 +29,7 @@ class Tenant extends Model
         'timezone',
         'business_hours',
         'auto_close_hours',
+        'onboarding_completed_at',
     ];
 
     protected function casts(): array
@@ -38,7 +41,8 @@ class Tenant extends Model
             'max_agents' => 'integer',
             'max_contacts' => 'integer',
             'media_retention_days' => 'integer',
-            'auto_close_hours' => 'integer',
+            'auto_close_hours'          => 'integer',
+            'onboarding_completed_at'   => 'datetime',
         ];
     }
 
@@ -75,5 +79,10 @@ class Tenant extends Model
     public function isConnected(): bool
     {
         return $this->wa_status === WaStatus::Connected;
+    }
+
+    public function hasCompletedOnboarding(): bool
+    {
+        return $this->onboarding_completed_at !== null;
     }
 }

@@ -1,0 +1,50 @@
+FROM php:8.3-fpm-alpine
+
+# System dependencies
+RUN apk add --no-cache \
+    git curl unzip bash \
+    postgresql-dev libzip-dev libpng-dev libjpeg-turbo-dev \
+    oniguruma-dev icu-dev
+
+# PHP extensions
+RUN docker-php-ext-configure gd --with-jpeg \
+ && docker-php-ext-install -j$(nproc) \
+    pdo_pgsql pgsql bcmath zip gd mbstring intl pcntl opcache
+
+# Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
+
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Install PHP dependencies (production only)
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Copy application
+COPY . .
+
+# Install Node + build assets
+RUN apk add --no-cache nodejs npm \
+ && npm ci \
+ && npm run build \
+ && apk del nodejs npm \
+ && rm -rf node_modules
+
+# Composer post-install scripts
+RUN composer run-script post-autoload-dump
+
+# Set permissions
+RUN chown -R www-data:www-data storage bootstrap/cache \
+ && chmod -R 775 storage bootstrap/cache
+
+# PHP config for production
+RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
+
+USER www-data
+
+EXPOSE 9000
+
+CMD ["php-fpm"]

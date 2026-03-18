@@ -20,15 +20,34 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        // Impersonation state (shared to tenant app so the banner shows)
+        $impersonating = $request->session()->has('impersonating_user_id')
+            ? [
+                'active'    => true,
+                'tenant_id' => $request->session()->get('impersonating_tenant_id'),
+                'admin_id'  => $request->session()->get('impersonating_admin_id'),
+            ]
+            : ['active' => false];
+
+        // Platform admin (shared to SuperAdmin pages)
+        $platformAdmin = auth('platform')->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user,
+                'user'   => $user,
                 'tenant' => $user?->tenant,
             ],
+            'impersonation' => $impersonating,
+            'platform_admin' => $platformAdmin ? [
+                'id'              => $platformAdmin->id,
+                'name'            => $platformAdmin->name,
+                'email'           => $platformAdmin->email,
+                'two_factor_enabled' => $platformAdmin->hasTwoFactorEnabled(),
+            ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
+                'error'   => fn () => $request->session()->get('error'),
             ],
         ];
     }

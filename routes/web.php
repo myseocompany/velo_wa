@@ -2,19 +2,31 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Models\Conversation;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Redirect root to dashboard or login
+// Landing page
 Route::get('/', function () {
-    return redirect()->route('dashboard');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return Inertia::render('Welcome');
+})->name('home');
+
+// Onboarding — runs before the onboarding middleware intercepts
+Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
+    Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
+    Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
 });
 
-// Authenticated + tenant-scoped routes
-Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
+// Authenticated + tenant-scoped routes (onboarding guard applied)
+Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function () {
     Route::middleware('instrument.dashboard')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
     });
@@ -84,6 +96,15 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         return Inertia::render('Settings/DataQuality');
     })->name('settings.data-quality');
 
+    // Billing — owner only
+    Route::middleware('role:owner')->group(function () {
+        Route::get('/settings/billing', [BillingController::class, 'show'])->name('settings.billing');
+        Route::post('/settings/billing/checkout/{plan}', [BillingController::class, 'checkout'])->name('billing.checkout');
+        Route::post('/settings/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+        Route::post('/settings/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+        Route::post('/settings/billing/resume', [BillingController::class, 'resume'])->name('billing.resume');
+    });
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -93,3 +114,19 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 });
 
 require __DIR__ . '/auth.php';
+
+// Stripe webhook (no auth — verified by Cashier via signature)
+Route::post('/stripe/webhook', StripeWebhookController::class)->name('cashier.webhook');
+
+// Stop impersonation (accessible while impersonating, no tenant middleware)
+Route::middleware('auth')->post('/impersonation/stop', function (\Illuminate\Http\Request $request) {
+    $tenantId = $request->session()->get('impersonating_tenant_id');
+
+    auth('web')->logout();
+
+    $request->session()->forget(['impersonating_user_id', 'impersonating_tenant_id', 'impersonating_admin_id']);
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect("/superadmin/tenants/{$tenantId}");
+})->name('impersonation.stop');

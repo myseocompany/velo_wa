@@ -52,15 +52,17 @@ class WhatsAppClientService
     public function setWebhook(string $instanceName, string $webhookUrl): void
     {
         $this->post("/webhook/set/{$instanceName}", [
-            'url'      => $webhookUrl,
-            'enabled'  => true,
-            'events'   => [
-                'MESSAGES_UPSERT',
-                'MESSAGES_UPDATE',
-                'CONNECTION_UPDATE',
-                'QRCODE_UPDATED',
-                'CONTACTS_UPSERT',
-                'CONTACTS_UPDATE',
+            'webhook' => [
+                'url'     => $webhookUrl,
+                'enabled' => true,
+                'events'  => [
+                    'MESSAGES_UPSERT',
+                    'MESSAGES_UPDATE',
+                    'CONNECTION_UPDATE',
+                    'QRCODE_UPDATED',
+                    'CONTACTS_UPSERT',
+                    'CONTACTS_UPDATE',
+                ],
             ],
         ]);
     }

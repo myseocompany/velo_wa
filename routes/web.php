@@ -116,7 +116,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
 require __DIR__ . '/auth.php';
 
 // Stripe webhook (no auth — verified by Cashier via signature)
-Route::post('/stripe/webhook', StripeWebhookController::class)->name('cashier.webhook');
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])->name('cashier.webhook');
 
 // Stop impersonation (accessible while impersonating, no tenant middleware)
 Route::middleware('auth')->post('/impersonation/stop', function (\Illuminate\Http\Request $request) {

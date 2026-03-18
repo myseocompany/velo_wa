@@ -33,13 +33,28 @@ class WhatsAppClientService
     public function createInstance(string $instanceName, string $webhookUrl): array
     {
         $response = $this->post('/instance/create', [
-            'instanceName'          => $instanceName,
-            'integration'           => 'WHATSAPP-BAILEYS',
-            'qrcode'                => true,
-            'webhookUrl'            => $webhookUrl,
-            'webhookByEvents'       => true,
-            'webhookBase64'         => false,
-            'webhookEvents'         => [
+            'instanceName' => $instanceName,
+            'integration'  => 'WHATSAPP-BAILEYS',
+            'qrcode'       => true,
+        ]);
+
+        $result = $response->json();
+
+        // Evolution API v2.3+ requires webhook to be set separately after instance creation
+        $this->setWebhook($instanceName, $webhookUrl);
+
+        return $result;
+    }
+
+    /**
+     * Set or update the webhook configuration for an existing instance.
+     */
+    public function setWebhook(string $instanceName, string $webhookUrl): void
+    {
+        $this->post("/webhook/set/{$instanceName}", [
+            'url'      => $webhookUrl,
+            'enabled'  => true,
+            'events'   => [
                 'MESSAGES_UPSERT',
                 'MESSAGES_UPDATE',
                 'CONNECTION_UPDATE',
@@ -48,8 +63,6 @@ class WhatsAppClientService
                 'CONTACTS_UPDATE',
             ],
         ]);
-
-        return $response->json();
     }
 
     /**

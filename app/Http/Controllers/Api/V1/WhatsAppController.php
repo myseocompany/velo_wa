@@ -55,19 +55,38 @@ class WhatsAppController extends Controller
         $webhookApiKey = rawurlencode((string) config('services.evolution.key', ''));
         $webhookUrl    = url("/api/v1/webhooks/evolution?apikey={$webhookApiKey}");
 
+        Log::info('[WA connect] start', [
+            'tenant_id'    => $tenant->id,
+            'instance'     => $instanceName,
+            'evolution_url' => config('services.evolution.url'),
+            'webhook_url'  => $webhookUrl,
+            'app_url'      => config('app.url'),
+        ]);
+
         // Delete any stale instance first — ensures a fresh QR every time
         try {
             $this->client->deleteInstance($instanceName);
-        } catch (\Throwable) {
-            // Ignore — instance might not exist
+            Log::info('[WA connect] stale instance deleted', ['instance' => $instanceName]);
+        } catch (\Throwable $e) {
+            Log::info('[WA connect] delete skipped (ok)', ['reason' => $e->getMessage()]);
         }
 
         // Create a fresh instance (always returns a QR on v2.3.7)
-        $createResult = $this->client->createInstance($instanceName, $webhookUrl);
+        try {
+            $createResult = $this->client->createInstance($instanceName, $webhookUrl);
+        } catch (\Throwable $e) {
+            Log::error('[WA connect] createInstance FAILED', [
+                'instance' => $instanceName,
+                'error'    => $e->getMessage(),
+            ]);
+            return response()->json(['error' => $e->getMessage()], 502);
+        }
 
-        Log::info('Evolution createInstance', [
+        Log::info('[WA connect] createInstance response', [
             'instance' => $instanceName,
             'hasQr'    => ! empty($createResult['qrcode']['base64'] ?? null),
+            'keys'     => array_keys($createResult),
+            'raw'      => json_encode($createResult),
         ]);
 
         $qrBase64 = $this->extractQr($createResult);

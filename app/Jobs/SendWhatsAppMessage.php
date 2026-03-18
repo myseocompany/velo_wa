@@ -57,7 +57,14 @@ class SendWhatsAppMessage implements ShouldQueue
             }
 
             $instanceName = WhatsAppClientService::instanceName($tenant->id);
-            $phone        = $contact->phone;
+
+            // Use the full wa_id for @lid contacts (WhatsApp privacy mode).
+            // For regular contacts strip the @s.whatsapp.net suffix so Evolution
+            // API accepts just the phone number (e.g. "573004410097").
+            $waId  = $contact->wa_id ?? '';
+            $phone = str_ends_with($waId, '@lid')
+                ? $waId                                        // keep full JID for LID contacts
+                : ($contact->phone ?? preg_replace('/@.*/', '', $waId));
 
             if ($message->hasMedia() && $message->media_url) {
                 // Evolution API runs in Docker and cannot reach the host MinIO URL.

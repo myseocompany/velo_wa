@@ -6,18 +6,34 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Conversations\AssignConversation;
 use App\Actions\Conversations\CloseConversation;
+use App\Actions\Conversations\CreateConversation;
 use App\Actions\Conversations\ReopenConversation;
 use App\Enums\ConversationStatus;
+use App\Events\ConversationUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AssignConversationRequest;
+use App\Http\Requests\Api\StoreConversationRequest;
 use App\Http\Resources\ConversationResource;
 use App\Models\Conversation;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ConversationController extends Controller
 {
+    public function store(StoreConversationRequest $request, CreateConversation $action): JsonResponse
+    {
+        $result = $action->handle($request->user(), $request->validated());
+        $conversation = $result['conversation'];
+
+        broadcast(new ConversationUpdated($conversation));
+
+        return response()->json([
+            'data' => (new ConversationResource($conversation))->toArray($request),
+        ], $result['created'] ? 201 : 200);
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Conversation::query()->with([
@@ -49,11 +65,11 @@ class ConversationController extends Controller
 
             $query->whereHas('contact', function ($contactQuery) use ($search, $phoneSearch): void {
                 $contactQuery->where(function ($q) use ($search, $phoneSearch): void {
-                    $q->where('name', 'ilike', '%' . $search . '%')
-                        ->orWhere('push_name', 'ilike', '%' . $search . '%');
+                    $q->where('name', 'ilike', '%'.$search.'%')
+                        ->orWhere('push_name', 'ilike', '%'.$search.'%');
 
                     if ($phoneSearch !== '') {
-                        $q->orWhere('phone', 'ilike', '%' . $phoneSearch . '%');
+                        $q->orWhere('phone', 'ilike', '%'.$phoneSearch.'%');
                     }
                 });
             });

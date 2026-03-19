@@ -5,13 +5,13 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\AssignmentRuleController;
 use App\Http\Controllers\Api\V1\AutomationController;
-use App\Http\Controllers\Api\V1\ConversationController;
-use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ContactController;
+use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\QuickReplyController;
+use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
 use App\Http\Controllers\WebhookController;
@@ -43,6 +43,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     });
 
     // Conversations — all authenticated users
+    Route::post('/conversations', [ConversationController::class, 'store'])->name('conversations.store');
     Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
     Route::patch('/conversations/{conversation}/assign', [ConversationController::class, 'assign'])->name('conversations.assign');

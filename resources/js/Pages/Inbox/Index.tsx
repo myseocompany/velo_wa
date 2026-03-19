@@ -8,8 +8,10 @@ import {
     ChevronDown,
     Info,
     MessageSquare,
+    Plus,
     RotateCcw,
     UserCheck,
+    X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ContactAvatar from './Partials/ContactAvatar';
@@ -144,6 +146,161 @@ function AssignDropdown({ conversation, agents, onlineUserIds, onAssigned }: Ass
     );
 }
 
+interface CreateConversationModalProps {
+    agents: User[];
+    currentUser: User;
+    onClose: () => void;
+    onCreated: (conversation: Conversation) => void;
+}
+
+function CreateConversationModal({
+    agents,
+    currentUser,
+    onClose,
+    onCreated,
+}: CreateConversationModalProps) {
+    const [phone, setPhone]           = useState('');
+    const [name, setName]             = useState('');
+    const [email, setEmail]           = useState('');
+    const [company, setCompany]       = useState('');
+    const [assignedTo, setAssignedTo] = useState(currentUser.id);
+    const [saving, setSaving]         = useState(false);
+    const [errors, setErrors]         = useState<Record<string, string>>({});
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true);
+        setErrors({});
+
+        try {
+            const res = await axios.post<{ data: Conversation }>('/api/v1/conversations', {
+                phone:       phone.trim(),
+                name:        name.trim() || null,
+                email:       email.trim() || null,
+                company:     company.trim() || null,
+                assigned_to: assignedTo || null,
+            });
+
+            onCreated(res.data.data);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err) && err.response?.data?.errors) {
+                const nextErrors: Record<string, string> = {};
+                for (const [field, value] of Object.entries(err.response.data.errors)) {
+                    nextErrors[field] = Array.isArray(value) ? (value as string[])[0] : String(value);
+                }
+                setErrors(nextErrors);
+            } else {
+                setErrors({ form: 'No se pudo crear la conversación. Intenta de nuevo.' });
+            }
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                    <div>
+                        <h3 className="font-semibold text-gray-900">Nueva conversación</h3>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Si el teléfono ya existe, se reutilizará el contacto actual.
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">
+                            Teléfono <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="+57 300 0000000"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        />
+                        {errors.phone && <p className="mt-0.5 text-xs text-red-500">{errors.phone}</p>}
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
+                        <input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">Email</label>
+                            <input
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                type="email"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            />
+                            {errors.email && <p className="mt-0.5 text-xs text-red-500">{errors.email}</p>}
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">Empresa</label>
+                            <input
+                                value={company}
+                                onChange={(e) => setCompany(e.target.value)}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">Asignar a</label>
+                        <select
+                            value={assignedTo}
+                            onChange={(e) => setAssignedTo(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                        >
+                            <option value="">Sin asignar</option>
+                            {agents.map((agent) => (
+                                <option key={agent.id} value={agent.id}>
+                                    {agent.name}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.assigned_to && <p className="mt-0.5 text-xs text-red-500">{errors.assigned_to}</p>}
+                    </div>
+
+                    {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={saving || !phone.trim()}
+                            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                        >
+                            {saving
+                                ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                : <Plus className="h-4 w-4" />}
+                            Crear y abrir
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function InboxIndex({ activeConversationId }: Props) {
@@ -158,6 +315,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [statusFilter, setStatusFilter]       = useState<ConversationStatus | 'all'>('all');
     const [search, setSearch]                   = useState('');
     const [agents, setAgents]                   = useState<User[]>([]);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const [showContactPanel, setShowContactPanel] = useState(false);
     const [unreadCounts, setUnreadCounts]       = useState<Record<string, number>>({});
     const [onlineUserIds, setOnlineUserIds]     = useState<Set<string>>(new Set());
@@ -337,6 +495,24 @@ export default function InboxIndex({ activeConversationId }: Props) {
         updateConvInList(conv);
     }
 
+    function handleConversationCreated(conv: Conversation) {
+        setShowCreateModal(false);
+        setShowContactPanel(false);
+        setStatusFilter('all');
+        setSearch('');
+        setConversations((prev) => {
+            const idx = prev.findIndex((item) => item.id === conv.id);
+            if (idx === -1) {
+                return [conv, ...prev];
+            }
+
+            const next = [...prev];
+            next.splice(idx, 1);
+            return [conv, ...next];
+        });
+        void selectConversation(conv);
+    }
+
     const isClosed = activeConv?.status === 'closed';
 
     return (
@@ -344,6 +520,16 @@ export default function InboxIndex({ activeConversationId }: Props) {
             <div className="flex h-full overflow-hidden">
                 {/* ── Conversation list sidebar ── */}
                 <aside className="flex w-80 flex-shrink-0 flex-col border-r border-gray-200 bg-white">
+                    <div className="border-b border-gray-100 px-3 py-3">
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Nueva conversación
+                        </button>
+                    </div>
+
                     {/* Search */}
                     <div className="border-b border-gray-100 px-3 py-2">
                         <input
@@ -479,6 +665,15 @@ export default function InboxIndex({ activeConversationId }: Props) {
                     )}
                 </main>
             </div>
+
+            {showCreateModal && (
+                <CreateConversationModal
+                    agents={agents}
+                    currentUser={auth.user}
+                    onClose={() => setShowCreateModal(false)}
+                    onCreated={handleConversationCreated}
+                />
+            )}
         </AppLayout>
     );
 }

@@ -86,6 +86,7 @@ AriCRM is a multi-tenant SaaS platform that connects businesses to WhatsApp for 
 
 ## Key Files Reference
 
+- `DESIGN_SYSTEM.md` — Color tokens, component rules, and screens to update (full design refactor)
 - `docs/ARCHITECTURE.md` — System architecture and data flows
 - `docs/DATABASE.md` — Complete data model
 - `docs/API.md` — API contracts and endpoints

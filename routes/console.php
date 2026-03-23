@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CheckInstanceHealth;
+use App\Jobs\ProcessDueFollowUps;
 use App\Jobs\ProcessNoResponseTimeout;
 use App\Jobs\RecalculateMetrics;
 use Illuminate\Foundation\Inspiring;
@@ -19,3 +20,6 @@ Schedule::job(new ProcessNoResponseTimeout)->everyMinute();
 
 // Pre-compute and cache dashboard stats for all tenants every hour
 Schedule::job(new RecalculateMetrics)->hourly()->onOneServer();
+
+// Notify agents about overdue deal follow-ups every 15 minutes
+Schedule::job(new ProcessDueFollowUps)->everyFifteenMinutes()->onOneServer();

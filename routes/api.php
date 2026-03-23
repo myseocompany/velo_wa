@@ -103,6 +103,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::get('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'show'])->name('pipeline.deals.show');
     Route::put('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'update'])->name('pipeline.deals.update');
     Route::patch('/pipeline/deals/{pipelineDeal}/stage', [PipelineDealController::class, 'updateStage'])->name('pipeline.deals.update-stage');
+    Route::patch('/pipeline/deals/{pipelineDeal}/follow-up', [PipelineDealController::class, 'followUp'])->name('pipeline.deals.follow-up');
     Route::delete('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'destroy'])->middleware('role:admin')->name('pipeline.deals.destroy');
 
     // Metrics

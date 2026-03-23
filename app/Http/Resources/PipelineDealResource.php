@@ -28,6 +28,8 @@ class PipelineDealResource extends JsonResource
             'won_product'     => $this->won_product,
             'lost_reason'     => $this->lost_reason,
             'closed_at'       => $this->closed_at?->toIso8601String(),
+            'follow_up_at'    => $this->follow_up_at?->toIso8601String(),
+            'follow_up_note'  => $this->follow_up_note,
             'updated_at'      => $this->updated_at->toIso8601String(),
             'contact'         => $this->whenLoaded('contact', fn () => new ContactResource($this->contact)),
             'assignee'        => $this->whenLoaded('assignee', fn () => [

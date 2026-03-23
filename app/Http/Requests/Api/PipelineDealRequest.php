@@ -23,6 +23,8 @@ class PipelineDealRequest extends FormRequest
             'notes'           => ['nullable', 'string', 'max:5000'],
             'won_product'     => ['nullable', 'string', 'max:500'],
             'lost_reason'     => ['nullable', 'string', 'max:500'],
+            'follow_up_at'    => ['nullable', 'date', 'after:now'],
+            'follow_up_note'  => ['nullable', 'string', 'max:1000'],
         ];
     }
 }

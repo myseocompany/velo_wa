@@ -44,6 +44,8 @@ class PipelineDeal extends Model
         'won_product',
         'assigned_to',
         'notes',
+        'follow_up_at',
+        'follow_up_note',
     ];
 
     protected function casts(): array
@@ -55,7 +57,8 @@ class PipelineDeal extends Model
             'qualified_at' => 'datetime',
             'proposal_at' => 'datetime',
             'negotiation_at' => 'datetime',
-            'closed_at' => 'datetime',
+            'closed_at'    => 'datetime',
+            'follow_up_at' => 'datetime',
         ];
     }
 

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Pipeline\MoveDealToStage;
+use App\Actions\Pipeline\ScheduleFollowUp;
 use App\Enums\DealStage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PipelineDealRequest;
+use App\Http\Requests\Api\V1\ScheduleFollowUpRequest;
 use App\Http\Requests\Api\V1\UpdateDealStageRequest;
 use App\Http\Resources\PipelineDealResource;
 use App\Models\PipelineDeal;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -69,6 +72,25 @@ class PipelineDealController extends Controller
         $dateTo = $request->string('date_to')->toString();
         if ($dateTo !== '') {
             $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        // Follow-up filters
+        $followUp = $request->string('follow_up')->toString();
+        if ($followUp === 'overdue') {
+            // Deals with a past follow_up_at that are still active
+            $query->whereNotNull('follow_up_at')
+                ->where('follow_up_at', '<=', now())
+                ->whereNotIn('stage', [DealStage::ClosedWon->value, DealStage::ClosedLost->value]);
+        } elseif ($followUp === 'upcoming') {
+            // Deals with a future follow_up_at (next 7 days) still active
+            $query->whereNotNull('follow_up_at')
+                ->where('follow_up_at', '>', now())
+                ->where('follow_up_at', '<=', now()->addDays(7))
+                ->whereNotIn('stage', [DealStage::ClosedWon->value, DealStage::ClosedLost->value]);
+        } elseif ($followUp === 'pending') {
+            // Any deal with a scheduled follow-up
+            $query->whereNotNull('follow_up_at')
+                ->whereNotIn('stage', [DealStage::ClosedWon->value, DealStage::ClosedLost->value]);
         }
 
         // Build ORDER BY CASE from enum definition — stays in sync automatically
@@ -155,6 +177,22 @@ class PipelineDealController extends Controller
         ]);
     }
 
+    public function followUp(
+        ScheduleFollowUpRequest $request,
+        PipelineDeal $pipelineDeal,
+        ScheduleFollowUp $action,
+    ): JsonResponse {
+        $followUpAt = $request->input('follow_up_at') !== null
+            ? CarbonImmutable::parse($request->input('follow_up_at'))
+            : null;
+
+        $deal = $action->handle($pipelineDeal, $followUpAt, $request->input('follow_up_note'));
+
+        return response()->json([
+            'data' => new PipelineDealResource($deal->load(['contact', 'assignee'])),
+        ]);
+    }
+
     /**
      * Summary: count + value per stage for dashboard cards.
      */
@@ -199,12 +237,19 @@ class PipelineDealController extends Controller
             'negotiation' => $dur && $dur->negotiation_hrs !== null ? (float) round($dur->negotiation_hrs, 1) : null,
         ];
 
+        $overdueCount = PipelineDeal::query()
+            ->whereNotNull('follow_up_at')
+            ->where('follow_up_at', '<=', now())
+            ->whereNotIn('stage', [DealStage::ClosedWon->value, DealStage::ClosedLost->value])
+            ->count();
+
         return response()->json([
-            'by_stage'        => $summary->values(),
-            'active_pipeline' => $activePipeline,
-            'total_won'       => (float) ($rows->get('closed_won')?->total_value ?? 0),
-            'total_lost'      => (float) ($rows->get('closed_lost')?->total_value ?? 0),
-            'stage_durations' => $stageDurations,
+            'by_stage'            => $summary->values(),
+            'active_pipeline'     => $activePipeline,
+            'total_won'           => (float) ($rows->get('closed_won')?->total_value ?? 0),
+            'total_lost'          => (float) ($rows->get('closed_lost')?->total_value ?? 0),
+            'stage_durations'     => $stageDurations,
+            'overdue_follow_ups'  => $overdueCount,
         ]);
     }
 }

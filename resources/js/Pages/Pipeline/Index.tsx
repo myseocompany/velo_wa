@@ -6,7 +6,7 @@ import axios from 'axios';
 import {
     Plus, Pencil, Trash2, X, Search, ChevronDown,
     TrendingUp, Trophy, AlertCircle, Briefcase,
-    GripVertical, User as UserIcon, BarChart2, ChevronUp, Timer,
+    GripVertical, User as UserIcon, BarChart2, ChevronUp, Timer, Clock, Bell,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -22,6 +22,7 @@ interface PipelineSummary {
     total_won: number;
     total_lost: number;
     stage_durations?: Record<string, number | null>;
+    overdue_follow_ups: number;
 }
 interface ApiResponse extends PaginatedData<PipelineDeal> {}
 
@@ -70,6 +71,27 @@ function fmtValue(v: number, currency = 'COP') {
 
 function contactName(c?: Contact) {
     return c?.name ?? c?.push_name ?? c?.phone ?? '—';
+}
+
+function fmtFollowUp(iso: string): { label: string; overdue: boolean } {
+    const d = new Date(iso);
+    const now = new Date();
+    const overdue = d < now;
+    const diff = Math.abs(d.getTime() - now.getTime());
+    const mins = Math.floor(diff / 60000);
+    const hrs  = Math.floor(mins / 60);
+    const days = Math.floor(hrs / 24);
+    let label: string;
+    if (overdue) {
+        if (days > 0)      label = `Vencido hace ${days}d`;
+        else if (hrs > 0)  label = `Vencido hace ${hrs}h`;
+        else               label = 'Vencido ahora';
+    } else {
+        if (days > 0)      label = `Seguimiento en ${days}d`;
+        else if (hrs > 0)  label = `Seguimiento en ${hrs}h`;
+        else               label = 'Seguimiento pronto';
+    }
+    return { label, overdue };
 }
 
 // ─── Deal Card ────────────────────────────────────────────────────────────────
@@ -121,6 +143,14 @@ function DealCard({ deal, moving, onEdit }: { deal: PipelineDeal; moving: boolea
                     <AlertCircle size={10} />{deal.lost_reason}
                 </p>
             )}
+            {deal.follow_up_at && !deal.stage.startsWith('closed') && (() => {
+                const { label, overdue } = fmtFollowUp(deal.follow_up_at);
+                return (
+                    <p className={`mt-1.5 ml-5 text-[11px] truncate flex items-center gap-1 font-medium ${overdue ? 'text-red-500' : 'text-amber-500'}`}>
+                        <Clock size={10} />{label}
+                    </p>
+                );
+            })()}
         </div>
     );
 }
@@ -146,6 +176,10 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
     const [notes, setNotes]           = useState(deal?.notes ?? '');
     const [wonProduct, setWonProduct] = useState(deal?.won_product ?? '');
     const [lostReason, setLostReason] = useState(deal?.lost_reason ?? '');
+    const [followUpAt, setFollowUpAt] = useState(
+        deal?.follow_up_at ? new Date(deal.follow_up_at).toISOString().slice(0, 16) : '',
+    );
+    const [followUpNote, setFollowUpNote] = useState(deal?.follow_up_note ?? '');
 
     // Contact search (create only)
     const [contactSearch, setContactSearch]   = useState('');
@@ -185,6 +219,8 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
                 notes: notes || null,
                 won_product: wonProduct || null,
                 lost_reason: lostReason || null,
+                follow_up_at: followUpAt || null,
+                follow_up_note: followUpNote || null,
                 contact_id: isEdit ? deal!.contact_id : selectedContact!.id,
                 ...(!isEdit && { stage }),
             };
@@ -341,6 +377,35 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
                             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                             placeholder="Contexto relevante…" />
                     </div>
+
+                    {/* Seguimiento */}
+                    {!isClosedWon && !isClosedLost && (
+                        <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 space-y-2">
+                            <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5 uppercase tracking-wide">
+                                <Clock size={12} /> Próximo seguimiento
+                            </p>
+                            <input
+                                type="datetime-local"
+                                value={followUpAt}
+                                onChange={e => setFollowUpAt(e.target.value)}
+                                className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            />
+                            {followUpAt && (
+                                <input
+                                    value={followUpNote}
+                                    onChange={e => setFollowUpNote(e.target.value)}
+                                    className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                    placeholder="Qué hacer en este seguimiento…"
+                                />
+                            )}
+                            {followUpAt && (
+                                <button type="button" onClick={() => { setFollowUpAt(''); setFollowUpNote(''); }}
+                                    className="text-xs text-amber-600 hover:text-red-500 flex items-center gap-1">
+                                    <X size={11} /> Quitar recordatorio
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </form>
 
                 {/* Footer */}
@@ -524,12 +589,13 @@ export default function PipelineIndex() {
     const [movingId, setMovingId] = useState<string | null>(null);
 
     // Filters
-    const [search, setSearch]           = useState('');
-    const [agentFilter, setAgentFilter] = useState('');
-    const [dateFrom, setDateFrom]       = useState('');
-    const [dateTo, setDateTo]           = useState('');
-    const [valueMin, setValueMin]       = useState('');
-    const [valueMax, setValueMax]       = useState('');
+    const [search, setSearch]               = useState('');
+    const [agentFilter, setAgentFilter]     = useState('');
+    const [dateFrom, setDateFrom]           = useState('');
+    const [dateTo, setDateTo]               = useState('');
+    const [valueMin, setValueMin]           = useState('');
+    const [valueMax, setValueMax]           = useState('');
+    const [followUpFilter, setFollowUpFilter] = useState('');
     const filterRef = useRef<ReturnType<typeof setTimeout>>();
 
     // UI state
@@ -566,15 +632,16 @@ export default function PipelineIndex() {
         clearTimeout(filterRef.current);
         filterRef.current = setTimeout(() => {
             const p: Record<string, string> = {};
-            if (search)      p.search      = search;
-            if (agentFilter) p.assigned_to = agentFilter;
-            if (dateFrom)    p.date_from   = dateFrom;
-            if (dateTo)      p.date_to     = dateTo;
-            if (valueMin)    p.value_min   = valueMin;
-            if (valueMax)    p.value_max   = valueMax;
+            if (search)         p.search      = search;
+            if (agentFilter)    p.assigned_to = agentFilter;
+            if (dateFrom)       p.date_from   = dateFrom;
+            if (dateTo)         p.date_to     = dateTo;
+            if (valueMin)       p.value_min   = valueMin;
+            if (valueMax)       p.value_max   = valueMax;
+            if (followUpFilter) p.follow_up   = followUpFilter;
             load(p);
         }, 320);
-    }, [search, agentFilter, dateFrom, dateTo, valueMin, valueMax]);
+    }, [search, agentFilter, dateFrom, dateTo, valueMin, valueMax, followUpFilter]);
 
     // ── Drag & drop ────────────────────────────────────────────────────────────
 
@@ -688,9 +755,20 @@ export default function PipelineIndex() {
                         <input type="number" min="0" value={valueMax} onChange={e => setValueMax(e.target.value)}
                             placeholder="Valor máx."
                             className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-28" />
+                        {/* Follow-up filter */}
+                        <div className="relative">
+                            <select value={followUpFilter} onChange={e => setFollowUpFilter(e.target.value)}
+                                className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 ${followUpFilter ? 'border-amber-400 text-amber-700 font-medium' : 'border-gray-300'}`}>
+                                <option value="">Todos los seguimientos</option>
+                                <option value="overdue">Seguimientos vencidos</option>
+                                <option value="upcoming">Próximos 7 días</option>
+                                <option value="pending">Con seguimiento</option>
+                            </select>
+                            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
                         {/* Clear filters */}
-                        {(search || agentFilter || dateFrom || dateTo || valueMin || valueMax) && (
-                            <button onClick={() => { setSearch(''); setAgentFilter(''); setDateFrom(''); setDateTo(''); setValueMin(''); setValueMax(''); }}
+                        {(search || agentFilter || dateFrom || dateTo || valueMin || valueMax || followUpFilter) && (
+                            <button onClick={() => { setSearch(''); setAgentFilter(''); setDateFrom(''); setDateTo(''); setValueMin(''); setValueMax(''); setFollowUpFilter(''); }}
                                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition">
                                 <X size={12} /> Limpiar
                             </button>
@@ -709,6 +787,19 @@ export default function PipelineIndex() {
                         <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">
                             <AlertCircle size={15} />{error}
                         </div>
+                    )}
+
+                    {/* Overdue follow-ups alert */}
+                    {summary && summary.overdue_follow_ups > 0 && followUpFilter !== 'overdue' && (
+                        <button
+                            onClick={() => setFollowUpFilter('overdue')}
+                            className="w-full flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 hover:bg-red-100 transition text-left"
+                        >
+                            <Bell size={15} className="shrink-0" />
+                            <span>
+                                <strong>{summary.overdue_follow_ups}</strong> {summary.overdue_follow_ups === 1 ? 'deal tiene' : 'deals tienen'} seguimiento vencido — haz clic para verlos
+                            </span>
+                        </button>
                     )}
 
                     {/* Board */}

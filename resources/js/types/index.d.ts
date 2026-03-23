@@ -146,6 +146,8 @@ export interface PipelineDeal {
     proposal_at: string | null;
     negotiation_at: string | null;
     closed_at: string | null;
+    follow_up_at: string | null;
+    follow_up_note: string | null;
     lost_reason: string | null;
     won_product: string | null;
     assigned_to: string | null;

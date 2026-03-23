@@ -348,7 +348,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
     }
 
     const inputCls =
-        'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500';
+        'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -453,7 +453,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                             onChange={(e) =>
                                                 setMatchType(e.target.value as 'any' | 'all')
                                             }
-                                            className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-brand-500 focus:outline-none"
+                                            className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
                                         >
                                             <option value="any">Cualquiera coincide</option>
                                             <option value="all">Todas coinciden</option>
@@ -464,7 +464,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                             type="checkbox"
                                             checked={caseInsensitive}
                                             onChange={(e) => setCaseInsensitive(e.target.checked)}
-                                            className="accent-brand-600"
+                                            className="accent-ari-600"
                                         />
                                         Ignorar mayúsculas
                                     </label>
@@ -484,7 +484,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                     max={1440}
                                     value={minutes}
                                     onChange={(e) => setMinutes(Number(e.target.value))}
-                                    className="w-32 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                                    className="w-32 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                                 />
                                 <p className="mt-1 text-xs text-gray-400">
                                     El job corre cada minuto; la precisión es ±1 min.
@@ -523,7 +523,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                     onChange={(e) => setMessage(e.target.value)}
                                     rows={4}
                                     placeholder="Hola {{name}}, gracias por contactarnos. En este momento..."
-                                    className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                                    className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                                     required
                                 />
                                 <p className="mt-1 text-xs text-gray-400">
@@ -619,7 +619,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                             role="switch"
                             aria-checked={isActive}
                             onClick={() => setIsActive(!isActive)}
-                            className={`flex h-6 w-10 items-center rounded-full px-0.5 transition-colors ${isActive ? 'bg-brand-600' : 'bg-gray-300'}`}
+                            className={`flex h-6 w-10 items-center rounded-full px-0.5 transition-colors ${isActive ? 'bg-ari-600' : 'bg-gray-300'}`}
                         >
                             <div
                                 className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`}
@@ -643,7 +643,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                     <button
                         onClick={handleSubmit as unknown as React.MouseEventHandler}
                         disabled={saving}
-                        className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
                     >
                         {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {isEdit ? 'Guardar cambios' : 'Crear automatización'}
@@ -772,11 +772,11 @@ function AutomationCard({
                     </div>
 
                     {/* Actions toolbar */}
-                    <div className="flex shrink-0 items-center gap-0.5">
+                    <div className="flex shrari-0 items-center gap-0.5">
                         {/* Execution count + logs */}
                         <button
                             onClick={onLogs}
-                            className="mr-1 flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600"
+                            className="mr-1 flex items-center gap-1 text-xs text-gray-400 hover:text-ari-600"
                             title="Ver historial de ejecuciones"
                         >
                             <Play className="h-3 w-3" />
@@ -789,7 +789,7 @@ function AutomationCard({
                             title={automation.is_active ? 'Desactivar' : 'Activar'}
                             className={
                                 automation.is_active
-                                    ? 'text-brand-500 hover:text-brand-700'
+                                    ? 'text-ari-500 hover:text-ari-700'
                                     : 'text-gray-400 hover:text-gray-600'
                             }
                         >
@@ -939,7 +939,7 @@ export default function AutomationsPage() {
                     </div>
                     <button
                         onClick={openCreate}
-                        className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                     >
                         <Plus className="h-4 w-4" />
                         Nueva automatización
@@ -976,7 +976,7 @@ export default function AutomationsPage() {
                         </div>
                         <button
                             onClick={openCreate}
-                            className="mt-1 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                            className="mt-1 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                         >
                             Crear automatización
                         </button>

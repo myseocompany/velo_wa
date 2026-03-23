@@ -57,7 +57,7 @@ function CapacityBar({ pct }: { pct: number | null }) {
 
     return (
         <div className="flex items-center gap-2">
-            <div className="h-2 w-20 flex-shrink-0 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-2 w-20 flex-shrari-0 overflow-hidden rounded-full bg-gray-100">
                 <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.min(100, pct)}%` }} />
             </div>
             <span className="text-xs text-gray-600">{pct}%</span>
@@ -126,7 +126,7 @@ export default function TeamIndex() {
                                     onClick={() => setRange(r)}
                                     className={`px-3 py-1.5 font-medium transition-colors ${
                                         range === r
-                                            ? 'bg-brand-600 text-white'
+                                            ? 'bg-ari-600 text-white'
                                             : 'text-gray-600 hover:bg-gray-50'
                                     }`}
                                 >
@@ -166,7 +166,7 @@ export default function TeamIndex() {
                         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
                             <Clock className="h-3.5 w-3.5" /> Dt1 promedio
                         </div>
-                        <p className="mt-2 text-2xl font-bold text-brand-600">{formatDt1(globalAvgDt1)}</p>
+                        <p className="mt-2 text-2xl font-bold text-ari-600">{formatDt1(globalAvgDt1)}</p>
                         <p className="text-xs text-gray-400">tiempo de primera respuesta</p>
                     </div>
                     <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -202,7 +202,7 @@ export default function TeamIndex() {
                                 {loading ? (
                                     <tr>
                                         <td colSpan={7} className="py-12 text-center">
-                                            <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                                            <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-ari-600 border-t-transparent" />
                                         </td>
                                     </tr>
                                 ) : merged.length === 0 ? (
@@ -217,7 +217,7 @@ export default function TeamIndex() {
                                         <tr key={agent.id} className="hover:bg-gray-50">
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                                                    <div className="relative flex h-8 w-8 flex-shrari-0 items-center justify-center rounded-full bg-ari-100 text-xs font-bold text-ari-700">
                                                         {agent.name.charAt(0).toUpperCase()}
                                                         <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${agent.is_online ? 'bg-green-500' : 'bg-gray-300'}`} />
                                                     </div>
@@ -241,7 +241,7 @@ export default function TeamIndex() {
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
                                                     {isOverloaded && (
-                                                        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-red-500" />
+                                                        <AlertTriangle className="h-3.5 w-3.5 flex-shrari-0 text-red-500" />
                                                     )}
                                                     <div className="text-sm">
                                                         <span className="font-medium text-gray-900">{agent.active_conversations}</span>
@@ -262,7 +262,7 @@ export default function TeamIndex() {
                                             <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
                                                 {agent.conversations_handled}
                                             </td>
-                                            <td className="px-4 py-3 text-right text-sm font-medium text-brand-600">
+                                            <td className="px-4 py-3 text-right text-sm font-medium text-ari-600">
                                                 {formatDt1(agent.avg_dt1)}
                                             </td>
                                             <td className="px-4 py-3 text-right text-sm text-gray-700">

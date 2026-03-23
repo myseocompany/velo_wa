@@ -55,7 +55,7 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[
     return (
         <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2">
             {tags.map((tag) => (
-                <span key={tag} className="flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                <span key={tag} className="flex items-center gap-1 rounded-full bg-ari-100 px-2 py-0.5 text-xs font-medium text-ari-700">
                     {tag}
                     <button onClick={() => removeTag(tag)}><X className="h-3 w-3" /></button>
                 </span>
@@ -138,7 +138,7 @@ export default function ContactShow({ contactId }: Props) {
         return (
             <AppLayout title="Contacto">
                 <div className="flex h-64 items-center justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-ari-600 border-t-transparent" />
                 </div>
             </AppLayout>
         );
@@ -165,10 +165,10 @@ export default function ContactShow({ contactId }: Props) {
 
                 <div className="flex flex-col gap-6 lg:flex-row">
                     {/* Left — contact card */}
-                    <div className="w-full lg:w-80 flex-shrink-0">
+                    <div className="w-full lg:w-80 flex-shrari-0">
                         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                            <div className="bg-gradient-to-br from-brand-50 to-brand-100 px-5 py-6 text-center">
-                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-600 text-2xl font-bold text-white">
+                            <div className="bg-gradient-to-br from-ari-50 to-ari-100 px-5 py-6 text-center">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ari-600 text-2xl font-bold text-white">
                                     {displayName.charAt(0).toUpperCase()}
                                 </div>
                                 <h2 className="mt-3 text-lg font-semibold text-gray-900">{displayName}</h2>
@@ -198,7 +198,7 @@ export default function ContactShow({ contactId }: Props) {
                                 )}
                                 {contact.assignee && (
                                     <div className="flex items-center gap-3 py-2.5">
-                                        <UserCheck className="h-4 w-4 text-brand-500" />
+                                        <UserCheck className="h-4 w-4 text-ari-500" />
                                         <span className="text-sm text-gray-700">{contact.assignee.name}</span>
                                     </div>
                                 )}
@@ -207,7 +207,7 @@ export default function ContactShow({ contactId }: Props) {
                                         <Tag className="mt-0.5 h-4 w-4 text-gray-400" />
                                         <div className="flex flex-wrap gap-1">
                                             {(contact.tags ?? []).map((tag) => (
-                                                <span key={tag} className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">{tag}</span>
+                                                <span key={tag} className="rounded-full bg-ari-50 px-2 py-0.5 text-xs font-medium text-ari-700">{tag}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -262,7 +262,7 @@ export default function ContactShow({ contactId }: Props) {
                         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                                    <MessageSquare className="h-4 w-4 text-brand-500" />
+                                    <MessageSquare className="h-4 w-4 text-ari-500" />
                                     Conversaciones ({conversations.length})
                                 </h3>
                             </div>
@@ -314,7 +314,7 @@ export default function ContactShow({ contactId }: Props) {
                                 <input
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -324,7 +324,7 @@ export default function ContactShow({ contactId }: Props) {
                                         value={editEmail}
                                         onChange={(e) => setEditEmail(e.target.value)}
                                         type="email"
-                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                     />
                                 </div>
                                 <div>
@@ -332,7 +332,7 @@ export default function ContactShow({ contactId }: Props) {
                                     <input
                                         value={editCompany}
                                         onChange={(e) => setEditCompany(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                     />
                                 </div>
                             </div>
@@ -345,7 +345,7 @@ export default function ContactShow({ contactId }: Props) {
                                 <select
                                     value={editAssigned}
                                     onChange={(e) => setEditAssigned(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                 >
                                     <option value="">Sin asignar</option>
                                     {agents.map((a) => (
@@ -361,7 +361,7 @@ export default function ContactShow({ contactId }: Props) {
                                     value={editNotes}
                                     onChange={(e) => setEditNotes(e.target.value)}
                                     rows={3}
-                                    className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                    className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                 />
                             </div>
                             <div>
@@ -373,7 +373,7 @@ export default function ContactShow({ contactId }: Props) {
                                             const key = `campo_${Object.keys(editCustomFields).length + 1}`;
                                             setEditCustomFields({ ...editCustomFields, [key]: '' });
                                         }}
-                                        className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+                                        className="text-xs text-ari-600 hover:text-ari-700 font-medium"
                                     >
                                         + Añadir campo
                                     </button>
@@ -394,13 +394,13 @@ export default function ContactShow({ contactId }: Props) {
                                                         setEditCustomFields(Object.fromEntries(entries));
                                                     }}
                                                     placeholder="clave"
-                                                    className="w-1/3 rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-brand-500 focus:outline-none"
+                                                    className="w-1/3 rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
                                                 />
                                                 <input
                                                     value={v}
                                                     onChange={(e) => setEditCustomFields({ ...editCustomFields, [k]: e.target.value })}
                                                     placeholder="valor"
-                                                    className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-brand-500 focus:outline-none"
+                                                    className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
                                                 />
                                                 <button
                                                     type="button"
@@ -425,7 +425,7 @@ export default function ContactShow({ contactId }: Props) {
                                 Cancelar
                             </button>
                             <button onClick={saveEdit} disabled={saving}
-                                className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                                className="flex items-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50">
                                 {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Check className="h-4 w-4" />}
                                 Guardar
                             </button>

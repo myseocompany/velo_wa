@@ -16,7 +16,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'General',
         description: 'Zona horaria, horario laboral y cierre automático de conversaciones.',
-        icon: <Clock className="h-6 w-6 text-brand-600" />,
+        icon: <Clock className="h-6 w-6 text-ari-600" />,
         href: '/settings/general',
         label: 'Abrir',
         roles: ['owner'],
@@ -24,7 +24,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'Equipo',
         description: 'Invita miembros, cambia roles y gestiona el acceso al sistema.',
-        icon: <Users className="h-6 w-6 text-brand-600" />,
+        icon: <Users className="h-6 w-6 text-ari-600" />,
         href: '/settings/team',
         label: 'Gestionar equipo',
         roles: ['owner', 'admin'],
@@ -32,7 +32,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'WhatsApp',
         description: 'Conecta o desconecta tu número y revisa el estado de la instancia.',
-        icon: <QrCode className="h-6 w-6 text-brand-600" />,
+        icon: <QrCode className="h-6 w-6 text-ari-600" />,
         href: '/settings/whatsapp',
         label: 'Ir a conexión WhatsApp',
         roles: ['owner', 'admin'],
@@ -40,7 +40,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'Reglas de asignación',
         description: 'Define cómo se asignan automáticamente las conversaciones entrantes.',
-        icon: <Shuffle className="h-6 w-6 text-brand-600" />,
+        icon: <Shuffle className="h-6 w-6 text-ari-600" />,
         href: '/settings/assignment-rules',
         label: 'Gestionar reglas',
         roles: ['owner', 'admin'],
@@ -48,7 +48,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'Respuestas rápidas',
         description: 'Crea atajos para enviar mensajes frecuentes desde el inbox con `/`.',
-        icon: <Zap className="h-6 w-6 text-brand-600" />,
+        icon: <Zap className="h-6 w-6 text-ari-600" />,
         href: '/settings/quick-replies',
         label: 'Gestionar respuestas',
         roles: ['owner', 'admin'],
@@ -56,7 +56,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'Automatizaciones',
         description: 'Responde, asigna o etiqueta conversaciones automáticamente.',
-        icon: <Bot className="h-6 w-6 text-brand-600" />,
+        icon: <Bot className="h-6 w-6 text-ari-600" />,
         href: '/settings/automations',
         label: 'Gestionar automatizaciones',
         roles: ['owner', 'admin'],
@@ -64,7 +64,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'Calidad de datos',
         description: 'Detecta y fusiona contactos duplicados que comparten el mismo número.',
-        icon: <DatabaseZap className="h-6 w-6 text-brand-600" />,
+        icon: <DatabaseZap className="h-6 w-6 text-ari-600" />,
         href: '/settings/data-quality',
         label: 'Revisar duplicados',
         roles: ['owner', 'admin'],
@@ -72,7 +72,7 @@ const CARDS: SettingCard[] = [
     {
         title: 'Registro de actividad',
         description: 'Auditoría de acciones realizadas por los miembros del equipo.',
-        icon: <Activity className="h-6 w-6 text-brand-600" />,
+        icon: <Activity className="h-6 w-6 text-ari-600" />,
         href: '/settings/activity',
         label: 'Ver registro',
         roles: ['owner', 'admin'],
@@ -110,7 +110,7 @@ export default function SettingsIndex() {
                             <div className="mt-4">
                                 <Link
                                     href={card.href}
-                                    className="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                                    className="inline-flex items-center rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                                 >
                                     {card.label}
                                 </Link>

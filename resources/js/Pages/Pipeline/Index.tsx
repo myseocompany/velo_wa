@@ -80,11 +80,11 @@ function DealCard({ deal, moving, onEdit }: { deal: PipelineDeal; moving: boolea
         <div className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-150 p-3.5">
             {/* Title row */}
             <div className="flex items-start gap-2">
-                <GripVertical size={14} className="mt-0.5 shrink-0 text-gray-300 group-hover:text-gray-400 cursor-grab" />
+                <GripVertical size={14} className="mt-0.5 shrari-0 text-gray-300 group-hover:text-gray-400 cursor-grab" />
                 <p className="flex-1 text-sm font-medium text-gray-900 leading-snug line-clamp-2">{deal.title}</p>
                 <button
                     onClick={onEdit}
-                    className="shrink-0 opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+                    className="shrari-0 opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
                 >
                     <Pencil size={13} />
                 </button>
@@ -647,7 +647,7 @@ export default function PipelineIndex() {
             <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-gray-50 overflow-hidden">
 
                 {/* Top bar */}
-                <div className="shrink-0 px-5 pt-4 pb-3 bg-white border-b border-gray-200">
+                <div className="shrari-0 px-5 pt-4 pb-3 bg-white border-b border-gray-200">
                     <div className="flex items-center justify-between gap-4 mb-3">
                         <div>
                             <h1 className="text-lg font-bold text-gray-900">Pipeline</h1>
@@ -723,16 +723,16 @@ export default function PipelineIndex() {
                                     const deals = board[stage.key];
                                     const stageTotal = summary?.by_stage.find(s => s.stage === stage.key)?.total_value ?? 0;
                                     return (
-                                        <div key={stage.key} className="w-[272px] shrink-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                                        <div key={stage.key} className="w-[272px] shrari-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                                             {/* Column header */}
                                             <div className={`px-3.5 py-3 border-b ${stage.header} flex items-center justify-between gap-2`}>
                                                 <div className="flex items-center gap-2 min-w-0">
-                                                    <span className={`w-2 h-2 rounded-full shrink-0 ${stage.dot}`} />
+                                                    <span className={`w-2 h-2 rounded-full shrari-0 ${stage.dot}`} />
                                                     <span className={`text-sm font-semibold truncate ${stage.color}`}>{stage.label}</span>
-                                                    <span className="text-xs text-gray-400 font-medium bg-white/70 rounded-full px-1.5 py-0.5 shrink-0">{deals.length}</span>
+                                                    <span className="text-xs text-gray-400 font-medium bg-white/70 rounded-full px-1.5 py-0.5 shrari-0">{deals.length}</span>
                                                 </div>
                                                 <button onClick={() => openCreate(stage.key)}
-                                                    className="shrink-0 p-1 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-white/80 transition"
+                                                    className="shrari-0 p-1 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-white/80 transition"
                                                     title="Nuevo deal">
                                                     <Plus size={15} />
                                                 </button>

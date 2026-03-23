@@ -136,7 +136,7 @@ export default function SettingsTeam() {
                     {canManage && (
                         <button
                             onClick={() => { setShowInvite(!showInvite); setInviteResult(null); setInviteError(null); }}
-                            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                            className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                         >
                             <UserPlus className="h-4 w-4" />
                             Invitar miembro
@@ -150,7 +150,7 @@ export default function SettingsTeam() {
 
                 {/* Invite panel */}
                 {showInvite && canManage && (
-                    <div className="rounded-xl border border-brand-200 bg-brand-50 p-5 space-y-4">
+                    <div className="rounded-xl border border-ari-200 bg-ari-50 p-5 space-y-4">
                         <h3 className="text-base font-semibold text-gray-900">Invitar nuevo miembro</h3>
 
                         {inviteResult ? (
@@ -162,7 +162,7 @@ export default function SettingsTeam() {
                                 </div>
                                 <button
                                     onClick={() => { setInviteResult(null); setShowInvite(false); }}
-                                    className="text-sm text-brand-600 hover:underline"
+                                    className="text-sm text-ari-600 hover:underline"
                                 >
                                     Cerrar
                                 </button>
@@ -175,7 +175,7 @@ export default function SettingsTeam() {
                                         type="text"
                                         value={inviteForm.name}
                                         onChange={e => setInviteForm(p => ({ ...p, name: e.target.value }))}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                         placeholder="Juan García"
                                     />
                                 </div>
@@ -185,7 +185,7 @@ export default function SettingsTeam() {
                                         type="email"
                                         value={inviteForm.email}
                                         onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                         placeholder="juan@empresa.com"
                                     />
                                 </div>
@@ -194,7 +194,7 @@ export default function SettingsTeam() {
                                     <select
                                         value={inviteForm.role}
                                         onChange={e => setInviteForm(p => ({ ...p, role: e.target.value as UserRole }))}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                     >
                                         <option value="agent">Agente</option>
                                         <option value="admin">Administrador</option>
@@ -209,7 +209,7 @@ export default function SettingsTeam() {
                                         max={100}
                                         value={inviteForm.max_concurrent_conversations}
                                         onChange={e => setInviteForm(p => ({ ...p, max_concurrent_conversations: parseInt(e.target.value) }))}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                                     />
                                 </div>
                                 {inviteError && (
@@ -221,7 +221,7 @@ export default function SettingsTeam() {
                                     <button
                                         onClick={handleInvite}
                                         disabled={inviting || !inviteForm.name || !inviteForm.email}
-                                        className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                                        className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
                                     >
                                         {inviting && <Loader2 className="h-4 w-4 animate-spin" />}
                                         Crear cuenta
@@ -338,7 +338,7 @@ function MemberRow({
     return (
         <div className="flex items-center gap-4 px-4 py-3">
             {/* Avatar */}
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
+            <div className="flex h-9 w-9 shrari-0 items-center justify-center rounded-full bg-ari-100 text-sm font-semibold text-ari-700">
                 {member.avatar_url
                     ? <img src={member.avatar_url} alt={member.name} className="h-9 w-9 rounded-full object-cover" />
                     : member.name.charAt(0).toUpperCase()
@@ -376,7 +376,7 @@ function MemberRow({
                     <button
                         onClick={() => onUpdateRole(member)}
                         disabled={actionLoading === member.id}
-                        className="rounded bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700 disabled:opacity-60"
+                        className="rounded bg-ari-600 px-2 py-1 text-xs text-white hover:bg-ari-700 disabled:opacity-60"
                     >
                         {actionLoading === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Guardar'}
                     </button>

@@ -100,11 +100,11 @@ export default function ProfileEdit({
                     {/* Avatar */}
                     <div className="mb-5 flex items-center gap-4">
                         <div className="relative">
-                            <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-100">
+                            <div className="h-16 w-16 overflow-hidden rounded-full bg-ari-100">
                                 {avatarPreview ? (
                                     <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                                 ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-brand-700">
+                                    <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-ari-700">
                                         {user.name.charAt(0).toUpperCase()}
                                     </div>
                                 )}
@@ -112,7 +112,7 @@ export default function ProfileEdit({
                             <button
                                 onClick={() => avatarInputRef.current?.click()}
                                 disabled={uploadingAvatar}
-                                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-brand-600 text-white hover:bg-brand-700"
+                                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-ari-600 text-white hover:bg-ari-700"
                                 title="Cambiar foto"
                             >
                                 {uploadingAvatar
@@ -144,7 +144,7 @@ export default function ProfileEdit({
                             type="text"
                             value={name}
                             onChange={e => setName(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                         />
                     </div>
 
@@ -163,7 +163,7 @@ export default function ProfileEdit({
                         <button
                             onClick={handleSaveProfile}
                             disabled={savingProfile}
-                            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                            className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
                         >
                             {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Guardar
@@ -175,7 +175,7 @@ export default function ProfileEdit({
                 {/* Notifications */}
                 <section className="rounded-xl border border-gray-200 bg-white p-5">
                     <div className="mb-4 flex items-center gap-2">
-                        <Bell className="h-5 w-5 text-brand-600" />
+                        <Bell className="h-5 w-5 text-ari-600" />
                         <h2 className="text-base font-semibold text-gray-900">Notificaciones</h2>
                     </div>
                     <div className="space-y-3">
@@ -185,7 +185,7 @@ export default function ProfileEdit({
                                     type="checkbox"
                                     checked={notifs[key] ?? false}
                                     onChange={e => setNotifs(p => ({ ...p, [key]: e.target.checked }))}
-                                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-ari-600 focus:ring-ari-500"
                                 />
                                 <div>
                                     <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -198,7 +198,7 @@ export default function ProfileEdit({
                         <button
                             onClick={handleSaveNotifs}
                             disabled={savingNotifs}
-                            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                            className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
                         >
                             {savingNotifs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Guardar preferencias
@@ -210,7 +210,7 @@ export default function ProfileEdit({
                 {/* Password */}
                 <section className="rounded-xl border border-gray-200 bg-white p-5">
                     <div className="mb-4 flex items-center gap-2">
-                        <Lock className="h-5 w-5 text-brand-600" />
+                        <Lock className="h-5 w-5 text-ari-600" />
                         <h2 className="text-base font-semibold text-gray-900">Cambiar contraseña</h2>
                     </div>
                     <UpdatePasswordForm className="" />

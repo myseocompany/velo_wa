@@ -15,7 +15,7 @@ interface WaStatusPayload {
 
 function StatusBadge({ status }: { status: WaStatus }) {
     const map: Record<WaStatus, { label: string; className: string }> = {
-        connected:    { label: 'Conectado',      className: 'bg-brand-100 text-brand-800' },
+        connected:    { label: 'Conectado',      className: 'bg-ari-100 text-ari-800' },
         qr_pending:   { label: 'Esperando QR',   className: 'bg-yellow-100 text-yellow-800' },
         disconnected: { label: 'Desconectado',   className: 'bg-gray-100 text-gray-600' },
         banned:       { label: 'Bloqueado',       className: 'bg-red-100 text-red-800' },
@@ -107,7 +107,7 @@ export default function WhatsApp() {
                             <StatusBadge status={status} />
                         </div>
                         {status === 'connected' && (
-                            <CheckCircle className="h-8 w-8 text-brand-500" />
+                            <CheckCircle className="h-8 w-8 text-ari-500" />
                         )}
                         {status === 'disconnected' && (
                             <WifiOff className="h-8 w-8 text-gray-400" />
@@ -163,7 +163,7 @@ export default function WhatsApp() {
                             <button
                                 onClick={handleConnect}
                                 disabled={loading}
-                                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50"
                             >
                                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                                 Conectar WhatsApp

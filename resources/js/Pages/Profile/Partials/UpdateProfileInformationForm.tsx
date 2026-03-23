@@ -82,14 +82,14 @@ export default function UpdateProfileInformation({
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
-                                className="rounded-md text-sm text-ink-900 underline decoration-brand-300 underline-offset-2 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                                className="rounded-md text-sm text-ari-900 underline decoration-ari-300 underline-offset-2 hover:text-ari-600 focus:outline-none focus:ring-2 focus:ring-ari-500 focus:ring-offset-2"
                             >
                                 Click here to re-send the verification email.
                             </Link>
                         </p>
 
-                        {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-brand-600">
+                        {status === 'verification-lari-sent' && (
+                            <div className="mt-2 text-sm font-medium text-ari-600">
                                 A new verification link has been sent to your
                                 email address.
                             </div>

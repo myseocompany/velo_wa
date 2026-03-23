@@ -130,11 +130,11 @@ function AssignDropdown({ conversation, agents, onlineUserIds, onAssigned }: Ass
                                 key={agent.id}
                                 onClick={() => assign(agent.id)}
                                 className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 ${
-                                    conversation.assigned_to === agent.id ? 'font-semibold text-brand-600' : 'text-gray-800'
+                                    conversation.assigned_to === agent.id ? 'font-semibold text-ari-600' : 'text-gray-800'
                                 }`}
                             >
                                 <span
-                                    className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}
+                                    className={`h-1.5 w-1.5 flex-shrari-0 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}
                                 />
                                 {agent.name}
                             </button>
@@ -221,7 +221,7 @@ function CreateConversationModal({
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="+57 300 0000000"
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                         {errors.phone && <p className="mt-0.5 text-xs text-red-500">{errors.phone}</p>}
                     </div>
@@ -231,7 +231,7 @@ function CreateConversationModal({
                         <input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                     </div>
 
@@ -242,7 +242,7 @@ function CreateConversationModal({
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 type="email"
-                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                             />
                             {errors.email && <p className="mt-0.5 text-xs text-red-500">{errors.email}</p>}
                         </div>
@@ -252,7 +252,7 @@ function CreateConversationModal({
                             <input
                                 value={company}
                                 onChange={(e) => setCompany(e.target.value)}
-                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                             />
                         </div>
                     </div>
@@ -262,7 +262,7 @@ function CreateConversationModal({
                         <select
                             value={assignedTo}
                             onChange={(e) => setAssignedTo(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         >
                             <option value="">Sin asignar</option>
                             {agents.map((agent) => (
@@ -287,7 +287,7 @@ function CreateConversationModal({
                         <button
                             type="submit"
                             disabled={saving || !phone.trim()}
-                            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                            className="flex items-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50"
                         >
                             {saving
                                 ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -519,11 +519,11 @@ export default function InboxIndex({ activeConversationId }: Props) {
         <AppLayout title="Inbox">
             <div className="flex h-full overflow-hidden">
                 {/* ── Conversation list sidebar ── */}
-                <aside className="flex w-80 flex-shrink-0 flex-col border-r border-gray-200 bg-white">
+                <aside className="flex w-80 flex-shrari-0 flex-col border-r border-gray-200 bg-white">
                     <div className="border-b border-gray-100 px-3 py-3">
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                         >
                             <Plus className="h-4 w-4" />
                             Nueva conversación
@@ -537,7 +537,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Buscar por nombre o teléfono…"
-                            className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm placeholder-gray-400 focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm placeholder-gray-400 focus:border-ari-500 focus:outline-none"
                         />
                     </div>
 
@@ -549,7 +549,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                 onClick={() => setStatusFilter(tab.value)}
                                 className={`flex-1 py-2 text-xs font-medium transition-colors ${
                                     statusFilter === tab.value
-                                        ? 'border-b-2 border-brand-600 text-brand-600'
+                                        ? 'border-b-2 border-ari-600 text-ari-600'
                                         : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
@@ -561,7 +561,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                     <div className="flex-1 overflow-y-auto">
                         {loadingConvs ? (
                             <div className="flex items-center justify-center py-16">
-                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-ari-600 border-t-transparent" />
                             </div>
                         ) : (
                             <ConversationList
@@ -624,7 +624,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
                                     <button
                                         onClick={() => setShowContactPanel(!showContactPanel)}
-                                        className={`rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 ${showContactPanel ? 'bg-gray-100 text-brand-600' : ''}`}
+                                        className={`rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 ${showContactPanel ? 'bg-gray-100 text-ari-600' : ''}`}
                                         title="Panel de contacto"
                                     >
                                         <Info className="h-4 w-4" />
@@ -636,7 +636,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                             <div className="flex flex-1 overflow-hidden">
                                 {loadingMessages ? (
                                     <div className="flex flex-1 items-center justify-center">
-                                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-ari-600 border-t-transparent" />
                                     </div>
                                 ) : (
                                     <MessageThread

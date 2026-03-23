@@ -113,14 +113,14 @@ export default function SettingsGeneral() {
                 {/* Zona horaria */}
                 <section className="rounded-xl border border-gray-200 bg-white p-5">
                     <div className="mb-4 flex items-center gap-2">
-                        <Globe className="h-5 w-5 text-brand-600" />
+                        <Globe className="h-5 w-5 text-ari-600" />
                         <h2 className="text-base font-semibold text-gray-900">Zona horaria</h2>
                     </div>
                     <select
                         disabled={!isOwner}
                         value={settings?.timezone ?? 'America/Bogota'}
                         onChange={e => setSettings(prev => ({ ...prev!, timezone: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500 disabled:bg-gray-50 disabled:text-gray-500"
                     >
                         {[
                             'America/Bogota', 'America/Lima', 'America/Caracas',
@@ -139,7 +139,7 @@ export default function SettingsGeneral() {
                 {/* Cierre automático */}
                 <section className="rounded-xl border border-gray-200 bg-white p-5">
                     <div className="mb-4 flex items-center gap-2">
-                        <Timer className="h-5 w-5 text-brand-600" />
+                        <Timer className="h-5 w-5 text-ari-600" />
                         <h2 className="text-base font-semibold text-gray-900">Cierre automático</h2>
                     </div>
                     <p className="mb-3 text-sm text-gray-500">
@@ -157,7 +157,7 @@ export default function SettingsGeneral() {
                                 auto_close_hours: e.target.value ? parseInt(e.target.value) : null,
                             }))}
                             placeholder="Sin cierre automático"
-                            className="w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50"
+                            className="w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500 disabled:bg-gray-50"
                         />
                         <span className="text-sm text-gray-500">horas</span>
                     </div>
@@ -166,7 +166,7 @@ export default function SettingsGeneral() {
                 {/* Horario laboral */}
                 <section className="rounded-xl border border-gray-200 bg-white p-5">
                     <div className="mb-4 flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-brand-600" />
+                        <Clock className="h-5 w-5 text-ari-600" />
                         <h2 className="text-base font-semibold text-gray-900">Horario laboral</h2>
                     </div>
                     <p className="mb-4 text-sm text-gray-500">
@@ -184,7 +184,7 @@ export default function SettingsGeneral() {
                                             disabled={!isOwner}
                                             checked={day.enabled}
                                             onChange={e => updateDay(key, 'enabled', e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                            className="h-4 w-4 rounded border-gray-300 text-ari-600 focus:ring-ari-500"
                                         />
                                         <label htmlFor={`day-${key}`} className="text-sm text-gray-700">
                                             {label}
@@ -195,7 +195,7 @@ export default function SettingsGeneral() {
                                         disabled={!isOwner || !day.enabled}
                                         value={day.start}
                                         onChange={e => updateDay(key, 'start', e.target.value)}
-                                        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
                                     />
                                     <span className="text-sm text-gray-400">—</span>
                                     <input
@@ -203,7 +203,7 @@ export default function SettingsGeneral() {
                                         disabled={!isOwner || !day.enabled}
                                         value={day.end}
                                         onChange={e => updateDay(key, 'end', e.target.value)}
-                                        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
                                     />
                                 </div>
                             );
@@ -235,7 +235,7 @@ export default function SettingsGeneral() {
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                            className="flex items-center gap-2 rounded-lg bg-ari-600 px-5 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
                         >
                             <Save className="h-4 w-4" />
                             {saving ? 'Guardando...' : 'Guardar cambios'}

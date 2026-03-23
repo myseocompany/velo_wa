@@ -86,7 +86,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                             value={shortcut}
                             onChange={(e) => setShortcut(e.target.value)}
                             placeholder="ej: horario"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                             required
                         />
                         {errors.shortcut && <p className="mt-1 text-xs text-red-600">{errors.shortcut}</p>}
@@ -98,7 +98,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Horario de atención"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                             required
                         />
                         {errors.title && <p className="mt-1 text-xs text-red-600">{errors.title}</p>}
@@ -113,7 +113,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                             onChange={(e) => setBody(e.target.value)}
                             placeholder="Nuestro horario es de lunes a viernes de 8am a 6pm."
                             rows={5}
-                            className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                             required
                         />
                         <p className="mt-1 text-xs text-gray-500">
@@ -128,7 +128,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                             placeholder="general"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                         />
                         {errors.category && <p className="mt-1 text-xs text-red-600">{errors.category}</p>}
                     </div>
@@ -144,7 +144,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                         <button
                             type="submit"
                             disabled={saving}
-                            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
                         >
                             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                             {isEdit ? 'Guardar cambios' : 'Crear respuesta'}
@@ -233,7 +233,7 @@ export default function QuickRepliesPage() {
                     </div>
                     <button
                         onClick={openCreateModal}
-                        className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                     >
                         <Plus className="h-4 w-4" />
                         Nueva respuesta
@@ -247,7 +247,7 @@ export default function QuickRepliesPage() {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Buscar por atajo, título o contenido..."
-                            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                         />
                     </div>
                 </div>
@@ -275,7 +275,7 @@ export default function QuickRepliesPage() {
                                 <article key={quickReply.id} className="flex items-start justify-between gap-3 px-4 py-4">
                                     <div className="min-w-0 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-700">
+                                            <span className="inline-flex items-center gap-1 rounded-md bg-ari-50 px-2 py-1 text-xs font-semibold text-ari-700">
                                                 <Zap className="h-3 w-3" />
                                                 /{quickReply.shortcut}
                                             </span>

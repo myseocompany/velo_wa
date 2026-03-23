@@ -110,7 +110,7 @@ export default function SettingsActivityLog() {
                         <select
                             value={logName}
                             onChange={e => setLogName(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         >
                             <option value="">Todas</option>
                             <option value="contact">Contactos</option>
@@ -124,7 +124,7 @@ export default function SettingsActivityLog() {
                             type="date"
                             value={dateFrom}
                             onChange={e => setDateFrom(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                     </div>
                     <div>
@@ -133,12 +133,12 @@ export default function SettingsActivityLog() {
                             type="date"
                             value={dateTo}
                             onChange={e => setDateTo(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                     </div>
                     <button
                         onClick={handleSearch}
-                        className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                        className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                     >
                         <Search className="h-4 w-4" />
                         Buscar
@@ -151,7 +151,7 @@ export default function SettingsActivityLog() {
                         <div className="space-y-px">
                             {[1, 2, 3, 4, 5].map(i => (
                                 <div key={i} className="flex gap-4 p-4">
-                                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                                    <div className="h-8 w-8 shrari-0 animate-pulse rounded-full bg-gray-200" />
                                     <div className="flex-1 space-y-2">
                                         <div className="h-4 w-48 animate-pulse rounded bg-gray-200" />
                                         <div className="h-3 w-32 animate-pulse rounded bg-gray-100" />
@@ -179,7 +179,7 @@ export default function SettingsActivityLog() {
                                     <tr key={entry.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ari-100 text-xs font-semibold text-ari-700">
                                                     {entry.causer?.avatar_url
                                                         ? <img src={entry.causer.avatar_url} alt={entry.causer.name} className="h-7 w-7 rounded-full object-cover" />
                                                         : entry.causer?.name.charAt(0).toUpperCase() ?? '?'

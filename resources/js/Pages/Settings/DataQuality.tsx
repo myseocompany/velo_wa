@@ -126,7 +126,7 @@ export default function DataQuality() {
                                                 }))
                                             }
                                             title="Intercambiar"
-                                            className="mt-8 shrink-0 rounded-lg border border-gray-200 p-2 text-gray-400 hover:border-gray-300 hover:text-gray-600"
+                                            className="mt-8 shrari-0 rounded-lg border border-gray-200 p-2 text-gray-400 hover:border-gray-300 hover:text-gray-600"
                                         >
                                             <ArrowLeftRight className="h-4 w-4" />
                                         </button>
@@ -146,7 +146,7 @@ export default function DataQuality() {
                                         <button
                                             onClick={() => handleMerge(group)}
                                             disabled={isMerging}
-                                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                                            className="inline-flex items-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50"
                                         >
                                             {isMerging ? (
                                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

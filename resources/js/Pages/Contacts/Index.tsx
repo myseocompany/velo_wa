@@ -32,8 +32,8 @@ const SOURCE_LABELS: Record<string, string> = {
 function SortIcon({ field, current, dir }: { field: SortField; current: SortField; dir: SortDir }) {
     if (field !== current) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
     return dir === 'asc'
-        ? <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-brand-600" />
-        : <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-brand-600" />;
+        ? <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-ari-600" />
+        : <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-ari-600" />;
 }
 
 // ─── Create contact modal ─────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="+57 300 0000000"
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                         {errors.phone && <p className="mt-0.5 text-xs text-red-500">{errors.phone}</p>}
                     </div>
@@ -107,7 +107,7 @@ function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
                         <input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -117,7 +117,7 @@ function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 type="email"
-                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                             />
                         </div>
                         <div>
@@ -125,7 +125,7 @@ function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
                             <input
                                 value={company}
                                 onChange={(e) => setCompany(e.target.value)}
-                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                             />
                         </div>
                     </div>
@@ -134,7 +134,7 @@ function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
                         <select
                             value={assignedTo}
                             onChange={(e) => setAssignedTo(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         >
                             <option value="">Sin asignar</option>
                             {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -147,7 +147,7 @@ function CreateContactModal({ agents, onClose, onCreated }: CreateModalProps) {
                             Cancelar
                         </button>
                         <button type="submit" disabled={saving || !phone.trim()}
-                            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                            className="flex items-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50">
                             {saving
                                 ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                 : <Plus className="h-4 w-4" />}
@@ -220,7 +220,7 @@ function MergeModal({ source, onClose, onMerged }: MergeModalProps) {
                             onChange={(e) => setPhone(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && search()}
                             placeholder="Buscar por nombre o teléfono…"
-                            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                         <button onClick={search} disabled={searching}
                             className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50">
@@ -235,16 +235,16 @@ function MergeModal({ source, onClose, onMerged }: MergeModalProps) {
                                 <li key={c.id}>
                                     <button
                                         onClick={() => setTarget(c)}
-                                        className={`flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 ${target?.id === c.id ? 'bg-brand-50' : ''}`}
+                                        className={`flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 ${target?.id === c.id ? 'bg-ari-50' : ''}`}
                                     >
-                                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                                        <div className="flex h-8 w-8 flex-shrari-0 items-center justify-center rounded-full bg-ari-100 text-xs font-bold text-ari-700">
                                             {(c.name ?? c.push_name ?? c.phone ?? '?').charAt(0).toUpperCase()}
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-sm font-medium text-gray-900 truncate">{c.name ?? c.push_name ?? 'Sin nombre'}</p>
                                             <p className="text-xs text-gray-400">{c.phone}</p>
                                         </div>
-                                        {target?.id === c.id && <span className="ml-auto text-xs font-medium text-brand-600">Seleccionado</span>}
+                                        {target?.id === c.id && <span className="ml-auto text-xs font-medium text-ari-600">Seleccionado</span>}
                                     </button>
                                 </li>
                             ))}
@@ -380,7 +380,7 @@ export default function ContactsIndex() {
                     </div>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                        className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                     >
                         <Plus className="h-4 w-4" />
                         Nuevo contacto
@@ -395,7 +395,7 @@ export default function ContactsIndex() {
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             placeholder="Buscar por nombre, teléfono o email"
-                            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                         />
                     </div>
 
@@ -404,7 +404,7 @@ export default function ContactsIndex() {
                             onClick={() => setShowTagPicker(!showTagPicker)}
                             className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium ${
                                 selectedTags.length
-                                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                    ? 'border-ari-500 bg-ari-50 text-ari-700'
                                     : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                             }`}
                         >
@@ -420,10 +420,10 @@ export default function ContactsIndex() {
                                         key={tag}
                                         onClick={() => toggleTag(tag)}
                                         className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 ${
-                                            selectedTags.includes(tag) ? 'font-semibold text-brand-600' : 'text-gray-800'
+                                            selectedTags.includes(tag) ? 'font-semibold text-ari-600' : 'text-gray-800'
                                         }`}
                                     >
-                                        <span className={`h-2 w-2 flex-shrink-0 rounded-full ${selectedTags.includes(tag) ? 'bg-brand-600' : 'bg-gray-300'}`} />
+                                        <span className={`h-2 w-2 flex-shrari-0 rounded-full ${selectedTags.includes(tag) ? 'bg-ari-600' : 'bg-gray-300'}`} />
                                         {tag}
                                     </button>
                                 ))}
@@ -434,7 +434,7 @@ export default function ContactsIndex() {
                     <select
                         value={assignedFilter}
                         onChange={(e) => { setAssignedFilter(e.target.value); setPage(1); }}
-                        className="rounded-lg border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-brand-500 focus:outline-none"
+                        className="rounded-lg border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-ari-500 focus:outline-none"
                     >
                         <option value="">Todos los agentes</option>
                         <option value="me">Asignados a mí</option>
@@ -443,7 +443,7 @@ export default function ContactsIndex() {
                     </select>
 
                     {selectedTags.map((tag) => (
-                        <span key={tag} className="flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-700">
+                        <span key={tag} className="flex items-center gap-1 rounded-full bg-ari-100 px-2.5 py-1 text-xs font-medium text-ari-700">
                             {tag}
                             <button onClick={() => toggleTag(tag)}><X className="h-3 w-3" /></button>
                         </span>
@@ -475,7 +475,7 @@ export default function ContactsIndex() {
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
                                     <tr><td colSpan={6} className="py-12 text-center">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-ari-600 border-t-transparent" />
                                     </td></tr>
                                 ) : contacts.length === 0 ? (
                                     <tr><td colSpan={6} className="px-4 py-10">
@@ -512,7 +512,7 @@ export default function ContactsIndex() {
                                         <td className="px-4 py-3">
                                             {contact.assignee ? (
                                                 <span className="flex items-center gap-1.5 text-sm text-gray-700">
-                                                    <UserCheck className="h-3.5 w-3.5 text-brand-500" />{contact.assignee.name}
+                                                    <UserCheck className="h-3.5 w-3.5 text-ari-500" />{contact.assignee.name}
                                                 </span>
                                             ) : (
                                                 <span className="text-sm text-gray-400">Sin asignar</span>

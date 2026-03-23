@@ -27,7 +27,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
     if (!value) return null;
     return (
         <div className="flex items-start gap-3 py-2">
-            <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+            <Icon className="mt-0.5 h-4 w-4 flex-shrari-0 text-gray-400" />
             <div className="min-w-0">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{label}</p>
                 <p className="text-sm text-gray-900">{value}</p>
@@ -91,7 +91,7 @@ export default function ContactPanel({ conversation, onClose }: Props) {
     };
 
     return (
-        <aside className="flex w-72 flex-shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white">
+        <aside className="flex w-72 flex-shrari-0 flex-col overflow-hidden border-l border-gray-200 bg-white">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                 <span className="text-sm font-semibold text-gray-800">Información</span>
@@ -124,14 +124,14 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                     <InfoRow icon={Building2} label="Empresa" value={contact?.company} />
                     {contact?.tags && contact.tags.length > 0 && (
                         <div className="flex items-start gap-3 py-2">
-                            <Tag className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                            <Tag className="mt-0.5 h-4 w-4 flex-shrari-0 text-gray-400" />
                             <div>
                                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Etiquetas</p>
                                 <div className="mt-1 flex flex-wrap gap-1">
                                     {contact.tags.map((tag) => (
                                         <span
                                             key={tag}
-                                            className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700"
+                                            className="rounded-full bg-ari-50 px-2 py-0.5 text-xs font-medium text-ari-700"
                                         >
                                             {tag}
                                         </span>
@@ -161,7 +161,7 @@ export default function ContactPanel({ conversation, onClose }: Props) {
 
                     {assignee && (
                         <div className="flex items-start gap-3 py-2">
-                            <UserIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                            <UserIcon className="mt-0.5 h-4 w-4 flex-shrari-0 text-gray-400" />
                             <div>
                                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Asignado</p>
                                 <p className="text-sm text-gray-900">{assignee.name}</p>
@@ -171,10 +171,10 @@ export default function ContactPanel({ conversation, onClose }: Props) {
 
                     {dt1Seconds !== null && (
                         <div className="flex items-start gap-3 py-2">
-                            <Clock className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                            <Clock className="mt-0.5 h-4 w-4 flex-shrari-0 text-gray-400" />
                             <div>
                                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Tiempo de respuesta (Dt1)</p>
-                                <p className="text-sm font-semibold text-brand-600">{formatDt1(dt1Seconds)}</p>
+                                <p className="text-sm font-semibold text-ari-600">{formatDt1(dt1Seconds)}</p>
                             </div>
                         </div>
                     )}
@@ -220,8 +220,8 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                         <div key={deal.id} className="mb-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
                             <div className="flex items-start justify-between gap-1">
                                 <p className="text-xs font-medium text-gray-800 line-clamp-1 flex-1">{deal.title}</p>
-                                {deal.stage === 'closed_won'  && <Trophy size={11} className="text-emerald-500 shrink-0 mt-0.5" />}
-                                {deal.stage === 'closed_lost' && <AlertCircle size={11} className="text-rose-400 shrink-0 mt-0.5" />}
+                                {deal.stage === 'closed_won'  && <Trophy size={11} className="text-emerald-500 shrari-0 mt-0.5" />}
+                                {deal.stage === 'closed_lost' && <AlertCircle size={11} className="text-rose-400 shrari-0 mt-0.5" />}
                             </div>
                             <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400">
                                 <span>{STAGE_LABELS[deal.stage] ?? deal.stage}</span>
@@ -236,7 +236,7 @@ export default function ContactPanel({ conversation, onClose }: Props) {
 
             {/* Footer link */}
             <div className="border-t border-gray-100 px-4 py-3">
-                <button className="flex w-full items-center justify-between text-xs text-brand-600 hover:text-brand-700">
+                <button className="flex w-full items-center justify-between text-xs text-ari-600 hover:text-ari-700">
                     <span>Ver perfil completo</span>
                     <ChevronRight className="h-3.5 w-3.5" />
                 </button>

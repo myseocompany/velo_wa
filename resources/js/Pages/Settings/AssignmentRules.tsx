@@ -392,7 +392,7 @@ function RuleCard({ rule, agents, onEdit, onDelete, onToggle, onMoveUp, onMoveDo
                         </span>
                         <span className="ml-1 text-xs text-gray-400">#{rule.priority}</span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 shrari-0">
                         <button
                             onClick={onToggle}
                             className={`text-sm ${rule.is_active ? 'text-emerald-500 hover:text-emerald-700' : 'text-gray-400 hover:text-gray-600'}`}

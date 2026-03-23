@@ -215,7 +215,7 @@ export default function Welcome() {
                                 <ul className="my-6 space-y-2">
                                     {plan.features.map(f => (
                                         <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                                            <CheckCircle size={14} className="shrink-0 text-ari-600" />
+                                            <CheckCircle size={14} className="shrari-0 text-ari-600" />
                                             {f}
                                         </li>
                                     ))}

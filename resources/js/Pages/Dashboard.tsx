@@ -128,7 +128,7 @@ function StatCard({
     };
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3 shadow-sm">
-            <div className={`p-2 rounded-lg shrink-0 ${bg[accent]}`}>{icon}</div>
+            <div className={`p-2 rounded-lg shrari-0 ${bg[accent]}`}>{icon}</div>
             <div className="min-w-0">
                 <p className="text-xs text-gray-500 truncate">{label}</p>
                 <p className="text-2xl font-bold text-gray-900 leading-tight mt-0.5">{value}</p>
@@ -151,7 +151,7 @@ function RangeTabs({ ranges, active, onChange }: {
                 <button key={r.key} onClick={() => onChange(r.key)}
                     className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                         active === r.key
-                            ? 'bg-brand-600 text-white shadow-sm'
+                            ? 'bg-ari-600 text-white shadow-sm'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}>
                     {r.label}
@@ -176,7 +176,7 @@ function AgentTable({ range }: { range: string }) {
 
     if (loading) return (
         <div className="flex items-center justify-center h-24">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-ari-500 border-t-transparent" />
         </div>
     );
 
@@ -278,7 +278,7 @@ export default function Dashboard({
                             title="Filtrar Dt1 por horario laboral (Lun–Vie 09:00–18:00 si no hay configuración)"
                             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition ${
                                 bhActive
-                                    ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                                    ? 'bg-ari-600 text-white border-ari-600 shadow-sm'
                                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                             }`}
                         >
@@ -317,7 +317,7 @@ export default function Dashboard({
                 {/* KPI row 2 — Dt1 */}
                 <div className="grid grid-cols-3 gap-3">
                     {bhActive && (
-                        <div className="col-span-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-200 text-xs text-brand-700">
+                        <div className="col-span-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ari-50 border border-ari-200 text-xs text-ari-700">
                             <Clock size={12} />
                             Dt1 filtrado por horario laboral — sólo conversaciones iniciadas en días/horas configurados
                         </div>
@@ -352,7 +352,7 @@ export default function Dashboard({
                                 <h2 className="text-sm font-semibold text-gray-900">Conversaciones nuevas</h2>
                                 <p className="text-xs text-gray-400 mt-0.5">{conversation_chart.total} en el período</p>
                             </div>
-                            <TrendingUp size={16} className="text-gray-300 mt-0.5 shrink-0" />
+                            <TrendingUp size={16} className="text-gray-300 mt-0.5 shrari-0" />
                         </div>
                         <div className="h-52">
                             <ResponsiveContainer width="100%" height="100%">
@@ -378,7 +378,7 @@ export default function Dashboard({
                                     {messages_chart.total_inbound} entrantes · {messages_chart.total_outbound} salientes
                                 </p>
                             </div>
-                            <MessageSquare size={16} className="text-gray-300 mt-0.5 shrink-0" />
+                            <MessageSquare size={16} className="text-gray-300 mt-0.5 shrari-0" />
                         </div>
                         <div className="h-52">
                             <ResponsiveContainer width="100%" height="100%">
@@ -421,7 +421,7 @@ export default function Dashboard({
                         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                             <div className="flex items-center justify-between mb-3">
                                 <h2 className="text-sm font-semibold text-gray-900">Pipeline</h2>
-                                <Link href="/pipeline" className="text-xs text-brand-600 hover:underline flex items-center gap-0.5">
+                                <Link href="/pipeline" className="text-xs text-ari-600 hover:underline flex items-center gap-0.5">
                                     Ver <ChevronRight size={12} />
                                 </Link>
                             </div>
@@ -455,7 +455,7 @@ export default function Dashboard({
                         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                             <div className="flex items-center justify-between mb-3">
                                 <h2 className="text-sm font-semibold text-gray-900">Recientes</h2>
-                                <Link href="/inbox" className="text-xs text-brand-600 hover:underline flex items-center gap-0.5">
+                                <Link href="/inbox" className="text-xs text-ari-600 hover:underline flex items-center gap-0.5">
                                     Inbox <ChevronRight size={12} />
                                 </Link>
                             </div>
@@ -466,12 +466,12 @@ export default function Dashboard({
                                 {recent_conversations.map(c => (
                                     <Link key={c.id} href={`/inbox?conversation=${c.id}`}
                                         className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition group">
-                                        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${STATUS_DOT[c.status] ?? 'bg-gray-300'}`} />
+                                        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrari-0 ${STATUS_DOT[c.status] ?? 'bg-gray-300'}`} />
                                         <div className="min-w-0">
                                             <p className="text-xs font-medium text-gray-800 truncate">{c.contact_name}</p>
                                             <p className="text-xs text-gray-400 truncate mt-0.5">{c.last_message}</p>
                                         </div>
-                                        <span className="text-[10px] text-gray-300 shrink-0 ml-auto pt-0.5">{fmtDate(c.last_message_at)}</span>
+                                        <span className="text-[10px] text-gray-300 shrari-0 ml-auto pt-0.5">{fmtDate(c.last_message_at)}</span>
                                     </Link>
                                 ))}
                             </div>

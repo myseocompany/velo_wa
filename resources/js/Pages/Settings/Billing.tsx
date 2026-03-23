@@ -79,7 +79,7 @@ export default function Billing({
                 {/* Trial / Status banner */}
                 {on_trial && trial_ends_at && (
                     <div className="flex items-center gap-3 rounded-xl border border-amber-700 bg-amber-900/20 p-4">
-                        <AlertCircle className="h-5 w-5 shrink-0 text-amber-400" />
+                        <AlertCircle className="h-5 w-5 shrari-0 text-amber-400" />
                         <p className="text-sm text-amber-300">
                             Tu período de prueba termina el{' '}
                             <strong>{new Date(trial_ends_at).toLocaleDateString('es')}</strong>.
@@ -168,7 +168,7 @@ export default function Billing({
                                     <ul className="my-4 space-y-1.5">
                                         {(PLAN_FEATURES[key] ?? []).map(f => (
                                             <li key={f} className="flex items-center gap-2 text-xs text-gray-400">
-                                                <CheckCircle size={12} className="text-amber-400 shrink-0" />
+                                                <CheckCircle size={12} className="text-amber-400 shrari-0" />
                                                 {f}
                                             </li>
                                         ))}

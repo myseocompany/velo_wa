@@ -101,11 +101,11 @@ export default function AppLayout({ children, title }: PropsWithChildren<{ title
                                 href={item.href}
                                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                                     isActive
-                                        ? 'bg-brand-50 text-ink-900'
-                                        : 'text-ink-900/75 hover:bg-brand-50 hover:text-ink-900'
+                                        ? 'bg-ari-50 text-ari-900'
+                                        : 'text-ari-900/75 hover:bg-ari-50 hover:text-ari-900'
                                 }`}
                             >
-                                <span className={isActive ? 'text-brand-500' : 'text-ink-900/40'}>
+                                <span className={isActive ? 'text-ari-500' : 'text-ari-900/40'}>
                                     {item.icon}
                                 </span>
                                 {item.label}
@@ -121,11 +121,11 @@ export default function AppLayout({ children, title }: PropsWithChildren<{ title
                             onClick={() => setUserMenuOpen((prev) => !prev)}
                             className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                            <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-brand-100">
+                            <div className="h-8 w-8 shrari-0 overflow-hidden rounded-full bg-ari-100">
                                 {user.avatar_url ? (
                                     <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
                                 ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-brand-700">
+                                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-ari-700">
                                         {user.name.charAt(0).toUpperCase()}
                                     </div>
                                 )}
@@ -136,14 +136,14 @@ export default function AppLayout({ children, title }: PropsWithChildren<{ title
                                     {user.role === 'owner' ? 'Propietario' : user.role === 'admin' ? 'Administrador' : 'Agente'}
                                 </p>
                             </div>
-                            <ChevronDown size={14} className="shrink-0 text-gray-400" />
+                            <ChevronDown size={14} className="shrari-0 text-gray-400" />
                         </button>
 
                         {userMenuOpen && (
                             <div className="absolute bottom-full mb-1 w-full rounded-md border border-gray-200 bg-white py-1 shadow-lg">
                                 <Link
                                     href="/profile"
-                                    className="flex items-center gap-2 px-4 py-2 text-sm text-ink-900 hover:bg-brand-50"
+                                    className="flex items-center gap-2 px-4 py-2 text-sm text-ari-900 hover:bg-ari-50"
                                     onClick={() => setUserMenuOpen(false)}
                                 >
                                     <User size={14} />

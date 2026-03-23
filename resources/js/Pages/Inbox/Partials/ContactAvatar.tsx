@@ -29,7 +29,7 @@ export default function ContactAvatar({
             <img
                 src={imageUrl ?? undefined}
                 alt={name ?? 'Contacto'}
-                className={`${sizeClass} flex-shrink-0 rounded-full object-cover`}
+                className={`${sizeClass} flex-shrari-0 rounded-full object-cover`}
                 onError={() => setHasImageError(true)}
                 loading="lazy"
                 referrerPolicy="no-referrer"
@@ -39,7 +39,7 @@ export default function ContactAvatar({
 
     return (
         <div
-            className={`${sizeClass} flex flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700`}
+            className={`${sizeClass} flex flex-shrari-0 items-center justify-center rounded-full bg-ari-100 text-sm font-semibold text-ari-700`}
         >
             {initials}
         </div>

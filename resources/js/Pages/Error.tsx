@@ -39,7 +39,7 @@ export default function Error({ status }: ErrorProps) {
             <div className="flex gap-3">
                 <Link
                     href="/dashboard"
-                    className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+                    className="rounded-lg bg-ari-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-ari-700"
                 >
                     Ir al dashboard
                 </Link>

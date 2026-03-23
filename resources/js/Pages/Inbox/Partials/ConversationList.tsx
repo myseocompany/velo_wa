@@ -52,7 +52,7 @@ export default function ConversationList({ conversations, activeId, unreadCounts
                     <li key={conv.id}>
                         <button
                             onClick={() => onSelect(conv)}
-                            className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 ${isActive ? 'border-l-2 border-brand-600 bg-brand-50' : ''}`}
+                            className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 ${isActive ? 'border-l-2 border-ari-600 bg-ari-50' : ''}`}
                         >
                             <ContactAvatar
                                 name={displayName}
@@ -64,7 +64,7 @@ export default function ConversationList({ conversations, activeId, unreadCounts
                                     <span className={`truncate text-sm ${unread > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-900'}`}>
                                         {displayName}
                                     </span>
-                                    <div className="ml-2 flex flex-shrink-0 items-center gap-1.5">
+                                    <div className="ml-2 flex flex-shrari-0 items-center gap-1.5">
                                         {conv.last_message_at && (
                                             <span className="text-xs text-gray-400">
                                                 {formatDistanceToNow(new Date(conv.last_message_at), {
@@ -74,7 +74,7 @@ export default function ConversationList({ conversations, activeId, unreadCounts
                                             </span>
                                         )}
                                         {unread > 0 && (
-                                            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">
+                                            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-ari-600 px-1.5 text-[10px] font-bold text-white">
                                                 {unread > 99 ? '99+' : unread}
                                             </span>
                                         )}

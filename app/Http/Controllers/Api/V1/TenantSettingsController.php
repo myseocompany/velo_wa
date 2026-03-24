@@ -23,6 +23,8 @@ class TenantSettingsController extends Controller
                 'business_hours'   => $tenant->business_hours ?? $this->defaultBusinessHours(),
                 'max_agents'       => $tenant->max_agents,
                 'max_contacts'     => $tenant->max_contacts,
+                'webhook_url'      => $tenant->webhook_url,
+                'webhook_secret'   => $tenant->webhook_secret ? '••••••••' : null,
             ],
         ]);
     }

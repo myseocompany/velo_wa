@@ -10,6 +10,7 @@ use App\Actions\WhatsApp\StoreInboundMessage;
 use App\Enums\AutomationTriggerType;
 use App\Events\ConversationUpdated;
 use App\Events\MessageReceived;
+use App\Jobs\DispatchOutboundWebhook;
 use App\Jobs\DownloadMessageMedia;
 use App\Models\Conversation;
 use App\Models\Tenant;
@@ -129,6 +130,16 @@ class HandleInboundMessage implements ShouldQueue
 
             broadcast(new MessageReceived($message));
             broadcast(new ConversationUpdated($conversation->fresh()));
+
+            if ($tenant->webhook_url) {
+                $event = $fromMe ? 'message.sent' : 'message.received';
+                DispatchOutboundWebhook::dispatch(
+                    $tenant->webhook_url,
+                    $event,
+                    DispatchOutboundWebhook::payloadFromMessage($message, $event),
+                    $tenant->webhook_secret,
+                );
+            }
         }
     }
 

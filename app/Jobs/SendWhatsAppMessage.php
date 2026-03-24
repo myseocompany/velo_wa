@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Enums\MessageStatus;
+use App\Jobs\DispatchOutboundWebhook;
 use App\Events\MessageReceived;
 use App\Models\Message;
 use App\Services\WhatsAppClientService;
@@ -91,7 +92,17 @@ class SendWhatsAppMessage implements ShouldQueue
                 'wa_message_id' => $waMessageId,
             ]);
 
-            broadcast(new MessageReceived($message->fresh()));
+            $freshMessage = $message->fresh();
+            broadcast(new MessageReceived($freshMessage));
+
+            if ($tenant->webhook_url) {
+                DispatchOutboundWebhook::dispatch(
+                    $tenant->webhook_url,
+                    'message.sent',
+                    DispatchOutboundWebhook::payloadFromMessage($freshMessage, 'message.sent'),
+                    $tenant->webhook_secret,
+                );
+            }
         } catch (Throwable $e) {
             Log::error('SendWhatsAppMessage: failed to send', [
                 'message_id' => $this->message->id,

@@ -23,6 +23,8 @@ class TenantSettingsRequest extends FormRequest
             'business_hours.*.enabled'  => ['boolean'],
             'business_hours.*.start'    => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
             'business_hours.*.end'      => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
+            'webhook_url'               => ['nullable', 'url', 'max:500'],
+            'webhook_secret'            => ['nullable', 'string', 'max:255'],
         ];
     }
 }

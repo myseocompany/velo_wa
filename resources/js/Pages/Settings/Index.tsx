@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Users, Zap } from 'lucide-react';
+import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Users, Webhook, Zap } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface SettingCard {
@@ -68,6 +68,14 @@ const CARDS: SettingCard[] = [
         href: '/settings/data-quality',
         label: 'Revisar duplicados',
         roles: ['owner', 'admin'],
+    },
+    {
+        title: 'Webhooks',
+        description: 'Notifica a tu CRM externo cuando llegue o salga un mensaje de WhatsApp.',
+        icon: <Webhook className="h-6 w-6 text-brand-600" />,
+        href: '/settings/webhooks',
+        label: 'Configurar webhook',
+        roles: ['owner'],
     },
     {
         title: 'Registro de actividad',

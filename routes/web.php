@@ -92,6 +92,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
         return Inertia::render('Settings/Automations');
     })->name('settings.automations');
 
+    Route::get('/settings/webhooks', function () {
+        return Inertia::render('Settings/Webhooks');
+    })->name('settings.webhooks');
+
     Route::get('/settings/data-quality', function () {
         return Inertia::render('Settings/DataQuality');
     })->name('settings.data-quality');

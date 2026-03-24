@@ -30,6 +30,8 @@ class Tenant extends Model
         'business_hours',
         'auto_close_hours',
         'onboarding_completed_at',
+        'webhook_url',
+        'webhook_secret',
     ];
 
     protected function casts(): array

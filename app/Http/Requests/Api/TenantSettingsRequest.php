@@ -16,7 +16,7 @@ class TenantSettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'timezone'          => ['required', 'string', 'timezone:all'],
+            'timezone'          => ['sometimes', 'required', 'string', 'timezone:all'],
             'auto_close_hours'  => ['nullable', 'integer', 'min:1', 'max:8760'],
             'business_hours'    => ['nullable', 'array'],
             'business_hours.*'  => ['array'],

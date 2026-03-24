@@ -1,6 +1,8 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
-import { CheckCircle, MessageSquare, QrCode, Smartphone, Users, Zap } from 'lucide-react';
+import axios from 'axios';
+import { useCallback, useState } from 'react';
+import { CheckCircle, Loader2, MessageSquare, QrCode, Smartphone, Users, Zap } from 'lucide-react';
+import { useTenantChannel } from '@/hooks/useEcho';
 
 interface TenantInfo {
     id: string;
@@ -41,9 +43,46 @@ function StepIndicator({ current }: { current: number }) {
     );
 }
 
+interface WaStatusPayload {
+    status: string;
+    phone: string | null;
+    qr_code: string | null;
+}
+
 export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
     const [step, setStep] = useState(1);
     const [completing, setCompleting] = useState(false);
+
+    const [waStatus, setWaStatus] = useState(tenant.wa_status);
+    const [qrCode, setQrCode]     = useState<string | null>(null);
+    const [waLoading, setWaLoading] = useState(false);
+    const [waError, setWaError]   = useState<string | null>(null);
+
+    const handleWaStatusUpdate = useCallback((data: unknown) => {
+        const payload = data as WaStatusPayload;
+        setWaStatus(payload.status);
+        if (payload.qr_code) setQrCode(payload.qr_code);
+        if (payload.status === 'connected') setQrCode(null);
+    }, []);
+
+    useTenantChannel(tenant.id, 'wa.status.updated', handleWaStatusUpdate);
+
+    async function handleConnect() {
+        setWaLoading(true);
+        setWaError(null);
+        try {
+            const res = await axios.post('/api/v1/whatsapp/connect');
+            setQrCode(res.data.qr_code ?? null);
+            setWaStatus('qr_pending');
+        } catch (e: unknown) {
+            const msg = axios.isAxiosError(e)
+                ? (e.response?.data?.message ?? 'Error al conectar')
+                : 'Error al conectar';
+            setWaError(msg);
+        } finally {
+            setWaLoading(false);
+        }
+    }
 
     const handleComplete = () => {
         setCompleting(true);
@@ -114,11 +153,13 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                             <QrCode className="mx-auto mb-3 h-10 w-10 text-amber-400" />
                             <h2 className="text-xl font-bold text-white">Conecta WhatsApp</h2>
                             <p className="mt-1 text-sm text-gray-400">
-                                Ve a Ajustes → Dispositivos vinculados en tu app de WhatsApp y escanea el QR desde el panel.
+                                Genera el código QR y escanéalo desde tu teléfono en{' '}
+                                <span className="text-white">WhatsApp → Dispositivos vinculados</span>.
                             </p>
                         </div>
 
-                        {tenant.wa_status === 'connected' ? (
+                        {/* Conectado */}
+                        {waStatus === 'connected' && (
                             <div className="rounded-xl border border-green-700 bg-green-900/20 p-4 text-center">
                                 <CheckCircle className="mx-auto mb-2 h-8 w-8 text-green-400" />
                                 <p className="font-semibold text-green-300">¡WhatsApp conectado!</p>
@@ -126,13 +167,56 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                                     <p className="mt-1 text-sm text-gray-400">{tenant.wa_phone}</p>
                                 )}
                             </div>
-                        ) : (
-                            <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6 text-center space-y-3">
+                        )}
+
+                        {/* QR generado */}
+                        {qrCode && waStatus !== 'connected' && (
+                            <div className="rounded-xl border border-amber-700/50 bg-amber-900/10 p-4 text-center space-y-3">
+                                <img
+                                    src={qrCode}
+                                    alt="WhatsApp QR Code"
+                                    className="mx-auto h-56 w-56 rounded-lg bg-white p-2"
+                                />
+                                <p className="text-xs text-amber-400">
+                                    El código expira en 60 segundos. Si expira, haz clic en "Generar QR" nuevamente.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Sin QR y no conectado */}
+                        {!qrCode && waStatus !== 'connected' && (
+                            <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6 text-center space-y-4">
                                 <Smartphone className="mx-auto h-10 w-10 text-gray-500" />
                                 <p className="text-sm text-gray-400">
-                                    Puedes conectar WhatsApp ahora o más tarde desde{' '}
-                                    <span className="text-amber-400">Ajustes → WhatsApp</span>.
+                                    Haz clic en el botón para generar el código QR de conexión.
                                 </p>
+                                <button
+                                    onClick={handleConnect}
+                                    disabled={waLoading}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-2.5 font-semibold text-gray-900 hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                                >
+                                    {waLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    Generar QR
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Botón regenerar cuando ya hay QR visible */}
+                        {qrCode && waStatus !== 'connected' && (
+                            <button
+                                onClick={handleConnect}
+                                disabled={waLoading}
+                                className="w-full rounded-xl border border-gray-700 py-2.5 text-sm text-gray-400 hover:bg-gray-800 disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
+                            >
+                                {waLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Generar nuevo QR
+                            </button>
+                        )}
+
+                        {/* Error */}
+                        {waError && (
+                            <div className="rounded-lg bg-red-900/20 border border-red-700 p-3 text-sm text-red-400">
+                                {waError}
                             </div>
                         )}
 
@@ -147,7 +231,7 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                                 onClick={() => setStep(3)}
                                 className="flex-1 rounded-xl bg-amber-500 py-3 font-semibold text-gray-900 hover:bg-amber-400 transition-colors"
                             >
-                                {tenant.wa_status === 'connected' ? 'Continuar →' : 'Omitir por ahora →'}
+                                {waStatus === 'connected' ? 'Continuar →' : 'Omitir por ahora →'}
                             </button>
                         </div>
                     </div>

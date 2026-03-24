@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { MessageSquare, Zap, BarChart3, Users, Shield, CheckCircle, ArrowRight, Star } from 'lucide-react';
+import ApplicationLogo from '@/Components/ApplicationLogo';
 
 const FEATURES = [
     {
@@ -85,11 +86,8 @@ export default function Welcome() {
             {/* Navbar */}
             <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur">
                 <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ari-600">
-                            <MessageSquare className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900">AriCRM</span>
+                    <div className="flex items-center">
+                        <ApplicationLogo className="h-8 w-auto" />
                     </div>
                     <nav className="hidden items-center gap-6 text-sm text-gray-500 md:flex">
                         <a href="#features" className="hover:text-gray-900 transition-colors">Características</a>
@@ -256,11 +254,8 @@ export default function Welcome() {
             {/* Footer */}
             <footer className="border-t border-gray-200 bg-gray-900 py-10">
                 <div className="mx-auto max-w-6xl px-6 flex flex-col items-center gap-4 md:flex-row md:justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-ari-600">
-                            <MessageSquare className="h-4 w-4 text-white" />
-                        </div>
-                        <span className="text-sm font-semibold text-white">AriCRM</span>
+                    <div className="flex items-center">
+                        <ApplicationLogo className="h-6 w-auto brightness-0 invert" />
                     </div>
                     <p className="text-xs text-gray-500">© {new Date().getFullYear()} AriCRM. Todos los derechos reservados.</p>
                     <div className="flex gap-4 text-xs text-gray-500">

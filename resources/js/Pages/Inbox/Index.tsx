@@ -464,7 +464,9 @@ export default function InboxIndex({ activeConversationId }: Props) {
     );
 
     function handleMessageSent(message: Message) {
-        setMessages((prev) => [...prev, message]);
+        // Optimistically mark as sent so the spinner clears immediately.
+        // The real status (sent/delivered/read/failed) will arrive via Reverb.
+        setMessages((prev) => [...prev, { ...message, status: 'sent' as Message['status'] }]);
     }
 
     function handleLoadOlderMessages(older: Message[], newNextCursor: string | null) {

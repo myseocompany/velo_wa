@@ -17,4 +17,13 @@ window.Echo = new Echo({
     wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
     enabledTransports: ['ws', 'wss'],
+    // Use axios for channel auth so CSRF token is included automatically
+    authorizer: (channel: { name: string }) => ({
+        authorize: (socketId: string, callback: (error: boolean, data: unknown) => void) => {
+            axios
+                .post('/broadcasting/auth', { socket_id: socketId, channel_name: channel.name })
+                .then((res) => callback(false, res.data))
+                .catch((err) => callback(true, err));
+        },
+    }),
 });

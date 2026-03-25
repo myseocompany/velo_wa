@@ -84,7 +84,7 @@ function DealCard({ deal, moving, onEdit }: { deal: PipelineDeal; moving: boolea
                 <p className="flex-1 text-sm font-medium text-gray-900 leading-snug line-clamp-2">{deal.title}</p>
                 <button
                     onClick={onEdit}
-                    className="shrari-0 opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
                 >
                     <Pencil size={13} />
                 </button>
@@ -219,7 +219,7 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
                         <span className={`w-2 h-2 rounded-full ${STAGE_MAP[stage].dot}`} />
                         <h2 className="font-semibold text-gray-900">{isEdit ? 'Editar deal' : `Nuevo deal · ${STAGE_MAP[stage].label}`}</h2>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100">
+                    <button onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
                         <X size={18} />
                     </button>
                 </div>
@@ -344,20 +344,20 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
                 </form>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50 rounded-b-2xl">
+                <div className="flex flex-col-reverse gap-2 px-5 py-4 border-t bg-gray-50 rounded-b-2xl sm:flex-row sm:items-center sm:justify-between">
                     {isEdit ? (
                         <button type="button" onClick={remove} disabled={deleting}
-                            className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 disabled:opacity-50">
+                            className="flex items-center justify-center gap-1.5 min-h-11 w-full sm:w-auto text-sm text-red-500 hover:text-red-700 disabled:opacity-50">
                             <Trash2 size={14} />{deleting ? 'Eliminando…' : 'Eliminar'}
                         </button>
-                    ) : <span />}
-                    <div className="flex gap-2">
+                    ) : <span className="hidden sm:block" />}
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
                         <button type="button" onClick={onClose}
-                            className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
+                            className="min-h-11 w-full sm:w-auto px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
                             Cancelar
                         </button>
                         <button onClick={submit as unknown as React.MouseEventHandler} disabled={saving}
-                            className="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 font-medium">
+                            className="min-h-11 w-full sm:w-auto px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 font-medium">
                             {saving ? 'Guardando…' : isEdit ? 'Guardar' : 'Crear deal'}
                         </button>
                     </div>
@@ -389,10 +389,10 @@ function SummaryBar({ summary }: { summary: PipelineSummary }) {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {cards.map(c => (
                 <div key={c.label} className={`${c.bg} rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm`}>
-                    <span className={c.sub}>{c.icon}</span>
-                    <div>
+                    <span className={`${c.sub} shrink-0`}>{c.icon}</span>
+                    <div className="min-w-0">
                         <p className={`text-xs ${c.sub}`}>{c.label}</p>
-                        <p className={`text-base font-bold ${c.text} leading-tight mt-0.5`}>{c.value}</p>
+                        <p className={`text-base font-bold ${c.text} leading-tight mt-0.5 truncate`}>{c.value}</p>
                     </div>
                 </div>
             ))}
@@ -654,18 +654,18 @@ export default function PipelineIndex() {
                             <p className="text-xs text-gray-400 mt-0.5">Arrastra las tarjetas para cambiar de etapa</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
                         {/* Search */}
-                        <div className="relative">
+                        <div className="relative w-full sm:w-auto">
                             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input value={search} onChange={e => setSearch(e.target.value)}
                                 placeholder="Buscar deal…"
-                                className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-40" />
+                                className="w-full sm:w-40 pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                         </div>
                         {/* Agent filter */}
-                        <div className="relative">
+                        <div className="relative w-full sm:w-auto">
                             <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
-                                className="appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                className="w-full sm:w-auto appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                 <option value="">Todos los agentes</option>
                                 <option value="me">Mis deals</option>
                                 <option value="unassigned">Sin asignar</option>
@@ -676,22 +676,22 @@ export default function PipelineIndex() {
                         {/* Date range */}
                         <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                             title="Desde"
-                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36" />
-                        <span className="text-xs text-gray-400">–</span>
+                            className="w-full sm:w-36 py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <span className="hidden sm:block text-xs text-gray-400">–</span>
                         <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                             title="Hasta"
-                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36" />
+                            className="w-full sm:w-36 py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                         {/* Value range */}
                         <input type="number" min="0" value={valueMin} onChange={e => setValueMin(e.target.value)}
                             placeholder="Valor mín."
-                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-28" />
+                            className="w-full sm:w-28 py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                         <input type="number" min="0" value={valueMax} onChange={e => setValueMax(e.target.value)}
                             placeholder="Valor máx."
-                            className="py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-28" />
+                            className="w-full sm:w-28 py-1.5 px-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                         {/* Clear filters */}
                         {(search || agentFilter || dateFrom || dateTo || valueMin || valueMax) && (
                             <button onClick={() => { setSearch(''); setAgentFilter(''); setDateFrom(''); setDateTo(''); setValueMin(''); setValueMax(''); }}
-                                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition">
+                                className="flex items-center justify-center gap-1 min-h-11 w-full sm:w-auto text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition">
                                 <X size={12} /> Limpiar
                             </button>
                         )}
@@ -723,7 +723,7 @@ export default function PipelineIndex() {
                                     const deals = board[stage.key];
                                     const stageTotal = summary?.by_stage.find(s => s.stage === stage.key)?.total_value ?? 0;
                                     return (
-                                        <div key={stage.key} className="w-[272px] shrari-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                                        <div key={stage.key} className="w-[85vw] sm:w-[272px] shrink-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                                             {/* Column header */}
                                             <div className={`px-3.5 py-3 border-b ${stage.header} flex items-center justify-between gap-2`}>
                                                 <div className="flex items-center gap-2 min-w-0">
@@ -732,7 +732,7 @@ export default function PipelineIndex() {
                                                     <span className="text-xs text-gray-400 font-medium bg-white/70 rounded-full px-1.5 py-0.5 shrari-0">{deals.length}</span>
                                                 </div>
                                                 <button onClick={() => openCreate(stage.key)}
-                                                    className="shrari-0 p-1 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-white/80 transition"
+                                                    className="shrink-0 flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-white/80 transition"
                                                     title="Nuevo deal">
                                                     <Plus size={15} />
                                                 </button>

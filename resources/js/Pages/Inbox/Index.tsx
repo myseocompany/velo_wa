@@ -4,6 +4,7 @@ import { Conversation, ConversationStatus, Message, PageProps, User } from '@/ty
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
 import {
+    ArrowLeft,
     CheckCircle,
     ChevronDown,
     Info,
@@ -235,7 +236,7 @@ function CreateConversationModal({
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                             <label className="mb-1 block text-xs font-medium text-gray-700">Email</label>
                             <input
@@ -276,18 +277,18 @@ function CreateConversationModal({
 
                     {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
 
-                    <div className="flex justify-end gap-2 pt-1">
+                    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="min-h-11 w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={saving || !phone.trim()}
-                            className="flex items-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50"
+                            className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50 sm:w-auto"
                         >
                             {saving
                                 ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -517,11 +518,17 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
     const isClosed = activeConv?.status === 'closed';
 
+    function handleBackToList() {
+        setActiveConv(null);
+        setMessages([]);
+        setShowContactPanel(false);
+    }
+
     return (
         <AppLayout title="Inbox">
             <div className="flex h-full overflow-hidden">
                 {/* ── Conversation list sidebar ── */}
-                <aside className="flex w-80 flex-shrari-0 flex-col border-r border-gray-200 bg-white">
+                <aside className={`flex w-full flex-shrink-0 flex-col border-r border-gray-200 bg-white md:w-80 ${activeConv ? 'hidden md:flex' : 'flex'}`}>
                     <div className="border-b border-gray-100 px-3 py-3">
                         <button
                             onClick={() => setShowCreateModal(true)}
@@ -577,11 +584,18 @@ export default function InboxIndex({ activeConversationId }: Props) {
                 </aside>
 
                 {/* ── Main area ── */}
-                <main className="flex flex-1 flex-col overflow-hidden">
+                <main className={`flex flex-1 flex-col overflow-hidden ${activeConv ? 'flex' : 'hidden md:flex'}`}>
                     {activeConv ? (
                         <>
                             {/* Thread header */}
-                            <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-5 py-3">
+                            <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-3 py-3 md:px-5">
+                                {/* Back button — mobile only */}
+                                <button
+                                    onClick={handleBackToList}
+                                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 md:hidden"
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </button>
                                 <ContactAvatar
                                     name={activeConv.contact?.name ?? activeConv.contact?.push_name ?? '?'}
                                     imageUrl={activeConv.contact?.profile_pic_url}
@@ -599,17 +613,19 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-2">
-                                    <AssignDropdown
-                                        conversation={activeConv}
-                                        agents={agents}
-                                        onlineUserIds={onlineUserIds}
-                                        onAssigned={handleAssigned}
-                                    />
+                                    <div className="hidden md:block">
+                                        <AssignDropdown
+                                            conversation={activeConv}
+                                            agents={agents}
+                                            onlineUserIds={onlineUserIds}
+                                            onAssigned={handleAssigned}
+                                        />
+                                    </div>
 
                                     {isClosed ? (
                                         <button
                                             onClick={reopenConversation}
-                                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                            className="hidden items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 md:flex"
                                         >
                                             <RotateCcw className="h-3.5 w-3.5" />
                                             Reabrir
@@ -617,7 +633,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                     ) : (
                                         <button
                                             onClick={closeConversation}
-                                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                            className="hidden items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 md:flex"
                                         >
                                             <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                                             Cerrar
@@ -650,12 +666,21 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                     />
                                 )}
 
-                                {/* Contact info panel */}
+                                {/* Contact info panel — overlay on mobile, side panel on md+ */}
                                 {showContactPanel && (
-                                    <ContactPanel
-                                        conversation={activeConv}
-                                        onClose={() => setShowContactPanel(false)}
-                                    />
+                                    <>
+                                        {/* Mobile overlay backdrop */}
+                                        <div
+                                            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+                                            onClick={() => setShowContactPanel(false)}
+                                        />
+                                        <div className="fixed inset-y-0 right-0 z-40 w-full max-w-sm md:relative md:inset-auto md:z-auto md:w-72 md:max-w-none">
+                                            <ContactPanel
+                                                conversation={activeConv}
+                                                onClose={() => setShowContactPanel(false)}
+                                            />
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         </>

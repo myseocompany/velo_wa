@@ -91,7 +91,7 @@ export default function ContactPanel({ conversation, onClose }: Props) {
     };
 
     return (
-        <aside className="flex w-72 flex-shrari-0 flex-col overflow-hidden border-l border-gray-200 bg-white">
+        <aside className="flex h-full w-full flex-shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                 <span className="text-sm font-semibold text-gray-800">Información</span>

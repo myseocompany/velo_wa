@@ -140,17 +140,17 @@ export default function TenantsIndex({
 
                 {/* Pagination */}
                 {tenants.meta.last_page > 1 && (
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         {tenants.links.prev && (
-                            <Link href={tenants.links.prev} className="rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
+                            <Link href={tenants.links.prev} className="inline-flex min-h-11 items-center justify-center rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
                                 ← Anterior
                             </Link>
                         )}
-                        <span className="px-3 py-1.5 text-xs text-gray-500">
+                        <span className="inline-flex min-h-11 items-center justify-center px-3 py-1.5 text-xs text-gray-500">
                             Pág. {tenants.meta.current_page} / {tenants.meta.last_page}
                         </span>
                         {tenants.links.next && (
-                            <Link href={tenants.links.next} className="rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
+                            <Link href={tenants.links.next} className="inline-flex min-h-11 items-center justify-center rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
                                 Siguiente →
                             </Link>
                         )}

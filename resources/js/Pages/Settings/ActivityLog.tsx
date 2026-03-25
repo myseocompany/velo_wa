@@ -104,13 +104,13 @@ export default function SettingsActivityLog() {
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-wrap items-end gap-3">
-                    <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                    <div className="w-full sm:w-auto">
                         <label className="mb-1 block text-xs font-medium text-gray-600">Categoría</label>
                         <select
                             value={logName}
                             onChange={e => setLogName(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                            className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         >
                             <option value="">Todas</option>
                             <option value="contact">Contactos</option>
@@ -118,27 +118,27 @@ export default function SettingsActivityLog() {
                             <option value="deal">Negocios</option>
                         </select>
                     </div>
-                    <div>
+                    <div className="w-full sm:w-auto">
                         <label className="mb-1 block text-xs font-medium text-gray-600">Desde</label>
                         <input
                             type="date"
                             value={dateFrom}
                             onChange={e => setDateFrom(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                            className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                     </div>
-                    <div>
+                    <div className="w-full sm:w-auto">
                         <label className="mb-1 block text-xs font-medium text-gray-600">Hasta</label>
                         <input
                             type="date"
                             value={dateTo}
                             onChange={e => setDateTo(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                            className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                         />
                     </div>
                     <button
                         onClick={handleSearch}
-                        className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 sm:w-auto"
                     >
                         <Search className="h-4 w-4" />
                         Buscar
@@ -165,12 +165,13 @@ export default function SettingsActivityLog() {
                             <p className="text-sm">Sin actividad registrada en este período.</p>
                         </div>
                     ) : (
-                        <table className="w-full text-sm">
+                        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+                            <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                                 <tr>
                                     <th className="px-4 py-3">Usuario</th>
                                     <th className="px-4 py-3">Acción</th>
-                                    <th className="px-4 py-3">Categoría</th>
+                                    <th className="hidden px-4 py-3 sm:table-cell">Categoría</th>
                                     <th className="px-4 py-3">Fecha</th>
                                 </tr>
                             </thead>
@@ -189,7 +190,7 @@ export default function SettingsActivityLog() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-gray-700">{formatAction(entry)}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="hidden px-4 py-3 sm:table-cell">
                                             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                                                 {LOG_LABELS[entry.log_name ?? ''] ?? entry.log_name ?? '—'}
                                             </span>
@@ -202,19 +203,20 @@ export default function SettingsActivityLog() {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                            </table>
+                        </div>
                     )}
                 </div>
 
                 {/* Pagination */}
                 {meta.last_page > 1 && (
-                    <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex flex-col gap-3 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
                         <span>{meta.total} registros</span>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
                                 disabled={page === 1 || loading}
-                                className="rounded p-1 hover:bg-gray-100 disabled:opacity-40"
+                                className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </button>
@@ -222,7 +224,7 @@ export default function SettingsActivityLog() {
                             <button
                                 onClick={() => setPage(p => Math.min(meta.last_page, p + 1))}
                                 disabled={page === meta.last_page || loading}
-                                className="rounded p-1 hover:bg-gray-100 disabled:opacity-40"
+                                className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </button>

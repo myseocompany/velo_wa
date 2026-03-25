@@ -43,6 +43,12 @@ const RANGE_LABELS: Record<Range, string> = {
     mes:    'Este mes',
 };
 
+const ROLE_LABELS: Record<string, string> = {
+    owner: 'Propietario',
+    admin: 'Administrador',
+    agent: 'Agente',
+};
+
 function formatDt1(seconds: number | null): string {
     if (seconds === null) return '—';
     if (seconds < 60)   return `${seconds}s`;
@@ -124,7 +130,7 @@ export default function TeamIndex() {
                                 <button
                                     key={r}
                                     onClick={() => setRange(r)}
-                                    className={`px-3 py-1.5 font-medium transition-colors ${
+                                    className={`min-h-11 px-3 py-1.5 font-medium transition-colors ${
                                         range === r
                                             ? 'bg-ari-600 text-white'
                                             : 'text-gray-600 hover:bg-gray-50'
@@ -138,7 +144,7 @@ export default function TeamIndex() {
                         <button
                             onClick={load}
                             disabled={loading}
-                            className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
                             title="Actualizar"
                         >
                             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -185,7 +191,88 @@ export default function TeamIndex() {
                     <div className="border-b border-gray-100 px-4 py-3">
                         <h2 className="text-sm font-semibold text-gray-800">Agentes</h2>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="block divide-y divide-gray-100 md:hidden">
+                        {loading ? (
+                            <div className="py-12 text-center">
+                                <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                            </div>
+                        ) : merged.length === 0 ? (
+                            <div className="px-4 py-10 text-center text-sm text-gray-400">
+                                Sin agentes activos.
+                            </div>
+                        ) : merged.map((agent) => {
+                            const isOverloaded = agent.capacity_pct !== null && agent.capacity_pct >= 90;
+                            return (
+                                <article key={agent.id} className="space-y-4 px-4 py-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                                            {agent.name.charAt(0).toUpperCase()}
+                                            <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${agent.is_online ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="truncate text-sm font-medium text-gray-900">{agent.name}</p>
+                                                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                                    {ROLE_LABELS[agent.role] ?? agent.role}
+                                                </span>
+                                                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${agent.is_online ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                    {agent.is_online ? 'Online' : 'Offline'}
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 truncate text-xs text-gray-400">{agent.email}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Carga actual</p>
+                                            <div className="mt-1 flex items-center gap-2">
+                                                {isOverloaded && (
+                                                    <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-red-500" />
+                                                )}
+                                                <p className="text-sm text-gray-700">
+                                                    <span className="font-semibold text-gray-900">{agent.active_conversations}</span>
+                                                    <span className="ml-1 text-xs text-gray-400">
+                                                        ({agent.open_conversations} ab. / {agent.pending_conversations} pend.)
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Capacidad</p>
+                                            <div className="mt-1">
+                                                <CapacityBar pct={agent.capacity_pct} />
+                                                {agent.max_concurrent_conversations > 0 && (
+                                                    <p className="mt-1 text-[10px] text-gray-400">
+                                                        máx. {agent.max_concurrent_conversations}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{RANGE_LABELS[range]}</p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">{agent.conversations_handled}</p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Dt1 / Mensajes</p>
+                                            <p className="mt-1 text-sm font-semibold text-brand-600">{formatDt1(agent.avg_dt1)}</p>
+                                            <p className="mt-0.5 text-xs text-gray-500">{agent.messages_sent} mensajes</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                        <a
+                                            href={`mailto:${agent.email}`}
+                                            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Email
+                                        </a>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                    <div className="hidden overflow-x-auto md:block">
                         <table className="min-w-full divide-y divide-gray-100">
                             <thead className="bg-gray-50">
                                 <tr>

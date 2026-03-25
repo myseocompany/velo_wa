@@ -101,7 +101,7 @@ export default function WhatsApp() {
 
                 {/* Status card */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-1">
                             <p className="text-sm font-medium text-gray-500">Estado</p>
                             <StatusBadge status={status} />
@@ -143,7 +143,7 @@ export default function WhatsApp() {
                         <img
                             src={qrCode}
                             alt="WhatsApp QR Code"
-                            className="mx-auto h-64 w-64 rounded-lg"
+                            className="mx-auto h-48 w-48 rounded-lg sm:h-64 sm:w-64"
                         />
                         <p className="mt-3 text-xs text-yellow-600">
                             El código expira en 60 segundos. Si expira, haz clic en "Conectar" nuevamente.
@@ -158,12 +158,12 @@ export default function WhatsApp() {
 
                 {/* Actions */}
                 {canManage && (
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row">
                         {status !== 'connected' && (
                             <button
                                 onClick={handleConnect}
                                 disabled={loading}
-                                className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50"
+                                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50 sm:w-auto"
                             >
                                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                                 Conectar WhatsApp
@@ -173,7 +173,7 @@ export default function WhatsApp() {
                             <button
                                 onClick={handleDisconnect}
                                 disabled={loading}
-                                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
                             >
                                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                                 Desconectar

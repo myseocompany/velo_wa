@@ -145,7 +145,7 @@ export default function SettingsGeneral() {
                     <p className="mb-3 text-sm text-gray-500">
                         Cierra automáticamente conversaciones sin actividad después de X horas. Deja vacío para desactivar.
                     </p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                         <input
                             type="number"
                             disabled={!isOwner}
@@ -157,7 +157,7 @@ export default function SettingsGeneral() {
                                 auto_close_hours: e.target.value ? parseInt(e.target.value) : null,
                             }))}
                             placeholder="Sin cierre automático"
-                            className="w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500 disabled:bg-gray-50"
+                            className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500 disabled:bg-gray-50 sm:w-48"
                         />
                         <span className="text-sm text-gray-500">horas</span>
                     </div>
@@ -176,8 +176,8 @@ export default function SettingsGeneral() {
                         {DAYS.map(({ key, label }) => {
                             const day = settings?.business_hours?.[key] ?? { enabled: false, start: '09:00', end: '18:00' };
                             return (
-                                <div key={key} className="flex items-center gap-4">
-                                    <div className="w-28 flex items-center gap-2">
+                                <div key={key} className="flex flex-col gap-3 rounded-lg border border-gray-100 p-3 sm:flex-row sm:items-center sm:border-0 sm:p-0">
+                                    <div className="flex w-full items-center gap-2 sm:w-28">
                                         <input
                                             type="checkbox"
                                             id={`day-${key}`}
@@ -186,7 +186,7 @@ export default function SettingsGeneral() {
                                             onChange={e => updateDay(key, 'enabled', e.target.checked)}
                                             className="h-4 w-4 rounded border-gray-300 text-ari-600 focus:ring-ari-500"
                                         />
-                                        <label htmlFor={`day-${key}`} className="text-sm text-gray-700">
+                                        <label htmlFor={`day-${key}`} className="text-sm text-gray-700 sm:truncate">
                                             {label}
                                         </label>
                                     </div>
@@ -195,15 +195,15 @@ export default function SettingsGeneral() {
                                         disabled={!isOwner || !day.enabled}
                                         value={day.start}
                                         onChange={e => updateDay(key, 'start', e.target.value)}
-                                        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                        className="min-w-0 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 sm:w-auto"
                                     />
-                                    <span className="text-sm text-gray-400">—</span>
+                                    <span className="hidden text-sm text-gray-400 sm:inline">—</span>
                                     <input
                                         type="time"
                                         disabled={!isOwner || !day.enabled}
                                         value={day.end}
                                         onChange={e => updateDay(key, 'end', e.target.value)}
-                                        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                        className="min-w-0 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 sm:w-auto"
                                     />
                                 </div>
                             );
@@ -215,7 +215,7 @@ export default function SettingsGeneral() {
                 {(settings?.max_agents || settings?.max_contacts) && (
                     <section className="rounded-xl border border-gray-200 bg-white p-5">
                         <h2 className="mb-3 text-base font-semibold text-gray-900">Límites del plan</h2>
-                        <div className="flex gap-6 text-sm text-gray-600">
+                        <div className="flex flex-col gap-2 text-sm text-gray-600 sm:flex-row sm:gap-6">
                             {settings.max_agents && (
                                 <div>
                                     <span className="font-medium text-gray-900">{settings.max_agents}</span> agentes máx.
@@ -231,11 +231,11 @@ export default function SettingsGeneral() {
                 )}
 
                 {isOwner && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="flex items-center gap-2 rounded-lg bg-ari-600 px-5 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
+                            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-5 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60 sm:w-auto"
                         >
                             <Save className="h-4 w-4" />
                             {saving ? 'Guardando...' : 'Guardar cambios'}

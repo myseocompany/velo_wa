@@ -67,12 +67,15 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-xl rounded-xl bg-white shadow-2xl">
+            <div className="flex w-full max-w-xl flex-col rounded-xl bg-white shadow-2xl">
                 <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                     <h2 className="text-lg font-semibold text-gray-900">
                         {isEdit ? 'Editar respuesta rápida' : 'Nueva respuesta rápida'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button
+                        onClick={onClose}
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -133,18 +136,18 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                         {errors.category && <p className="mt-1 text-xs text-red-600">{errors.category}</p>}
                     </div>
 
-                    <div className="flex justify-end gap-2 border-t border-gray-200 pt-4">
+                    <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            className="min-h-11 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 sm:w-auto"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
+                            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60 sm:w-auto"
                         >
                             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                             {isEdit ? 'Guardar cambios' : 'Crear respuesta'}
@@ -233,7 +236,7 @@ export default function QuickRepliesPage() {
                     </div>
                     <button
                         onClick={openCreateModal}
-                        className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 sm:w-auto"
                     >
                         <Plus className="h-4 w-4" />
                         Nueva respuesta
@@ -272,7 +275,7 @@ export default function QuickRepliesPage() {
                     ) : (
                         <div className="divide-y divide-gray-100">
                             {quickReplies.map((quickReply) => (
-                                <article key={quickReply.id} className="flex items-start justify-between gap-3 px-4 py-4">
+                                <article key={quickReply.id} className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                                     <div className="min-w-0 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="inline-flex items-center gap-1 rounded-md bg-ari-50 px-2 py-1 text-xs font-semibold text-ari-700">
@@ -292,10 +295,10 @@ export default function QuickRepliesPage() {
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex w-full items-center justify-end gap-1 sm:w-auto">
                                         <button
                                             onClick={() => openEditModal(quickReply)}
-                                            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                            className="flex h-11 w-11 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                                             title="Editar"
                                         >
                                             <Pencil className="h-4 w-4" />
@@ -303,7 +306,7 @@ export default function QuickRepliesPage() {
                                         <button
                                             onClick={() => handleDelete(quickReply)}
                                             disabled={deletingId === quickReply.id}
-                                            className="rounded-md p-2 text-red-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                                            className="flex h-11 w-11 items-center justify-center rounded-md text-red-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                                             title="Eliminar"
                                         >
                                             {deletingId === quickReply.id ? (

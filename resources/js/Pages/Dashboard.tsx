@@ -149,7 +149,7 @@ function RangeTabs({ ranges, active, onChange }: {
         <div className="flex gap-1 flex-wrap">
             {ranges.map(r => (
                 <button key={r.key} onClick={() => onChange(r.key)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                    className={`min-h-11 rounded-lg px-3 py-1 text-xs font-medium transition ${
                         active === r.key
                             ? 'bg-ari-600 text-white shadow-sm'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -185,7 +185,7 @@ function AgentTable({ range }: { range: string }) {
     );
 
     return (
-        <div className="overflow-x-auto">
+        <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-gray-100">
@@ -276,7 +276,7 @@ export default function Dashboard({
                         <button
                             onClick={toggleBusinessHours}
                             title="Filtrar Dt1 por horario laboral (Lun–Vie 09:00–18:00 si no hay configuración)"
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition ${
+                            className={`flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition ${
                                 bhActive
                                     ? 'bg-ari-600 text-white border-ari-600 shadow-sm'
                                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
@@ -286,17 +286,31 @@ export default function Dashboard({
                             Hor. laboral
                         </button>
                         {/* CSV export */}
-                        <div className="relative group">
-                            <button className="p-2 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+                        <div className="flex w-full flex-col gap-2 sm:flex-row md:hidden">
+                            <button
+                                onClick={() => downloadCsv('conversations')}
+                                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                            >
+                                Exportar conversaciones
+                            </button>
+                            <button
+                                onClick={() => downloadCsv('agents')}
+                                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                            >
+                                Exportar agentes
+                            </button>
+                        </div>
+                        <div className="relative hidden md:block group">
+                            <button className="flex h-11 w-11 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700">
                                 <Download size={15} />
                             </button>
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 hidden group-hover:block min-w-max">
+                            <div className="pointer-events-none absolute right-0 top-full z-10 mt-1 min-w-max rounded-xl border border-gray-200 bg-white opacity-0 shadow-lg transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                                 <button onClick={() => downloadCsv('conversations')}
-                                    className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-t-xl">
+                                    className="block min-h-11 w-full rounded-t-xl px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50">
                                     Exportar conversaciones
                                 </button>
                                 <button onClick={() => downloadCsv('agents')}
-                                    className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-b-xl">
+                                    className="block min-h-11 w-full rounded-b-xl px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50">
                                     Exportar agentes
                                 </button>
                             </div>
@@ -315,9 +329,9 @@ export default function Dashboard({
                 </div>
 
                 {/* KPI row 2 — Dt1 */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {bhActive && (
-                        <div className="col-span-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ari-50 border border-ari-200 text-xs text-ari-700">
+                        <div className="flex items-center gap-1.5 rounded-lg border border-ari-200 bg-ari-50 px-3 py-1.5 text-xs text-ari-700 sm:col-span-3">
                             <Clock size={12} />
                             Dt1 filtrado por horario laboral — sólo conversaciones iniciadas en días/horas configurados
                         </div>

@@ -126,7 +126,7 @@ export default function SettingsTeam() {
             <Head title="Gestión de equipo" />
 
             <div className="max-w-3xl space-y-6 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-900">Equipo</h1>
                         <p className="mt-1 text-sm text-gray-500">
@@ -136,7 +136,7 @@ export default function SettingsTeam() {
                     {canManage && (
                         <button
                             onClick={() => { setShowInvite(!showInvite); setInviteResult(null); setInviteError(null); }}
-                            className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
+                            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 sm:w-auto"
                         >
                             <UserPlus className="h-4 w-4" />
                             Invitar miembro
@@ -162,7 +162,7 @@ export default function SettingsTeam() {
                                 </div>
                                 <button
                                     onClick={() => { setInviteResult(null); setShowInvite(false); }}
-                                    className="text-sm text-ari-600 hover:underline"
+                                    className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm text-ari-600 hover:bg-ari-100 hover:text-ari-700"
                                 >
                                     Cerrar
                                 </button>
@@ -217,18 +217,18 @@ export default function SettingsTeam() {
                                         {inviteError}
                                     </div>
                                 )}
-                                <div className="col-span-2 flex gap-3">
+                                <div className="col-span-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                                     <button
                                         onClick={handleInvite}
                                         disabled={inviting || !inviteForm.name || !inviteForm.email}
-                                        className="flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
+                                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60 sm:w-auto"
                                     >
                                         {inviting && <Loader2 className="h-4 w-4 animate-spin" />}
                                         Crear cuenta
                                     </button>
                                     <button
                                         onClick={() => setShowInvite(false)}
-                                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                        className="min-h-11 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 sm:w-auto"
                                     >
                                         Cancelar
                                     </button>
@@ -336,108 +336,112 @@ function MemberRow({
     const isEditing = editingId === member.id;
 
     return (
-        <div className="flex items-center gap-4 px-4 py-3">
-            {/* Avatar */}
-            <div className="flex h-9 w-9 shrari-0 items-center justify-center rounded-full bg-ari-100 text-sm font-semibold text-ari-700">
-                {member.avatar_url
-                    ? <img src={member.avatar_url} alt={member.name} className="h-9 w-9 rounded-full object-cover" />
-                    : member.name.charAt(0).toUpperCase()
-                }
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-4">
+                {/* Avatar */}
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ari-100 text-sm font-semibold text-ari-700">
+                    {member.avatar_url
+                        ? <img src={member.avatar_url} alt={member.name} className="h-9 w-9 rounded-full object-cover" />
+                        : member.name.charAt(0).toUpperCase()
+                    }
+                </div>
+
+                {/* Info */}
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-sm font-medium text-gray-900">{member.name}</span>
+                        {isSelf && <span className="text-xs text-gray-400">(tú)</span>}
+                        {member.is_online && (
+                            <span className="h-2 w-2 rounded-full bg-green-400" title="En línea" />
+                        )}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                        <Mail className="h-3 w-3 flex-shrink-0 text-gray-400" />
+                        <span className="truncate text-xs text-gray-500">{member.email}</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Info */}
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-gray-900">{member.name}</span>
-                    {isSelf && <span className="text-xs text-gray-400">(tú)</span>}
-                    {member.is_online && (
-                        <span className="h-2 w-2 rounded-full bg-green-400" title="En línea" />
-                    )}
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                    <Mail className="h-3 w-3 text-gray-400" />
-                    <span className="truncate text-xs text-gray-500">{member.email}</span>
-                </div>
+            <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:flex-nowrap sm:justify-end">
+                {/* Role */}
+                {isEditing ? (
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                        <select
+                            value={editRole}
+                            onChange={e => setEditRole(e.target.value as UserRole)}
+                            className="min-w-0 w-full rounded-md border border-gray-300 px-2 py-2.5 text-xs sm:w-auto"
+                            autoFocus
+                        >
+                            <option value="agent">Agente</option>
+                            <option value="admin">Administrador</option>
+                            {currentUser.role === 'owner' && <option value="owner">Propietario</option>}
+                        </select>
+                        <button
+                            onClick={() => onUpdateRole(member)}
+                            disabled={actionLoading === member.id}
+                            className="inline-flex min-h-11 items-center justify-center rounded bg-ari-600 px-3 py-2 text-xs text-white hover:bg-ari-700 disabled:opacity-60"
+                        >
+                            {actionLoading === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Guardar'}
+                        </button>
+                        <button
+                            onClick={() => setEditingId(null)}
+                            className="inline-flex min-h-11 items-center justify-center text-xs text-gray-500 hover:text-gray-700"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                ) : (
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_COLORS[member.role as UserRole]}`}>
+                        {ROLE_LABELS[member.role as UserRole]}
+                    </span>
+                )}
+
+                {/* Actions menu */}
+                {canManage && !isSelf && !isEditing && (
+                    <div className="relative w-full sm:w-auto">
+                        <button
+                            onClick={() => setMenuOpen(menuOpen === member.id ? null : member.id)}
+                            className="flex min-h-11 w-full items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 sm:h-11 sm:w-11"
+                        >
+                            <MoreVertical className="h-4 w-4 text-gray-400" />
+                        </button>
+                        {menuOpen === member.id && (
+                            <div className="absolute right-0 top-full z-10 mt-1 w-full rounded-md border border-gray-200 bg-white py-1 shadow-lg sm:w-48">
+                                <button
+                                    onClick={() => {
+                                        setEditingId(member.id);
+                                        setEditRole(member.role as UserRole);
+                                        setMenuOpen(null);
+                                    }}
+                                    className="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                    <ShieldCheck className="h-4 w-4" />
+                                    Cambiar rol
+                                </button>
+                                {member.is_active ? (
+                                    <button
+                                        onClick={() => onDeactivate(member)}
+                                        disabled={actionLoading === member.id}
+                                        className="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                    >
+                                        <UserX className="h-4 w-4" />
+                                        Desactivar
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => onReactivate(member)}
+                                        disabled={actionLoading === member.id}
+                                        className="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-sm text-green-700 hover:bg-green-50"
+                                    >
+                                        <UserCheck className="h-4 w-4" />
+                                        Reactivar
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
-
-            {/* Role */}
-            {isEditing ? (
-                <div className="flex items-center gap-2">
-                    <select
-                        value={editRole}
-                        onChange={e => setEditRole(e.target.value as UserRole)}
-                        className="rounded-md border border-gray-300 px-2 py-1 text-xs"
-                        autoFocus
-                    >
-                        <option value="agent">Agente</option>
-                        <option value="admin">Administrador</option>
-                        {currentUser.role === 'owner' && <option value="owner">Propietario</option>}
-                    </select>
-                    <button
-                        onClick={() => onUpdateRole(member)}
-                        disabled={actionLoading === member.id}
-                        className="rounded bg-ari-600 px-2 py-1 text-xs text-white hover:bg-ari-700 disabled:opacity-60"
-                    >
-                        {actionLoading === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Guardar'}
-                    </button>
-                    <button
-                        onClick={() => setEditingId(null)}
-                        className="text-xs text-gray-500 hover:text-gray-700"
-                    >
-                        ✕
-                    </button>
-                </div>
-            ) : (
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[member.role as UserRole]}`}>
-                    {ROLE_LABELS[member.role as UserRole]}
-                </span>
-            )}
-
-            {/* Actions menu */}
-            {canManage && !isSelf && !isEditing && (
-                <div className="relative">
-                    <button
-                        onClick={() => setMenuOpen(menuOpen === member.id ? null : member.id)}
-                        className="rounded p-1 hover:bg-gray-100"
-                    >
-                        <MoreVertical className="h-4 w-4 text-gray-400" />
-                    </button>
-                    {menuOpen === member.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-                            <button
-                                onClick={() => {
-                                    setEditingId(member.id);
-                                    setEditRole(member.role as UserRole);
-                                    setMenuOpen(null);
-                                }}
-                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                                <ShieldCheck className="h-4 w-4" />
-                                Cambiar rol
-                            </button>
-                            {member.is_active ? (
-                                <button
-                                    onClick={() => onDeactivate(member)}
-                                    disabled={actionLoading === member.id}
-                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                >
-                                    <UserX className="h-4 w-4" />
-                                    Desactivar
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => onReactivate(member)}
-                                    disabled={actionLoading === member.id}
-                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-green-700 hover:bg-green-50"
-                                >
-                                    <UserCheck className="h-4 w-4" />
-                                    Reactivar
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }

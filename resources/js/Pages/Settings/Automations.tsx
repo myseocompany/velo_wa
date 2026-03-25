@@ -153,7 +153,10 @@ function LogsDrawer({ automation, onClose }: LogsDrawerProps) {
                             {automation.name}
                         </p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button
+                        onClick={onClose}
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -183,7 +186,7 @@ function LogsDrawer({ automation, onClose }: LogsDrawerProps) {
                                             : 'border-red-100 bg-red-50'
                                     }`}
                                 >
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <span
                                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                                                 log.status === 'success'
@@ -358,7 +361,10 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                     <h2 className="text-lg font-semibold text-gray-900">
                         {isEdit ? 'Editar automatización' : 'Nueva automatización'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button
+                        onClick={onClose}
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -443,8 +449,8 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                         </p>
                                     )}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-4">
-                                    <div>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                                    <div className="w-full sm:w-auto">
                                         <label className="mb-1 block text-xs font-medium text-gray-600">
                                             Condición
                                         </label>
@@ -453,7 +459,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                             onChange={(e) =>
                                                 setMatchType(e.target.value as 'any' | 'all')
                                             }
-                                            className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
+                                            className="min-w-0 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none sm:w-auto"
                                         >
                                             <option value="any">Cualquiera coincide</option>
                                             <option value="all">Todas coinciden</option>
@@ -484,7 +490,7 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                                     max={1440}
                                     value={minutes}
                                     onChange={(e) => setMinutes(Number(e.target.value))}
-                                    className="w-32 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
+                                    className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500 sm:w-32"
                                 />
                                 <p className="mt-1 text-xs text-gray-400">
                                     El job corre cada minuto; la precisión es ±1 min.
@@ -632,18 +638,18 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                 </form>
 
                 {/* Footer */}
-                <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                <div className="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        className="min-h-11 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 sm:w-auto"
                     >
                         Cancelar
                     </button>
                     <button
                         onClick={handleSubmit as unknown as React.MouseEventHandler}
                         disabled={saving}
-                        className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60"
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-60 sm:w-auto"
                     >
                         {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {isEdit ? 'Guardar cambios' : 'Crear automatización'}
@@ -717,15 +723,15 @@ function AutomationCard({
 
     return (
         <div
-            className={`flex gap-3 rounded-xl border bg-white p-4 shadow-sm transition-opacity ${automation.is_active ? '' : 'opacity-55'}`}
+            className={`flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm transition-opacity sm:flex-row ${automation.is_active ? '' : 'opacity-55'}`}
         >
             {/* Priority controls */}
-            <div className="flex flex-col items-center gap-0.5 pt-1">
+            <div className="flex flex-row items-center gap-2 sm:flex-col sm:gap-0.5 sm:pt-1">
                 <button
                     onClick={onMoveUp}
                     disabled={isFirst}
                     title="Subir prioridad"
-                    className="text-gray-300 hover:text-gray-500 disabled:opacity-20"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300 hover:bg-gray-100 hover:text-gray-500 disabled:opacity-20"
                 >
                     <ChevronUp className="h-4 w-4" />
                 </button>
@@ -734,7 +740,7 @@ function AutomationCard({
                     onClick={onMoveDown}
                     disabled={isLast}
                     title="Bajar prioridad"
-                    className="text-gray-300 hover:text-gray-500 disabled:opacity-20"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300 hover:bg-gray-100 hover:text-gray-500 disabled:opacity-20"
                 >
                     <ChevronDown className="h-4 w-4" />
                 </button>
@@ -742,7 +748,7 @@ function AutomationCard({
 
             {/* Content */}
             <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                         {/* Name + priority number */}
                         <div className="flex flex-wrap items-baseline gap-1.5">
@@ -766,17 +772,17 @@ function AutomationCard({
                         </div>
 
                         {/* Summary line */}
-                        <p className="mt-1 truncate text-xs text-gray-500">
+                        <p className="mt-1 break-words text-xs text-gray-500">
                             {summarizeTrigger()} → {summarizeAction()}
                         </p>
                     </div>
 
                     {/* Actions toolbar */}
-                    <div className="flex shrari-0 items-center gap-0.5">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1 sm:justify-end">
                         {/* Execution count + logs */}
                         <button
                             onClick={onLogs}
-                            className="mr-1 flex items-center gap-1 text-xs text-gray-400 hover:text-ari-600"
+                            className="mr-1 flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs text-gray-400 hover:bg-gray-100 hover:text-ari-600"
                             title="Ver historial de ejecuciones"
                         >
                             <Play className="h-3 w-3" />
@@ -789,8 +795,8 @@ function AutomationCard({
                             title={automation.is_active ? 'Desactivar' : 'Activar'}
                             className={
                                 automation.is_active
-                                    ? 'text-ari-500 hover:text-ari-700'
-                                    : 'text-gray-400 hover:text-gray-600'
+                                    ? 'flex h-11 w-11 items-center justify-center rounded-lg text-ari-500 hover:bg-gray-100 hover:text-ari-700'
+                                    : 'flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                             }
                         >
                             {automation.is_active ? (
@@ -804,7 +810,7 @@ function AutomationCard({
                         <button
                             onClick={onEdit}
                             title="Editar"
-                            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            className="flex h-11 w-11 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                         >
                             <Pencil className="h-4 w-4" />
                         </button>
@@ -813,7 +819,7 @@ function AutomationCard({
                         <button
                             onClick={onDelete}
                             title="Eliminar"
-                            className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                            className="flex h-11 w-11 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-500"
                         >
                             <Trash2 className="h-4 w-4" />
                         </button>
@@ -939,7 +945,7 @@ export default function AutomationsPage() {
                     </div>
                     <button
                         onClick={openCreate}
-                        className="inline-flex items-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 sm:w-auto"
                     >
                         <Plus className="h-4 w-4" />
                         Nueva automatización
@@ -950,7 +956,7 @@ export default function AutomationsPage() {
                 {error && (
                     <div className="flex items-center justify-between rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
                         <span>{error}</span>
-                        <button onClick={() => setError(null)}>
+                        <button onClick={() => setError(null)} className="flex h-11 w-11 items-center justify-center rounded-lg">
                             <X className="h-4 w-4" />
                         </button>
                     </div>
@@ -976,7 +982,7 @@ export default function AutomationsPage() {
                         </div>
                         <button
                             onClick={openCreate}
-                            className="mt-1 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
+                            className="mt-1 inline-flex min-h-11 items-center justify-center rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700"
                         >
                             Crear automatización
                         </button>

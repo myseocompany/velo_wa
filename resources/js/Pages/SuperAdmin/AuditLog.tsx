@@ -204,17 +204,17 @@ export default function AuditLog({
 
                 {/* Pagination */}
                 {logs.meta.last_page > 1 && (
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         {logs.links.prev && (
-                            <Link href={logs.links.prev} className="rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
+                            <Link href={logs.links.prev} className="inline-flex min-h-11 items-center justify-center rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
                                 ← Anterior
                             </Link>
                         )}
-                        <span className="px-3 py-1.5 text-xs text-gray-500">
+                        <span className="inline-flex min-h-11 items-center justify-center px-3 py-1.5 text-xs text-gray-500">
                             Pág. {logs.meta.current_page} / {logs.meta.last_page}
                         </span>
                         {logs.links.next && (
-                            <Link href={logs.links.next} className="rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
+                            <Link href={logs.links.next} className="inline-flex min-h-11 items-center justify-center rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
                                 Siguiente →
                             </Link>
                         )}

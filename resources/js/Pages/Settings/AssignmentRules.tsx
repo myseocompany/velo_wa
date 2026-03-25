@@ -138,7 +138,10 @@ function RuleModal({ rule, agents, onClose, onSaved }: RuleModalProps) {
                     <h2 className="text-lg font-semibold text-gray-900">
                         {isEdit ? 'Editar regla' : 'Nueva regla'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button
+                        onClick={onClose}
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
                         <X size={20} />
                     </button>
                 </div>
@@ -220,7 +223,7 @@ function RuleModal({ rule, agents, onClose, onSaved }: RuleModalProps) {
                                         min={1}
                                         value={maxConversations}
                                         onChange={(e) => setMaxConversations(Number(e.target.value))}
-                                        className="w-32 rounded-lg border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-32"
                                     />
                                 </div>
                             )}
@@ -237,7 +240,7 @@ function RuleModal({ rule, agents, onClose, onSaved }: RuleModalProps) {
                                 <button
                                     type="button"
                                     onClick={addTagMapping}
-                                    className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                    className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-xs text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                                 >
                                     <Plus size={12} /> Agregar
                                 </button>
@@ -255,7 +258,7 @@ function RuleModal({ rule, agents, onClose, onSaved }: RuleModalProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => removeTagMapping(i)}
-                                                className="text-red-400 hover:text-red-600"
+                                                className="flex h-11 w-11 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600"
                                             >
                                                 <X size={14} />
                                             </button>
@@ -307,18 +310,18 @@ function RuleModal({ rule, agents, onClose, onSaved }: RuleModalProps) {
                 </form>
 
                 {/* Footer */}
-                <div className="flex justify-end gap-2 px-6 py-4 border-t">
+                <div className="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        className="min-h-11 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 sm:w-auto"
                     >
                         Cancelar
                     </button>
                     <button
                         onClick={handleSubmit as unknown as React.MouseEventHandler}
                         disabled={saving}
-                        className="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                        className="min-h-11 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
                     >
                         {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear regla'}
                     </button>
@@ -362,13 +365,15 @@ function RuleCard({ rule, agents, onEdit, onDelete, onToggle, onMoveUp, onMoveDo
     }
 
     return (
-        <div className={`bg-white rounded-xl border shadow-sm p-4 flex gap-3 items-start transition-opacity ${rule.is_active ? '' : 'opacity-60'}`}>
+        <div
+            className={`flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm transition-opacity sm:flex-row sm:items-start ${rule.is_active ? '' : 'opacity-60'}`}
+        >
             {/* Drag handle / priority controls */}
-            <div className="flex flex-col items-center gap-0.5 pt-1">
+            <div className="flex flex-row items-center gap-2 sm:flex-col sm:gap-0.5 sm:pt-1">
                 <button
                     onClick={onMoveUp}
                     disabled={isFirst}
-                    className="text-gray-300 hover:text-gray-500 disabled:opacity-20"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300 hover:bg-gray-100 hover:text-gray-500 disabled:opacity-20"
                 >
                     <ChevronUp size={16} />
                 </button>
@@ -376,7 +381,7 @@ function RuleCard({ rule, agents, onEdit, onDelete, onToggle, onMoveUp, onMoveDo
                 <button
                     onClick={onMoveDown}
                     disabled={isLast}
-                    className="text-gray-300 hover:text-gray-500 disabled:opacity-20"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-300 hover:bg-gray-100 hover:text-gray-500 disabled:opacity-20"
                 >
                     <ChevronDown size={16} />
                 </button>
@@ -384,7 +389,7 @@ function RuleCard({ rule, agents, onEdit, onDelete, onToggle, onMoveUp, onMoveDo
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <span className="font-medium text-gray-900">{rule.name}</span>
                         <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -392,29 +397,29 @@ function RuleCard({ rule, agents, onEdit, onDelete, onToggle, onMoveUp, onMoveDo
                         </span>
                         <span className="ml-1 text-xs text-gray-400">#{rule.priority}</span>
                     </div>
-                    <div className="flex items-center gap-1 shrari-0">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1">
                         <button
                             onClick={onToggle}
-                            className={`text-sm ${rule.is_active ? 'text-emerald-500 hover:text-emerald-700' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`flex h-11 w-11 items-center justify-center rounded-lg text-sm ${rule.is_active ? 'text-emerald-500 hover:bg-gray-100 hover:text-emerald-700' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}
                             title={rule.is_active ? 'Desactivar' : 'Activar'}
                         >
                             {rule.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                         </button>
                         <button
                             onClick={onEdit}
-                            className="text-gray-400 hover:text-gray-600 p-1"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                         >
                             <Pencil size={15} />
                         </button>
                         <button
                             onClick={onDelete}
-                            className="text-gray-400 hover:text-red-500 p-1"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500"
                         >
                             <Trash2 size={15} />
                         </button>
                     </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 truncate">{configSummary()}</p>
+                <p className="mt-1 break-words text-xs text-gray-500">{configSummary()}</p>
                 {rule.type === 'least_busy' && rule.config?.max_conversations && (
                     <p className="text-xs text-gray-400 mt-0.5">
                         Máx. {rule.config.max_conversations} convs/agente
@@ -513,7 +518,7 @@ export default function AssignmentRules() {
 
             <div className="max-w-2xl mx-auto py-8 px-4">
                 {/* Header actions */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p className="text-sm text-gray-500">
                             Define cómo se asignan automáticamente las conversaciones entrantes a los agentes.
@@ -522,7 +527,7 @@ export default function AssignmentRules() {
                     </div>
                     <button
                         onClick={openCreate}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 sm:w-auto"
                     >
                         <Plus size={16} />
                         Nueva regla
@@ -541,7 +546,7 @@ export default function AssignmentRules() {
                         </p>
                         <button
                             onClick={openCreate}
-                            className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700"
+                            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700"
                         >
                             Crear regla
                         </button>

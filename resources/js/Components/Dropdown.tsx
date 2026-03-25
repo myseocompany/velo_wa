@@ -73,7 +73,7 @@ const Content = ({
     let widthClasses = '';
 
     if (width === '48') {
-        widthClasses = 'w-48';
+        widthClasses = 'w-full min-w-full sm:w-48';
     }
 
     return (

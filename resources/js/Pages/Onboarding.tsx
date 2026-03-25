@@ -175,7 +175,7 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                                 <img
                                     src={qrCode}
                                     alt="WhatsApp QR Code"
-                                    className="mx-auto h-56 w-56 rounded-lg bg-white p-2"
+                                    className="mx-auto h-48 w-48 rounded-lg bg-white p-2 sm:h-56 sm:w-56"
                                 />
                                 <p className="text-xs text-amber-400">
                                     El código expira en 60 segundos. Si expira, haz clic en "Generar QR" nuevamente.

@@ -65,7 +65,7 @@ export default function TenantsIndex({
                             onChange={e => setSearch(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && applyFilters()}
                             placeholder="Nombre, slug, teléfono..."
-                            className="rounded-lg border border-gray-700 bg-gray-800 pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:border-amber-500 focus:outline-none w-56"
+                            className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2 pl-9 pr-3 text-sm text-white placeholder-gray-500 focus:border-amber-500 focus:outline-none sm:w-56"
                         />
                     </div>
                     <select

@@ -28,11 +28,36 @@ interface Props {
 // ─── Status icon ──────────────────────────────────────────────────────────────
 
 function StatusIcon({ status }: { status: MessageStatus }) {
-    if (status === 'read')      return <CheckCheck className="h-3.5 w-3.5 text-blue-500" />;
-    if (status === 'delivered') return <CheckCheck className="h-3.5 w-3.5 text-gray-400" />;
-    if (status === 'sent')      return <Check className="h-3.5 w-3.5 text-gray-400" />;
-    if (status === 'failed')    return <span className="text-xs text-red-500">!</span>;
-    return <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-300" />;
+    if (status === 'read') {
+        return (
+            <CheckCheck
+                strokeWidth={2.5}
+                className="h-4 w-4 text-cyan-200 drop-shadow-[0_0_2px_rgba(255,255,255,0.45)]"
+            />
+        );
+    }
+
+    if (status === 'delivered') {
+        return (
+            <CheckCheck
+                strokeWidth={2.5}
+                className="h-4 w-4 text-white/80 drop-shadow-[0_0_1px_rgba(255,255,255,0.25)]"
+            />
+        );
+    }
+
+    if (status === 'sent') {
+        return (
+            <Check
+                strokeWidth={2.5}
+                className="h-4 w-4 text-white/75 drop-shadow-[0_0_1px_rgba(255,255,255,0.2)]"
+            />
+        );
+    }
+
+    if (status === 'failed') return <span className="text-xs font-semibold text-red-200">!</span>;
+
+    return <Loader2 className="h-4 w-4 animate-spin text-white/70" />;
 }
 
 // ─── Media content ────────────────────────────────────────────────────────────

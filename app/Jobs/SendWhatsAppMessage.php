@@ -70,8 +70,9 @@ class SendWhatsAppMessage implements ShouldQueue
             if ($message->hasMedia() && $message->media_url) {
                 // Evolution API runs in Docker and cannot reach the host MinIO URL.
                 // Read the file from S3 and pass it as a base64 data URI instead.
-                $s3Path   = $this->resolveS3Path($message->media_url);
-                $binary   = Storage::disk('s3')->get($s3Path);
+                $diskName = (string) config('filesystems.media_disk', config('filesystems.default', 'local'));
+                $filePath = $this->resolveStoredPath($message->media_url);
+                $binary   = Storage::disk($diskName)->get($filePath);
                 $mediaB64 = base64_encode($binary);
 
                 $result = $client->sendMedia(
@@ -135,10 +136,15 @@ class SendWhatsAppMessage implements ShouldQueue
      * New records store "tenantId/media/YYYY-MM/file.ext".
      * Legacy records may store "http://host/bucket/tenantId/media/...".
      */
-    private function resolveS3Path(string $mediaUrl): string
+    private function resolveStoredPath(string $mediaUrl): string
     {
         if (! str_starts_with($mediaUrl, 'http')) {
             return $mediaUrl;
+        }
+
+        $publicPath = parse_url($mediaUrl, PHP_URL_PATH);
+        if (is_string($publicPath) && preg_match('~/storage/(.+)$~', $publicPath, $m)) {
+            return $m[1];
         }
 
         $bucket = config('filesystems.disks.s3.bucket', 'velo-media');

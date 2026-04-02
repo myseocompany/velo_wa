@@ -73,8 +73,9 @@ class DownloadMessageMedia implements ShouldQueue
             $tenantId  = $message->tenant_id;
             $month     = now()->format('Y-m');
             $path      = "{$tenantId}/media/{$month}/{$filename}";
+            $diskName  = (string) config('filesystems.media_disk', config('filesystems.default', 'local'));
 
-            Storage::disk('s3')->put($path, $binary, [
+            Storage::disk($diskName)->put($path, $binary, [
                 'ContentType' => $this->mediaMimeType ?? 'application/octet-stream',
             ]);
 

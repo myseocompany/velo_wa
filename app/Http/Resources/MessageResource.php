@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class MessageResource extends JsonResource
 {
@@ -45,7 +46,14 @@ class MessageResource extends JsonResource
             return null;
         }
 
-        return Storage::disk('s3')->temporaryUrl($path, now()->addHours(6));
+        $diskName = (string) config('filesystems.media_disk', config('filesystems.default', 'local'));
+        $disk     = Storage::disk($diskName);
+
+        try {
+            return $disk->temporaryUrl($path, now()->addHours(6));
+        } catch (Throwable) {
+            return $disk->url($path);
+        }
     }
 
     private function extractS3Path(string $stored): ?string
@@ -53,6 +61,11 @@ class MessageResource extends JsonResource
         // Already a relative path — use directly.
         if (! str_starts_with($stored, 'http')) {
             return $stored;
+        }
+
+        $publicPath = parse_url($stored, PHP_URL_PATH);
+        if (is_string($publicPath) && preg_match('~/storage/(.+)$~', $publicPath, $m)) {
+            return $m[1];
         }
 
         // Legacy full URL: strip scheme + host + "/bucket/" prefix.

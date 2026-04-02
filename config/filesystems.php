@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media Filesystem Disk
+    |--------------------------------------------------------------------------
+    |
+    | Chat attachments may need a different storage backend than the rest of
+    | the application. By default they follow the main filesystem disk, but
+    | production can override this with MEDIA_DISK.
+    |
+    */
+
+    'media_disk' => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'local')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

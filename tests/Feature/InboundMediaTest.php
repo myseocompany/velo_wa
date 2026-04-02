@@ -82,6 +82,7 @@ class InboundMediaTest extends TestCase
 
     public function test_download_message_media_uses_full_payload_and_stores_file(): void
     {
+        config()->set('filesystems.media_disk', 's3');
         Storage::fake('s3');
 
         $tenant = Tenant::create([

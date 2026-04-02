@@ -63,8 +63,9 @@ class MessageController extends Controller
         $tenantId  = $conversation->tenant_id;
         $month     = now()->format('Y-m');
         $path      = "{$tenantId}/media/{$month}/{$filename}";
+        $diskName  = (string) config('filesystems.media_disk', config('filesystems.default', 'local'));
 
-        Storage::disk('s3')->putFileAs(
+        Storage::disk($diskName)->putFileAs(
             "{$tenantId}/media/{$month}",
             $file,
             $filename,

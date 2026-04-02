@@ -121,7 +121,7 @@ class HandleInboundMessage implements ShouldQueue
                 DownloadMessageMedia::dispatch(
                     $message->id,
                     $tenant->wa_instance_id,
-                    $key,
+                    $this->buildMediaDownloadPayload($msgPayload, $msgData['mediaType']),
                     $msgData['mediaType'],
                     $msgData['mediaMimeType'],
                     $msgData['mediaFilename'],
@@ -192,5 +192,38 @@ class HandleInboundMessage implements ShouldQueue
             'mediaFilename' => $mediaFilename,
             'timestamp'     => $timestamp,
         ];
+    }
+
+    /**
+     * Evolution's media endpoint expects the original message envelope, including
+     * `messageType` plus the nested message payload with media metadata.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildMediaDownloadPayload(array $payload, string $mediaType): array
+    {
+        if (! isset($payload['messageType']) || ! is_string($payload['messageType']) || $payload['messageType'] === '') {
+            $payload['messageType'] = $this->inferMessageType($payload['message'] ?? [], $mediaType);
+        }
+
+        return $payload;
+    }
+
+    private function inferMessageType(array $message, string $mediaType): string
+    {
+        foreach (array_keys($message) as $key) {
+            if (is_string($key) && str_ends_with($key, 'Message')) {
+                return $key;
+            }
+        }
+
+        return match ($mediaType) {
+            'image'    => 'imageMessage',
+            'video'    => 'videoMessage',
+            'audio'    => 'audioMessage',
+            'document' => 'documentMessage',
+            'sticker'  => 'stickerMessage',
+            default    => 'conversation',
+        };
     }
 }

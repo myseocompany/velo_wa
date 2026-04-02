@@ -26,7 +26,7 @@ class DownloadMessageMedia implements ShouldQueue
     public function __construct(
         private readonly string $messageId,
         private readonly string $instanceName,
-        private readonly array $messageKey,
+        private readonly array $messagePayload,
         private readonly string $mediaType,
         private readonly ?string $mediaMimeType,
         private readonly ?string $mediaFilename,
@@ -43,13 +43,14 @@ class DownloadMessageMedia implements ShouldQueue
         }
 
         try {
-            $result = $client->getMediaBase64($this->instanceName, $this->messageKey);
+            $result = $client->getMediaBase64($this->instanceName, $this->messagePayload);
 
             $base64 = $result['base64'] ?? null;
 
             if (! $base64) {
                 Log::warning('DownloadMessageMedia: no base64 returned', [
                     'message_id' => $this->messageId,
+                    'message_type' => $this->messagePayload['messageType'] ?? null,
                 ]);
                 return;
             }
@@ -81,7 +82,7 @@ class DownloadMessageMedia implements ShouldQueue
                 'media_url'       => $path,
                 'media_type'      => $this->mediaType,
                 'media_mime_type' => $this->mediaMimeType,
-                'media_filename'  => $this->mediaFilename,
+                'media_filename'  => $filename,
             ]);
 
             // Notify the frontend so it replaces the "downloading" spinner with the media

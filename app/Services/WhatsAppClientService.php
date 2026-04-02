@@ -98,15 +98,16 @@ class WhatsAppClientService
     }
 
     /**
-     * Get media as base64 from a message.
-     * Uses the Evolution API endpoint to decrypt and return media content.
+     * Get media as base64 from a webhook message payload.
+     * Evolution expects the full message envelope, not just the key.
      *
-     * @return array{base64: string, mimetype: string, fileName?: string}
+     * @param  array<string, mixed>  $messagePayload
+     * @return array{base64?: string, mimetype?: string, fileName?: string}
      */
-    public function getMediaBase64(string $instanceName, array $messageKey): array
+    public function getMediaBase64(string $instanceName, array $messagePayload): array
     {
         $response = $this->post("/chat/getBase64FromMediaMessage/{$instanceName}", [
-            'message' => ['key' => $messageKey],
+            'message' => $messagePayload,
         ]);
 
         return $response->json();

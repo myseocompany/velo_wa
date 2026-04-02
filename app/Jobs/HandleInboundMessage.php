@@ -170,6 +170,9 @@ class HandleInboundMessage implements ShouldQueue
         } elseif (isset($message['audioMessage'])) {
             $mediaType     = 'audio';
             $mediaMimeType = $message['audioMessage']['mimetype'] ?? null;
+        } elseif (isset($message['pttMessage'])) {
+            $mediaType     = 'audio';
+            $mediaMimeType = $message['pttMessage']['mimetype'] ?? 'audio/ogg; codecs=opus';
         } elseif (isset($message['documentMessage'])) {
             $mediaType     = 'document';
             $mediaMimeType = $message['documentMessage']['mimetype'] ?? null;

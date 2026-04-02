@@ -338,6 +338,32 @@ export default function InboxIndex({ activeConversationId }: Props) {
             .finally(() => { refetchingRef.current = false; });
     }, [statusFilter, search]);
 
+    const loadLatestMessages = useCallback(async (conversationId: string) => {
+        const res = await axios.get<{ data: Message[]; links: { next: string | null } }>(
+            `/api/v1/conversations/${conversationId}/messages`,
+        );
+
+        return {
+            messages: [...res.data.data].reverse(),
+            nextCursor: res.data.links.next
+                ? new URL(res.data.links.next).searchParams.get('cursor')
+                : null,
+        };
+    }, []);
+
+    const mergeMessages = useCallback((current: Message[], latest: Message[]): Message[] => {
+        const byId = new Map(current.map((message) => [message.id, message]));
+
+        latest.forEach((message) => {
+            const previous = byId.get(message.id);
+            byId.set(message.id, previous ? { ...previous, ...message } : message);
+        });
+
+        return [...byId.values()].sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+    }, []);
+
     // Load conversations when filter changes
     useEffect(() => {
         setLoadingConvs(true);
@@ -376,18 +402,42 @@ export default function InboxIndex({ activeConversationId }: Props) {
             return next;
         });
         try {
-            const res = await axios.get<{ data: Message[]; links: { next: string | null } }>(
-                `/api/v1/conversations/${conv.id}/messages`,
-            );
-            setMessages([...res.data.data].reverse());
-            const next = res.data.links.next
-                ? new URL(res.data.links.next).searchParams.get('cursor')
-                : null;
-            setNextCursor(next);
+            const { messages: latestMessages, nextCursor: latestNextCursor } = await loadLatestMessages(conv.id);
+            setMessages(latestMessages);
+            setNextCursor(latestNextCursor);
         } finally {
             setLoadingMessages(false);
         }
     }
+
+    // Poll as a fallback when a websocket reconnect or private-channel auth is missed.
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState !== 'visible') return;
+            refetchConversations();
+        }, 10000);
+
+        return () => window.clearInterval(intervalId);
+    }, [refetchConversations]);
+
+    useEffect(() => {
+        if (!activeConv) return;
+
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState !== 'visible') return;
+
+            loadLatestMessages(activeConv.id)
+                .then(({ messages: latestMessages, nextCursor: latestNextCursor }) => {
+                    setMessages((prev) => mergeMessages(prev, latestMessages));
+                    setNextCursor(latestNextCursor);
+                })
+                .catch(() => {
+                    // Ignore transient polling errors; realtime remains the primary path.
+                });
+        }, 5000);
+
+        return () => window.clearInterval(intervalId);
+    }, [activeConv, loadLatestMessages, mergeMessages]);
 
     // Real-time: message received
     const handleMessageReceived = useCallback((data: unknown) => {

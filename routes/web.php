@@ -59,6 +59,11 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
         return Inertia::render('Pipeline/Index');
     })->name('pipeline');
 
+    // Tasks
+    Route::get('/tasks', function () {
+        return Inertia::render('Tasks/Index');
+    })->name('tasks');
+
     // Settings
     Route::get('/settings', function () {
         return Inertia::render('Settings/Index');

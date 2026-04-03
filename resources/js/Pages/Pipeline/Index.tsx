@@ -1,12 +1,27 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Contact, DealStage, PaginatedData, PipelineDeal, User } from '@/types';
+import { Contact, DealStage, PaginatedData, PipelineDeal, Task, User } from '@/types';
 import { Head } from '@inertiajs/react';
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
 import axios from 'axios';
 import {
-    Plus, Pencil, Trash2, X, Search, ChevronDown,
-    TrendingUp, Trophy, AlertCircle, Briefcase,
-    GripVertical, User as UserIcon, BarChart2, ChevronUp, Timer,
+    AlertCircle,
+    BarChart2,
+    Briefcase,
+    Calendar,
+    Check,
+    CheckSquare,
+    ChevronDown,
+    ChevronUp,
+    GripVertical,
+    Pencil,
+    Plus,
+    Search,
+    Timer,
+    Trash2,
+    TrendingUp,
+    Trophy,
+    User as UserIcon,
+    X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -154,9 +169,47 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
     const [contactLoading, setContactLoading] = useState(false);
     const searchRef = useRef<ReturnType<typeof setTimeout>>();
 
-    const [saving, setSaving]   = useState(false);
+    const [saving, setSaving]     = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const [errors, setErrors]   = useState<Record<string, string>>({});
+    const [errors, setErrors]     = useState<Record<string, string>>({});
+
+    // Tasks for this deal
+    const [tasks, setTasks]           = useState<Task[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(false);
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [addingTask, setAddingTask]     = useState(false);
+    const [savingTask, setSavingTask]     = useState(false);
+
+    useEffect(() => {
+        if (!deal?.id) return;
+        setTasksLoading(true);
+        axios.get('/api/v1/tasks', { params: { deal_id: deal.id, per_page: 10 } })
+            .then(r => setTasks(r.data.data ?? []))
+            .finally(() => setTasksLoading(false));
+    }, [deal?.id]);
+
+    async function createDealTask(e: React.FormEvent) {
+        e.preventDefault();
+        if (!newTaskTitle.trim() || !deal?.id) return;
+        setSavingTask(true);
+        try {
+            const res = await axios.post<{ data: Task }>('/api/v1/tasks', {
+                title: newTaskTitle.trim(),
+                deal_id: deal.id,
+                contact_id: deal.contact_id,
+            });
+            setTasks(prev => [res.data.data, ...prev]);
+            setNewTaskTitle('');
+            setAddingTask(false);
+        } finally {
+            setSavingTask(false);
+        }
+    }
+
+    async function completeDealTask(task: Task) {
+        const res = await axios.patch<{ data: Task }>(`/api/v1/tasks/${task.id}/complete`);
+        setTasks(prev => prev.map(t => t.id === task.id ? res.data.data : t));
+    }
 
     const stage = deal?.stage ?? defaultStage;
     const isClosedWon  = stage === 'closed_won';
@@ -341,6 +394,83 @@ function DealModal({ deal, agents, defaultStage, onClose, onSaved, onDeleted }: 
                             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                             placeholder="Contexto relevante…" />
                     </div>
+
+                    {/* Tasks — only shown when editing an existing deal */}
+                    {isEdit && (
+                        <div className="border-t border-gray-100 pt-4">
+                            <div className="mb-2 flex items-center justify-between">
+                                <label className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    <CheckSquare size={12} /> Tareas
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setAddingTask(v => !v)}
+                                    className="flex items-center gap-1 text-xs text-ari-600 hover:text-ari-700"
+                                >
+                                    <Plus size={12} /> Nueva
+                                </button>
+                            </div>
+
+                            {addingTask && (
+                                <form onSubmit={createDealTask} className="mb-2 flex gap-1.5">
+                                    <input
+                                        autoFocus
+                                        value={newTaskTitle}
+                                        onChange={e => setNewTaskTitle(e.target.value)}
+                                        placeholder="Título de la tarea…"
+                                        className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+                                    />
+                                    <button type="submit" disabled={savingTask || !newTaskTitle.trim()}
+                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ari-600 text-white disabled:opacity-40">
+                                        <Check size={12} />
+                                    </button>
+                                    <button type="button" onClick={() => setAddingTask(false)}
+                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-400">
+                                        <X size={12} />
+                                    </button>
+                                </form>
+                            )}
+
+                            {tasksLoading && <p className="text-xs text-gray-400">Cargando…</p>}
+
+                            {!tasksLoading && tasks.length === 0 && !addingTask && (
+                                <p className="text-xs text-gray-400">Sin tareas en este deal</p>
+                            )}
+
+                            {!tasksLoading && tasks.map(task => (
+                                <div key={task.id} className="flex items-start gap-2 py-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => completeDealTask(task)}
+                                        disabled={!!task.completed_at}
+                                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                            task.completed_at
+                                                ? 'border-ari-400 bg-ari-400 text-white'
+                                                : 'border-gray-300 hover:border-ari-400'
+                                        }`}
+                                    >
+                                        {task.completed_at && <Check size={9} />}
+                                    </button>
+                                    <div className="min-w-0 flex-1">
+                                        <p className={`text-xs ${task.completed_at ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                                            {task.title}
+                                        </p>
+                                        {task.due_at && (
+                                            <p className={`flex items-center gap-0.5 text-[10px] ${
+                                                task.is_overdue && !task.completed_at ? 'text-red-500' : 'text-gray-400'
+                                            }`}>
+                                                <Calendar size={9} />
+                                                {new Date(task.due_at).toLocaleString('es-CO', {
+                                                    month: 'short', day: 'numeric',
+                                                    hour: '2-digit', minute: '2-digit',
+                                                })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </form>
 
                 {/* Footer */}

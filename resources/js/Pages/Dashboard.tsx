@@ -2,8 +2,17 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import {
-    Inbox, Users, MessageSquare, Timer, CheckCheck,
-    TrendingUp, Trophy, Download, ChevronRight, Clock,
+    AlertCircle,
+    CheckCheck,
+    ChevronRight,
+    Clock,
+    Download,
+    Inbox,
+    MessageSquare,
+    Timer,
+    TrendingUp,
+    Trophy,
+    Users,
 } from 'lucide-react';
 import {
     Bar, BarChart, CartesianGrid, ResponsiveContainer,
@@ -156,6 +165,62 @@ function RangeTabs({ ranges, active, onChange }: {
                     }`}>
                     {r.label}
                 </button>
+            ))}
+        </div>
+    );
+}
+
+// ─── Overdue tasks widget ─────────────────────────────────────────────────────
+
+interface OverdueTask { id: string; title: string; due_at: string; assignee?: { name: string } | null; }
+
+function OverdueTasksWidget() {
+    const [tasks, setTasks]   = useState<OverdueTask[]>([]);
+    const [total, setTotal]   = useState(0);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        axios.get('/api/v1/tasks', { params: { status: 'overdue', per_page: 5 } })
+            .then(r => { setTasks(r.data.data ?? []); setTotal(r.data.meta?.total ?? 0); })
+            .finally(() => setLoading(false));
+    }, []);
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-gray-900">Tareas vencidas</h2>
+                    {total > 0 && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
+                            {total}
+                        </span>
+                    )}
+                </div>
+                <a href="/tasks?status=overdue" className="text-xs text-ari-600 hover:underline flex items-center gap-0.5">
+                    Ver <ChevronRight size={12} />
+                </a>
+            </div>
+
+            {loading && <p className="text-xs text-gray-400 py-2">Cargando…</p>}
+
+            {!loading && tasks.length === 0 && (
+                <p className="text-xs text-gray-400 py-4 text-center">Sin tareas vencidas 🎉</p>
+            )}
+
+            {!loading && tasks.map(task => (
+                <div key={task.id} className="flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                    <AlertCircle size={12} className="mt-0.5 shrink-0 text-red-400" />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-xs text-gray-800 truncate">{task.title}</p>
+                        <p className="text-[10px] text-red-400">
+                            {new Date(task.due_at).toLocaleString('es-CO', {
+                                month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                            })}
+                            {task.assignee && ` · ${task.assignee.name.split(' ')[0]}`}
+                        </p>
+                    </div>
+                </div>
             ))}
         </div>
     );
@@ -429,7 +494,7 @@ export default function Dashboard({
                         <AgentTable range={range} />
                     </div>
 
-                    {/* Right column: pipeline + recent */}
+                    {/* Right column: pipeline + recent + overdue tasks */}
                     <div className="space-y-4">
                         {/* Pipeline mini-summary */}
                         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -464,6 +529,9 @@ export default function Dashboard({
                                 </div>
                             </div>
                         </div>
+
+                        {/* Overdue tasks */}
+                        <OverdueTasksWidget />
 
                         {/* Recent conversations */}
                         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">

@@ -2,6 +2,7 @@
 
 export type WaStatus = 'disconnected' | 'qr_pending' | 'connected' | 'banned';
 export type UserRole = 'owner' | 'admin' | 'agent';
+export type TaskPriority = 'low' | 'medium' | 'high';
 export type ConversationStatus = 'open' | 'pending' | 'closed';
 export type MessageDirection = 'in' | 'out';
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
@@ -154,6 +155,26 @@ export interface PipelineDeal {
     updated_at: string;
     contact?: Contact;
     assignee?: User;
+}
+
+export interface Task {
+    id: string;
+    tenant_id: string;
+    user_id: string;
+    assigned_to: string | null;
+    contact_id: string | null;
+    conversation_id: string | null;
+    deal_id: string | null;
+    title: string;
+    description: string | null;
+    priority: TaskPriority;
+    due_at: string | null;
+    completed_at: string | null;
+    is_overdue: boolean;
+    created_at: string;
+    updated_at: string;
+    assignee?: { id: string; name: string; avatar_url: string | null } | null;
+    contact?: { id: string; display_name: string; phone: string | null } | null;
 }
 
 export interface QuickReply {

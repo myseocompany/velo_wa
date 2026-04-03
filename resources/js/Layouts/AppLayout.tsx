@@ -1,6 +1,7 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import {
     BarChart2,
+    CheckSquare,
     ChevronDown,
     Inbox,
     LayoutDashboard,
@@ -53,6 +54,12 @@ const navItems: NavItem[] = [
         href: '/pipeline',
         icon: <BarChart2 size={18} />,
         routeName: 'pipeline',
+    },
+    {
+        label: 'Tareas',
+        href: '/tasks',
+        icon: <CheckSquare size={18} />,
+        routeName: 'tasks',
     },
     {
         label: 'Equipo',

@@ -1,17 +1,21 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Contact, User } from '@/types';
+import { Contact, Task, User } from '@/types';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
+    AlertCircle,
     ArrowLeft,
     Building2,
+    Calendar,
     Check,
+    CheckSquare,
     Mail,
     MessageSquare,
     Pencil,
     Phone,
+    Plus,
     Tag,
     UserCheck,
     X,
@@ -75,11 +79,16 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[
 }
 
 export default function ContactShow({ contactId }: Props) {
-    const [contact, setContact]   = useState<Contact | null>(null);
-    const [loading, setLoading]   = useState(true);
-    const [editing, setEditing]   = useState(false);
-    const [saving, setSaving]     = useState(false);
-    const [agents, setAgents]     = useState<User[]>([]);
+    const [contact, setContact]       = useState<Contact | null>(null);
+    const [loading, setLoading]       = useState(true);
+    const [editing, setEditing]       = useState(false);
+    const [saving, setSaving]         = useState(false);
+    const [agents, setAgents]         = useState<User[]>([]);
+    const [tasks, setTasks]           = useState<Task[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(false);
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [addingTask, setAddingTask]     = useState(false);
+    const [savingTask, setSavingTask]     = useState(false);
 
     // Edit state
     const [editName, setEditName]         = useState('');
@@ -100,6 +109,40 @@ export default function ContactShow({ contactId }: Props) {
             .then((r) => setContact(r.data.data))
             .finally(() => setLoading(false));
     }, [contactId]);
+
+    useEffect(() => {
+        setTasksLoading(true);
+        axios.get('/api/v1/tasks', { params: { contact_id: contactId, per_page: 20 } })
+            .then(r => setTasks(r.data.data ?? []))
+            .finally(() => setTasksLoading(false));
+    }, [contactId]);
+
+    async function createTask(e: React.FormEvent) {
+        e.preventDefault();
+        if (!newTaskTitle.trim()) return;
+        setSavingTask(true);
+        try {
+            const res = await axios.post<{ data: Task }>('/api/v1/tasks', {
+                title: newTaskTitle.trim(),
+                contact_id: contactId,
+            });
+            setTasks(prev => [res.data.data, ...prev]);
+            setNewTaskTitle('');
+            setAddingTask(false);
+        } finally {
+            setSavingTask(false);
+        }
+    }
+
+    async function completeTask(task: Task) {
+        const res = await axios.patch<{ data: Task }>(`/api/v1/tasks/${task.id}/complete`);
+        setTasks(prev => prev.map(t => t.id === task.id ? res.data.data : t));
+    }
+
+    async function reopenTask(task: Task) {
+        const res = await axios.patch<{ data: Task }>(`/api/v1/tasks/${task.id}/reopen`);
+        setTasks(prev => prev.map(t => t.id === task.id ? res.data.data : t));
+    }
 
     function startEdit() {
         if (!contact) return;
@@ -257,6 +300,91 @@ export default function ContactShow({ contactId }: Props) {
                                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{contact.notes}</p>
                             </div>
                         )}
+
+                        {/* Tasks */}
+                        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                                    <CheckSquare className="h-4 w-4 text-ari-500" />
+                                    Tareas ({tasks.length})
+                                </h3>
+                                <button
+                                    onClick={() => setAddingTask(v => !v)}
+                                    className="flex items-center gap-1 text-xs text-ari-600 hover:text-ari-700"
+                                >
+                                    <Plus className="h-3.5 w-3.5" /> Nueva
+                                </button>
+                            </div>
+
+                            {addingTask && (
+                                <form onSubmit={createTask} className="flex gap-2 border-b border-gray-100 px-4 py-3">
+                                    <input
+                                        autoFocus
+                                        value={newTaskTitle}
+                                        onChange={e => setNewTaskTitle(e.target.value)}
+                                        placeholder="Título de la tarea…"
+                                        className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-ari-400 focus:outline-none"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={savingTask || !newTaskTitle.trim()}
+                                        className="rounded-lg bg-ari-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+                                    >
+                                        Guardar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddingTask(false)}
+                                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-50"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </form>
+                            )}
+
+                            {tasksLoading ? (
+                                <p className="px-4 py-4 text-center text-sm text-gray-400">Cargando…</p>
+                            ) : tasks.length === 0 ? (
+                                <p className="px-4 py-6 text-center text-sm text-gray-400">Sin tareas asociadas.</p>
+                            ) : (
+                                <ul className="divide-y divide-gray-50">
+                                    {tasks.map(task => (
+                                        <li key={task.id} className="flex items-start gap-3 px-4 py-3">
+                                            <button
+                                                onClick={() => task.completed_at ? reopenTask(task) : completeTask(task)}
+                                                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                                    task.completed_at
+                                                        ? 'border-ari-500 bg-ari-500 text-white'
+                                                        : 'border-gray-300 hover:border-ari-400'
+                                                }`}
+                                            >
+                                                {task.completed_at && <Check className="h-3 w-3" />}
+                                            </button>
+                                            <div className="min-w-0 flex-1">
+                                                <p className={`text-sm ${task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                                    {task.title}
+                                                </p>
+                                                {task.due_at && (
+                                                    <p className={`mt-0.5 flex items-center gap-1 text-xs ${
+                                                        task.is_overdue && !task.completed_at ? 'text-red-500' : 'text-gray-400'
+                                                    }`}>
+                                                        {task.is_overdue && !task.completed_at && <AlertCircle className="h-3 w-3" />}
+                                                        <Calendar className="h-3 w-3 opacity-60" />
+                                                        {new Date(task.due_at).toLocaleString('es-CO', {
+                                                            month: 'short', day: 'numeric',
+                                                            hour: '2-digit', minute: '2-digit',
+                                                        })}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            {task.assignee && (
+                                                <span className="shrink-0 text-xs text-gray-400">{task.assignee.name.split(' ')[0]}</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
 
                         {/* Conversations */}
                         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">

@@ -1,22 +1,85 @@
-import { Contact, Conversation, PipelineDeal, User } from '@/types';
+import { Contact, Conversation, PipelineDeal, Task, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
+    AlertCircle,
+    Briefcase,
     Building2,
+    Check,
+    CheckSquare,
     ChevronRight,
     Clock,
     Mail,
     Phone,
+    Plus,
     Tag,
+    Trophy,
     User as UserIcon,
     X,
-    Briefcase,
-    Trophy,
-    AlertCircle,
 } from 'lucide-react';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import ContactAvatar from './ContactAvatar';
+
+// ─── Quick task form ──────────────────────────────────────────────────────────
+
+function QuickTaskForm({
+    contactId,
+    conversationId,
+    onCreated,
+    onCancel,
+}: {
+    contactId: string;
+    conversationId: string;
+    onCreated: (t: Task) => void;
+    onCancel: () => void;
+}) {
+    const [title, setTitle]   = useState('');
+    const [saving, setSaving] = useState(false);
+
+    async function submit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!title.trim()) return;
+        setSaving(true);
+        try {
+            const res = await axios.post<{ data: Task }>('/api/v1/tasks', {
+                title: title.trim(),
+                contact_id: contactId,
+                conversation_id: conversationId,
+            });
+            onCreated(res.data.data);
+            setTitle('');
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <form onSubmit={submit} className="mt-2 flex gap-1.5">
+            <input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título de la tarea…"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+            />
+            <button
+                type="submit"
+                disabled={saving || !title.trim()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ari-600 text-white disabled:opacity-40"
+            >
+                <Check className="h-3.5 w-3.5" />
+            </button>
+            <button
+                type="button"
+                onClick={onCancel}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50"
+            >
+                <X className="h-3.5 w-3.5" />
+            </button>
+        </form>
+    );
+}
 
 interface Props {
     conversation: Conversation;
@@ -51,8 +114,11 @@ export default function ContactPanel({ conversation, onClose }: Props) {
     const contact  = conversation.contact as Contact | undefined;
     const assignee = conversation.assignee as User | undefined;
 
-    const [deals, setDeals]           = useState<PipelineDeal[]>([]);
+    const [deals, setDeals]               = useState<PipelineDeal[]>([]);
     const [dealsLoading, setDealsLoading] = useState(false);
+    const [tasks, setTasks]               = useState<Task[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(false);
+    const [addingTask, setAddingTask]     = useState(false);
 
     useEffect(() => {
         if (!contact?.id) { setDeals([]); return; }
@@ -61,6 +127,19 @@ export default function ContactPanel({ conversation, onClose }: Props) {
             .then(r => setDeals(r.data.data ?? []))
             .finally(() => setDealsLoading(false));
     }, [contact?.id]);
+
+    useEffect(() => {
+        if (!contact?.id) { setTasks([]); return; }
+        setTasksLoading(true);
+        axios.get('/api/v1/tasks', { params: { contact_id: contact.id, status: 'pending', per_page: 5 } })
+            .then(r => setTasks(r.data.data ?? []))
+            .finally(() => setTasksLoading(false));
+    }, [contact?.id]);
+
+    async function completeTask(task: Task) {
+        await axios.patch(`/api/v1/tasks/${task.id}/complete`);
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+    }
 
     const displayName =
         contact?.name ?? contact?.push_name ?? contact?.phone ?? 'Desconocido';
@@ -206,6 +285,59 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                         )}
                     </div>
                 </div>
+
+                {/* Tasks */}
+                {contact?.id && (
+                    <div className="border-b border-gray-100 px-4 py-2">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-1">
+                                <CheckSquare size={10} /> Tareas pendientes
+                            </p>
+                            <button
+                                onClick={() => setAddingTask(true)}
+                                className="flex items-center gap-0.5 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-ari-600"
+                                title="Crear tarea"
+                            >
+                                <Plus size={13} />
+                            </button>
+                        </div>
+
+                        {tasksLoading && <p className="text-xs text-gray-400">Cargando…</p>}
+
+                        {!tasksLoading && tasks.length === 0 && !addingTask && (
+                            <p className="text-xs text-gray-400">Sin tareas pendientes</p>
+                        )}
+
+                        {!tasksLoading && tasks.map(task => (
+                            <div key={task.id} className="mb-1.5 flex items-start gap-2">
+                                <button
+                                    onClick={() => completeTask(task)}
+                                    className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 hover:border-ari-400"
+                                />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs text-gray-800 line-clamp-1">{task.title}</p>
+                                    {task.due_at && (
+                                        <p className={`text-[10px] ${task.is_overdue ? 'text-red-500' : 'text-gray-400'}`}>
+                                            {new Date(task.due_at).toLocaleString('es-CO', {
+                                                month: 'short', day: 'numeric',
+                                                hour: '2-digit', minute: '2-digit',
+                                            })}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {addingTask && (
+                            <QuickTaskForm
+                                contactId={contact.id}
+                                conversationId={conversation.id}
+                                onCreated={(t) => { setTasks(prev => [t, ...prev]); setAddingTask(false); }}
+                                onCancel={() => setAddingTask(false)}
+                            />
+                        )}
+                    </div>
+                )}
 
                 {/* Deals */}
                 <div className="px-4 py-2">

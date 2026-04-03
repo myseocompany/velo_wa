@@ -93,6 +93,16 @@ class CreateOrUpdateContactTest extends TestCase
         $this->assertSame('15551234567', $contact->phone);
     }
 
+    public function test_does_not_treat_lid_identifier_as_phone_without_hint(): void
+    {
+        $contact = $this->action->handle($this->tenant, $this->waData([
+            'remoteJid' => '161752914342099@lid',
+        ]));
+
+        $this->assertSame('161752914342099@lid', $contact->wa_id);
+        $this->assertNull($contact->phone);
+    }
+
     // -------------------------------------------------------------------------
     // Update
     // -------------------------------------------------------------------------
@@ -183,6 +193,26 @@ class CreateOrUpdateContactTest extends TestCase
 
         $this->assertSame($manual->id, $contact->id);
         $this->assertSame('573001234567@s.whatsapp.net', $contact->wa_id);
+        $this->assertDatabaseCount('contacts', 1);
+    }
+
+    public function test_links_contact_by_phone_hint_for_lid_identity(): void
+    {
+        $existing = Contact::withoutGlobalScopes()->create([
+            'tenant_id' => $this->tenant->id,
+            'phone'     => '573004410097',
+            'name'      => 'My SEO Company',
+            'wa_id'     => '573004410097@s.whatsapp.net',
+        ]);
+
+        $contact = $this->action->handle($this->tenant, $this->waData([
+            'remoteJid' => '161752914342099@lid',
+            'phone'     => '573004410097',
+        ]));
+
+        $this->assertSame($existing->id, $contact->id);
+        $this->assertSame('161752914342099@lid', $contact->wa_id);
+        $this->assertSame('573004410097', $contact->phone);
         $this->assertDatabaseCount('contacts', 1);
     }
 

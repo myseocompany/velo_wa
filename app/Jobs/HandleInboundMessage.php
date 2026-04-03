@@ -75,6 +75,7 @@ class HandleInboundMessage implements ShouldQueue
         $key       = $msgPayload['key'] ?? [];
         $fromMe    = (bool) ($key['fromMe'] ?? false);
         $remoteJid = $key['remoteJid'] ?? '';
+        $phoneHint = $this->extractPhoneHint($msgPayload, $tenant, $fromMe);
 
         // Skip group messages and status broadcasts
         if (str_contains($remoteJid, '@g.us') || $remoteJid === 'status@broadcast') {
@@ -86,6 +87,7 @@ class HandleInboundMessage implements ShouldQueue
             'remoteJid'     => $remoteJid,
             'pushName'      => $fromMe ? null : ($msgPayload['pushName'] ?? null),
             'profilePicUrl' => null,
+            'phone'         => $phoneHint,
         ];
 
         $contact      = $createContact->handle($tenant, $waData);
@@ -225,5 +227,44 @@ class HandleInboundMessage implements ShouldQueue
             'sticker'  => 'stickerMessage',
             default    => 'conversation',
         };
+    }
+
+    private function extractPhoneHint(array $msgPayload, Tenant $tenant, bool $fromMe): ?string
+    {
+        $candidatePaths = [
+            ['senderPn'],
+            ['participantPn'],
+            ['key', 'participantPn'],
+            ['key', 'senderPn'],
+            ['key', 'participant'],
+            ['participant'],
+        ];
+
+        foreach ($candidatePaths as $path) {
+            $value = data_get($msgPayload, implode('.', $path));
+            $normalized = $this->normalizePhone((string) $value);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        // Self-sent messages may not include participant phone; use the connected WA number.
+        if ($fromMe && is_string($tenant->wa_phone) && $tenant->wa_phone !== '') {
+            return $this->normalizePhone($tenant->wa_phone);
+        }
+
+        return null;
+    }
+
+    private function normalizePhone(string $value): ?string
+    {
+        $normalized = preg_replace('/[^0-9]/', '', $value);
+
+        // Conservative phone-length guard to avoid treating short random ids as phones.
+        if (! is_string($normalized) || strlen($normalized) < 8 || strlen($normalized) > 15) {
+            return null;
+        }
+
+        return $normalized;
     }
 }

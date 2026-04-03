@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Users, Webhook, Zap } from 'lucide-react';
+import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface SettingCard {
@@ -59,6 +59,14 @@ const CARDS: SettingCard[] = [
         icon: <Bot className="h-6 w-6 text-ari-600" />,
         href: '/settings/automations',
         label: 'Gestionar automatizaciones',
+        roles: ['owner', 'admin'],
+    },
+    {
+        title: 'Menú digital',
+        description: 'Configura tu menú de productos para enviarlo automáticamente por WhatsApp.',
+        icon: <UtensilsCrossed className="h-6 w-6 text-ari-600" />,
+        href: '/settings/menu',
+        label: 'Gestionar menú',
         roles: ['owner', 'admin'],
     },
     {

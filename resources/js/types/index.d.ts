@@ -157,6 +157,29 @@ export interface PipelineDeal {
     assignee?: User;
 }
 
+export interface MenuItem {
+    id: string;
+    menu_category_id: string;
+    name: string;
+    description: string | null;
+    price: string;
+    currency: string;
+    image_url: string | null;
+    is_available: boolean;
+    sort_order: number;
+    formatted_price: string;
+    created_at: string;
+}
+
+export interface MenuCategory {
+    id: string;
+    name: string;
+    sort_order: number;
+    is_active: boolean;
+    items: MenuItem[];
+    created_at: string;
+}
+
 export interface Task {
     id: string;
     tenant_id: string;

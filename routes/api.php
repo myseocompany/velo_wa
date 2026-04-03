@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AssignmentRuleController;
 use App\Http\Controllers\Api\V1\AutomationController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
@@ -126,6 +127,23 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
 
     // Activity log — admin+
     Route::get('/activity', [ActivityController::class, 'index'])->middleware('role:admin')->name('activity.index');
+
+    // Menu — all can read; write admin+
+    Route::get('/menu/categories', [MenuController::class, 'indexCategories'])->name('menu.categories.index');
+    Route::get('/menu/items', [MenuController::class, 'indexItems'])->name('menu.items.index');
+    Route::get('/menu/preview', [MenuController::class, 'preview'])->name('menu.preview');
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
+        Route::put('/menu/categories/{menuCategory}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
+        Route::delete('/menu/categories/{menuCategory}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
+        Route::patch('/menu/categories/reorder', [MenuController::class, 'reorderCategories'])->name('menu.categories.reorder');
+        Route::post('/menu/items', [MenuController::class, 'storeItem'])->name('menu.items.store');
+        Route::put('/menu/items/{menuItem}', [MenuController::class, 'updateItem'])->name('menu.items.update');
+        Route::delete('/menu/items/{menuItem}', [MenuController::class, 'destroyItem'])->name('menu.items.destroy');
+        Route::patch('/menu/items/{menuItem}/toggle', [MenuController::class, 'toggleItem'])->name('menu.items.toggle');
+        Route::patch('/menu/items/reorder', [MenuController::class, 'reorderItems'])->name('menu.items.reorder');
+        Route::post('/menu/test', [MenuController::class, 'sendTest'])->name('menu.test');
+    });
 
     // Tasks — all can create/read; agents limited to own tasks (enforced in controller)
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');

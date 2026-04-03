@@ -101,6 +101,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
         return Inertia::render('Settings/Webhooks');
     })->name('settings.webhooks');
 
+    Route::get('/settings/menu', function () {
+        return Inertia::render('Settings/Menu');
+    })->name('settings.menu');
+
     Route::get('/settings/data-quality', function () {
         return Inertia::render('Settings/DataQuality');
     })->name('settings.data-quality');

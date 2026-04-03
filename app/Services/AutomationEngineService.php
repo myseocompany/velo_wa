@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Actions\Pipeline\MoveDealToStage;
 use App\Enums\AutomationActionType;
+use App\Services\MenuFormatterService;
 use App\Enums\AutomationTriggerType;
 use App\Enums\DealStage;
 use App\Models\Automation;
@@ -186,6 +187,7 @@ class AutomationEngineService
             AutomationActionType::AssignAgent => $this->actionAssignAgent($automation, $conversation),
             AutomationActionType::AddTag      => $this->actionAddTag($automation, $conversation),
             AutomationActionType::MoveStage   => $this->actionMoveStage($automation, $conversation),
+            AutomationActionType::SendMenu    => $this->actionSendMenu($conversation),
         };
 
         Log::info('AutomationEngine: executed', [
@@ -276,6 +278,25 @@ class AutomationEngineService
 
         if ($deal) {
             app(MoveDealToStage::class)->handle($deal, $stage);
+        }
+    }
+
+    private function actionSendMenu(Conversation $conversation): void
+    {
+        $tenant   = $conversation->tenant;
+        $messages = app(MenuFormatterService::class)->format($tenant);
+
+        foreach ($messages as $body) {
+            $msg = Message::create([
+                'tenant_id'       => $conversation->tenant_id,
+                'conversation_id' => $conversation->id,
+                'direction'       => 'out',
+                'body'            => $body,
+                'status'          => 'pending',
+                'is_automated'    => true,
+            ]);
+
+            dispatch(new \App\Jobs\SendWhatsAppMessage($msg));
         }
     }
 

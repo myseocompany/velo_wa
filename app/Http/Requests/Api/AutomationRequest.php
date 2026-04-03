@@ -55,7 +55,10 @@ class AutomationRequest extends FormRequest
             'trigger_config.use_tenant_hours' => ['nullable', 'boolean'],
 
             'action_type'   => ['required', 'string', Rule::in(array_column(AutomationActionType::cases(), 'value'))],
-            'action_config' => ['required', 'array'],
+            'action_config' => [
+                $actionType === AutomationActionType::SendMenu->value ? 'nullable' : 'required',
+                'array',
+            ],
             // Send message
             'action_config.message'   => [
                 Rule::requiredIf($actionType === AutomationActionType::SendMessage->value),

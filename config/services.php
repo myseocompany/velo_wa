@@ -40,4 +40,10 @@ return [
         'key' => env('EVOLUTION_API_KEY', ''),
     ],
 
+    'stripe' => [
+        'price_seed'  => env('STRIPE_PRICE_SEED'),
+        'price_grow'  => env('STRIPE_PRICE_GROW'),
+        'price_scale' => env('STRIPE_PRICE_SCALE'),
+    ],
+
 ];

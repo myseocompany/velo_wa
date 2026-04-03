@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -18,6 +19,22 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
         $this->configureRateLimiting();
+        $this->configurePlanGates();
+    }
+
+    private function configurePlanGates(): void
+    {
+        $features = [
+            'inbox', 'contacts', 'tasks', 'quick_replies',
+            'menu', 'pipeline', 'orders', 'reservations',
+            'loyalty', 'automations_unlimited', 'dashboard_full', 'api_access',
+        ];
+
+        foreach ($features as $feature) {
+            Gate::define("use-{$feature}", function ($user) use ($feature) {
+                return $user->tenant->canUse($feature);
+            });
+        }
     }
 
     private function configureRateLimiting(): void

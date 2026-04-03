@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\TenantPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,26 +13,29 @@ use Inertia\Response;
 class BillingController extends Controller
 {
     private const PLANS = [
-        'starter' => [
-            'name'         => 'Starter',
-            'price_id'     => null, // Set STRIPE_PRICE_STARTER in .env
-            'price'        => '$29/mes',
+        'seed' => [
+            'name'         => 'Semilla',
+            'price_id_key' => 'services.stripe.price_seed',
+            'price'        => 'USD 19/mes',
+            'max_agents'   => 1,
+            'max_contacts' => 500,
+            'features'     => ['Inbox', 'Contactos', 'Menú digital', 'Tareas', '3 automatizaciones'],
+        ],
+        'grow' => [
+            'name'         => 'Crecer',
+            'price_id_key' => 'services.stripe.price_grow',
+            'price'        => 'USD 29/mes',
             'max_agents'   => 3,
             'max_contacts' => 2000,
-        ],
-        'growth' => [
-            'name'         => 'Growth',
-            'price_id'     => null, // Set STRIPE_PRICE_GROWTH in .env
-            'price'        => '$79/mes',
-            'max_agents'   => 10,
-            'max_contacts' => 15000,
+            'features'     => ['Todo Semilla', 'Pipeline Kanban', 'Pedidos', 'Reservas', 'Automatizaciones ilimitadas'],
         ],
         'scale' => [
-            'name'         => 'Scale',
-            'price_id'     => null, // Set STRIPE_PRICE_SCALE in .env
-            'price'        => '$199/mes',
+            'name'         => 'Escalar',
+            'price_id_key' => 'services.stripe.price_scale',
+            'price'        => 'USD 59/mes',
             'max_agents'   => null,
             'max_contacts' => null,
+            'features'     => ['Todo Crecer', 'Agentes ilimitados', 'Contactos ilimitados', 'API access', 'Soporte prioritario'],
         ],
     ];
 
@@ -41,8 +45,16 @@ class BillingController extends Controller
         $tenant       = $request->user()->tenant;
         $subscription = $tenant->subscription('default');
 
+        // Resolve price_id for each plan at runtime
+        $plans = array_map(function (array $plan) {
+            $plan['price_id'] = config($plan['price_id_key']);
+            unset($plan['price_id_key']);
+            return $plan;
+        }, self::PLANS);
+
         return Inertia::render('Settings/Billing', [
-            'plans'        => self::PLANS,
+            'plans'        => $plans,
+            'current_plan' => $tenant->currentPlan()->value,
             'subscription' => $subscription ? [
                 'stripe_status' => $subscription->stripe_status,
                 'stripe_price'  => $subscription->stripe_price,
@@ -61,10 +73,10 @@ class BillingController extends Controller
     public function checkout(Request $request, string $plan): RedirectResponse
     {
         $priceId = match ($plan) {
-            'starter' => config('services.stripe.price_starter'),
-            'growth'  => config('services.stripe.price_growth'),
-            'scale'   => config('services.stripe.price_scale'),
-            default   => abort(404),
+            'seed'  => config('services.stripe.price_seed'),
+            'grow'  => config('services.stripe.price_grow'),
+            'scale' => config('services.stripe.price_scale'),
+            default => abort(404),
         };
 
         if (! $priceId) {

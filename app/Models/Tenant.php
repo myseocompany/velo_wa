@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\TenantPlan;
 use App\Enums\WaStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -86,5 +87,21 @@ class Tenant extends Model
     public function hasCompletedOnboarding(): bool
     {
         return $this->onboarding_completed_at !== null;
+    }
+
+    public function currentPlan(): TenantPlan
+    {
+        if ($this->onTrial() && ! $this->subscribed('default')) {
+            return TenantPlan::Trial;
+        }
+
+        $priceId = $this->subscription('default')?->stripe_price;
+
+        return TenantPlan::fromPriceId($priceId);
+    }
+
+    public function canUse(string $feature): bool
+    {
+        return $this->currentPlan()->can($feature);
     }
 }

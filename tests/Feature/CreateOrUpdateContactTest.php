@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Actions\WhatsApp\CreateOrUpdateContact;
 use App\Enums\ContactSource;
 use App\Models\Contact;
+use App\Models\ContactIdentityAlias;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -211,9 +212,48 @@ class CreateOrUpdateContactTest extends TestCase
         ]));
 
         $this->assertSame($existing->id, $contact->id);
-        $this->assertSame('161752914342099@lid', $contact->wa_id);
+        $this->assertSame('573004410097@s.whatsapp.net', $contact->wa_id);
         $this->assertSame('573004410097', $contact->phone);
         $this->assertDatabaseCount('contacts', 1);
+    }
+
+    public function test_tracks_identity_aliases_for_same_contact(): void
+    {
+        $contact = $this->action->handle($this->tenant, $this->waData([
+            'remoteJid' => '573004410097@s.whatsapp.net',
+            'aliases' => ['161752914342099@lid'],
+        ]));
+
+        $this->assertDatabaseHas('contact_identity_aliases', [
+            'tenant_id' => $this->tenant->id,
+            'contact_id' => $contact->id,
+            'alias' => '573004410097@s.whatsapp.net',
+            'alias_type' => 'pn',
+        ]);
+
+        $this->assertDatabaseHas('contact_identity_aliases', [
+            'tenant_id' => $this->tenant->id,
+            'contact_id' => $contact->id,
+            'alias' => '161752914342099@lid',
+            'alias_type' => 'lid',
+        ]);
+    }
+
+    public function test_resolves_existing_contact_by_alias_before_creating_new_contact(): void
+    {
+        $contact = $this->action->handle($this->tenant, $this->waData([
+            'remoteJid' => '573004410097@s.whatsapp.net',
+            'aliases' => ['161752914342099@lid'],
+        ]));
+
+        $resolved = $this->action->handle($this->tenant, $this->waData([
+            'remoteJid' => '161752914342099@lid',
+        ]));
+
+        $this->assertSame($contact->id, $resolved->id);
+        $this->assertSame('573004410097@s.whatsapp.net', $resolved->wa_id);
+        $this->assertDatabaseCount('contacts', 1);
+        $this->assertSame(2, ContactIdentityAlias::withoutGlobalScopes()->count());
     }
 
     public function test_does_not_link_manual_contact_if_it_already_has_a_wa_id(): void

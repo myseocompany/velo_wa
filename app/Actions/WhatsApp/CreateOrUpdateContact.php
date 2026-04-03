@@ -6,29 +6,57 @@ namespace App\Actions\WhatsApp;
 
 use App\Enums\ContactSource;
 use App\Models\Contact;
+use App\Models\ContactIdentityAlias;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 
 class CreateOrUpdateContact
 {
     /**
-     * @param  array{remoteJid: string, pushName: ?string, profilePicUrl: ?string, phone?: ?string}  $waData
+     * @param  array{
+     *   remoteJid: string,
+     *   pushName: ?string,
+     *   profilePicUrl: ?string,
+     *   phone?: ?string,
+     *   aliases?: array<int, string>
+     * }  $waData
      */
     public function handle(Tenant $tenant, array $waData): Contact
     {
-        $waId  = $waData['remoteJid']; // e.g. "573001234567@s.whatsapp.net"
-        $phone = $this->resolvePhone($waId, $waData['phone'] ?? null);
+        $aliases = $this->normalizeAliases(array_merge(
+            [$waData['remoteJid']], // e.g. "573001234567@s.whatsapp.net"
+            $waData['aliases'] ?? [],
+        ));
+        $primaryWaId = $this->selectPrimaryWaId($aliases);
+        $phone       = $this->resolvePhone($aliases, $waData['phone'] ?? null);
 
-        return DB::transaction(function () use ($tenant, $waId, $phone, $waData): Contact {
+        return DB::transaction(function () use ($tenant, $primaryWaId, $aliases, $phone, $waData): Contact {
             /** @var Contact|null $contact */
             $contact = Contact::withoutGlobalScope('tenant')
                 ->where('tenant_id', $tenant->id)
-                ->where('wa_id', $waId)
+                ->whereIn('wa_id', $aliases)
                 ->lockForUpdate()
                 ->first();
 
+            if (! $contact && $aliases !== []) {
+                $contactId = ContactIdentityAlias::withoutGlobalScope('tenant')
+                    ->where('tenant_id', $tenant->id)
+                    ->whereIn('alias', $aliases)
+                    ->value('contact_id');
+
+                if ($contactId) {
+                    $contact = Contact::withoutGlobalScope('tenant')
+                        ->where('tenant_id', $tenant->id)
+                        ->where('id', $contactId)
+                        ->lockForUpdate()
+                        ->first();
+                }
+            }
+
             if ($contact) {
+                $nextWaId = $this->resolveNextWaId($contact->wa_id, $primaryWaId);
                 $contact->update([
+                    'wa_id'            => $nextWaId,
                     'phone'           => $phone ?? $contact->phone,
                     'push_name'       => $waData['pushName'] ?? $contact->push_name,
                     'profile_pic_url' => $waData['profilePicUrl'] ?? $contact->profile_pic_url,
@@ -50,8 +78,9 @@ class CreateOrUpdateContact
 
                 if ($contact) {
                     // Link/refresh the WhatsApp identity for this phone.
+                    $nextWaId = $this->resolveNextWaId($contact->wa_id, $primaryWaId);
                     $contact->update([
-                        'wa_id'           => $waId,
+                        'wa_id'           => $nextWaId,
                         'phone'           => $phone ?? $contact->phone,
                         'push_name'       => $waData['pushName'] ?? $contact->push_name,
                         'profile_pic_url' => $waData['profilePicUrl'] ?? $contact->profile_pic_url,
@@ -60,7 +89,7 @@ class CreateOrUpdateContact
                 } else {
                     $contact = Contact::create([
                         'tenant_id'        => $tenant->id,
-                        'wa_id'            => $waId,
+                        'wa_id'            => $primaryWaId,
                         'phone'            => $phone,
                         'push_name'        => $waData['pushName'] ?? null,
                         'profile_pic_url'  => $waData['profilePicUrl'] ?? null,
@@ -70,6 +99,8 @@ class CreateOrUpdateContact
                     ]);
                 }
             }
+
+            $this->upsertAliases($tenant->id, $contact->id, $aliases);
 
             return $contact;
         });
@@ -81,15 +112,17 @@ class CreateOrUpdateContact
         return explode('@', $remoteJid)[0];
     }
 
-    private function resolvePhone(string $remoteJid, ?string $phoneHint): ?string
+    private function resolvePhone(array $aliases, ?string $phoneHint): ?string
     {
         $normalizedHint = $this->normalizePhone($phoneHint);
         if ($normalizedHint !== null) {
             return $normalizedHint;
         }
 
-        if (str_ends_with($remoteJid, '@s.whatsapp.net')) {
-            return $this->normalizePhone($this->extractPhone($remoteJid));
+        foreach ($aliases as $alias) {
+            if (str_ends_with($alias, '@s.whatsapp.net')) {
+                return $this->normalizePhone($this->extractPhone($alias));
+            }
         }
 
         // LID/JID aliases are not always phone numbers.
@@ -105,5 +138,106 @@ class CreateOrUpdateContact
         $normalized = preg_replace('/[^0-9]/', '', $value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    /**
+     * @param  array<int, string>  $aliases
+     * @return array<int, string>
+     */
+    private function normalizeAliases(array $aliases): array
+    {
+        $normalized = array_values(array_unique(array_filter(array_map(
+            static fn ($v) => is_string($v) ? trim($v) : '',
+            $aliases
+        ))));
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<int, string>  $aliases
+     */
+    private function selectPrimaryWaId(array $aliases): ?string
+    {
+        foreach ($aliases as $alias) {
+            if (str_ends_with($alias, '@s.whatsapp.net')) {
+                return $alias;
+            }
+        }
+
+        return $aliases[0] ?? null;
+    }
+
+    private function resolveNextWaId(?string $currentWaId, ?string $incomingWaId): ?string
+    {
+        if (! $incomingWaId) {
+            return $currentWaId;
+        }
+
+        if (! $currentWaId) {
+            return $incomingWaId;
+        }
+
+        // Preserve PN identity as canonical whenever available.
+        if (str_ends_with($currentWaId, '@s.whatsapp.net')) {
+            return $currentWaId;
+        }
+
+        if (str_ends_with($incomingWaId, '@s.whatsapp.net')) {
+            return $incomingWaId;
+        }
+
+        return $incomingWaId;
+    }
+
+    /**
+     * @param  array<int, string>  $aliases
+     */
+    private function upsertAliases(string $tenantId, string $contactId, array $aliases): void
+    {
+        if ($aliases === []) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($aliases as $alias) {
+            $record = ContactIdentityAlias::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('alias', $alias)
+                ->lockForUpdate()
+                ->first();
+
+            if ($record) {
+                $record->update([
+                    'contact_id' => $contactId,
+                    'alias_type' => $this->aliasType($alias),
+                    'last_seen_at' => $now,
+                ]);
+                continue;
+            }
+
+            ContactIdentityAlias::create([
+                'tenant_id' => $tenantId,
+                'contact_id' => $contactId,
+                'alias' => $alias,
+                'alias_type' => $this->aliasType($alias),
+                'first_seen_at' => $now,
+                'last_seen_at' => $now,
+            ]);
+        }
+    }
+
+    private function aliasType(string $alias): string
+    {
+        if (str_ends_with($alias, '@lid')) {
+            return 'lid';
+        }
+
+        if (str_ends_with($alias, '@s.whatsapp.net')) {
+            return 'pn';
+        }
+
+        return 'other';
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -67,9 +68,29 @@ class Contact extends Model
         return $this->hasMany(Conversation::class)->latest('last_message_at');
     }
 
+    public function identityAliases(): HasMany
+    {
+        return $this->hasMany(ContactIdentityAlias::class);
+    }
+
     public function deals(): HasMany
     {
         return $this->hasMany(PipelineDeal::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function loyaltyAccount(): HasOne
+    {
+        return $this->hasOne(LoyaltyAccount::class);
     }
 
     public function displayName(): string

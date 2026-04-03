@@ -76,6 +76,7 @@ class HandleInboundMessage implements ShouldQueue
         $fromMe    = (bool) ($key['fromMe'] ?? false);
         $remoteJid = $key['remoteJid'] ?? '';
         $phoneHint = $this->extractPhoneHint($msgPayload, $tenant, $fromMe);
+        $aliases   = $this->extractIdentityAliases($msgPayload);
 
         // Skip group messages and status broadcasts
         if (str_contains($remoteJid, '@g.us') || $remoteJid === 'status@broadcast') {
@@ -88,6 +89,7 @@ class HandleInboundMessage implements ShouldQueue
             'pushName'      => $fromMe ? null : ($msgPayload['pushName'] ?? null),
             'profilePicUrl' => null,
             'phone'         => $phoneHint,
+            'aliases'       => $aliases,
         ];
 
         $contact      = $createContact->handle($tenant, $waData);
@@ -266,5 +268,25 @@ class HandleInboundMessage implements ShouldQueue
         }
 
         return $normalized;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractIdentityAliases(array $msgPayload): array
+    {
+        $raw = [
+            (string) data_get($msgPayload, 'key.remoteJid', ''),
+            (string) data_get($msgPayload, 'key.remoteJidAlt', ''),
+            (string) data_get($msgPayload, 'data.key.remoteJid', ''),
+            (string) data_get($msgPayload, 'data.key.remoteJidAlt', ''),
+            (string) data_get($msgPayload, 'key.participant', ''),
+            (string) data_get($msgPayload, 'participant', ''),
+        ];
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn (string $v) => trim($v),
+            $raw,
+        ))));
     }
 }

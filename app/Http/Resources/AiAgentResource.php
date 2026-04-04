@@ -17,6 +17,7 @@ class AiAgentResource extends JsonResource
             'system_prompt' => $this->system_prompt,
             'llm_model' => $this->llm_model,
             'is_enabled' => (bool) $this->is_enabled,
+            'is_default' => (bool) $this->is_default,
             'context_messages' => (int) $this->context_messages,
             'is_configured' => $this->exists,
             'created_at' => $this->created_at?->toIso8601String(),

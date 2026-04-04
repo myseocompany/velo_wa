@@ -19,8 +19,13 @@ class AiAgentService
 {
     public function agentForTenant(string $tenantId): ?AiAgent
     {
-        return AiAgent::withoutGlobalScope('tenant')
-            ->where('tenant_id', $tenantId)
+        $query = AiAgent::withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenantId);
+
+        return (clone $query)
+            ->orderByDesc('is_default')
+            ->orderByDesc('is_enabled')
+            ->orderBy('created_at')
             ->first();
     }
 

@@ -66,10 +66,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
 
     // AI agent
     Route::get('/ai-agent', [AiAgentController::class, 'show'])->name('ai-agent.show');
+    Route::get('/ai-agents', [AiAgentController::class, 'index'])->name('ai-agents.index');
     Route::patch('/conversations/{conversation}/ai-agent-toggle', [ConversationController::class, 'toggleAiAgent'])->name('conversations.ai-agent-toggle');
     Route::middleware('role:admin')->group(function () {
+        // Backward-compatible single-agent endpoints
         Route::put('/ai-agent', [AiAgentController::class, 'upsert'])->name('ai-agent.upsert');
         Route::patch('/ai-agent/toggle', [AiAgentController::class, 'toggle'])->name('ai-agent.toggle');
+
+        // Multi-agent endpoints
+        Route::post('/ai-agents', [AiAgentController::class, 'store'])->name('ai-agents.store');
+        Route::put('/ai-agents/{aiAgent}', [AiAgentController::class, 'update'])->name('ai-agents.update');
+        Route::delete('/ai-agents/{aiAgent}', [AiAgentController::class, 'destroy'])->name('ai-agents.destroy');
+        Route::patch('/ai-agents/{aiAgent}/toggle', [AiAgentController::class, 'toggleAgent'])->name('ai-agents.toggle');
+        Route::patch('/ai-agents/{aiAgent}/default', [AiAgentController::class, 'setDefault'])->name('ai-agents.default');
     });
 
     // Team — members/workload readable by all; management admin+

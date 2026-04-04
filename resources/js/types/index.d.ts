@@ -124,6 +124,7 @@ export interface AiAgent {
     system_prompt: string | null;
     llm_model: string;
     is_enabled: boolean;
+    is_default?: boolean;
     context_messages: number;
     is_configured: boolean;
     created_at?: string | null;

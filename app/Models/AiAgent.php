@@ -18,6 +18,7 @@ class AiAgent extends Model
         'system_prompt',
         'llm_model',
         'is_enabled',
+        'is_default',
         'context_messages',
     ];
 
@@ -25,6 +26,7 @@ class AiAgent extends Model
     {
         return [
             'is_enabled' => 'boolean',
+            'is_default' => 'boolean',
             'context_messages' => 'integer',
         ];
     }

@@ -15,6 +15,7 @@ use App\Jobs\DownloadMessageMedia;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Services\AssignmentEngineService;
+use App\Services\AiAgentService;
 use App\Services\AutomationEngineService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,6 +44,7 @@ class HandleInboundMessage implements ShouldQueue
         StoreInboundMessage $storeMessage,
         AssignmentEngineService $assignmentEngine,
         AutomationEngineService $automationEngine,
+        AiAgentService $aiAgentService,
     ): void {
         $tenant = Tenant::find($this->tenantId);
 
@@ -59,7 +61,7 @@ class HandleInboundMessage implements ShouldQueue
         }
 
         foreach ($messages as $msgPayload) {
-            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine, $automationEngine);
+            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine, $automationEngine, $aiAgentService);
         }
     }
 
@@ -71,6 +73,7 @@ class HandleInboundMessage implements ShouldQueue
         StoreInboundMessage $storeMessage,
         AssignmentEngineService $assignmentEngine,
         AutomationEngineService $automationEngine,
+        AiAgentService $aiAgentService,
     ): void {
         $key       = $msgPayload['key'] ?? [];
         $fromMe    = (bool) ($key['fromMe'] ?? false);
@@ -118,6 +121,11 @@ class HandleInboundMessage implements ShouldQueue
                     $automationEngine->dispatch($conversation, AutomationTriggerType::OutsideHours, $message);
                 }
                 $automationEngine->dispatch($conversation, AutomationTriggerType::Keyword, $message);
+
+                $aiAgent = $aiAgentService->agentForTenant($tenant->id);
+                if ($aiAgent && $conversation->isOpen() && $aiAgentService->shouldRespond($conversation->refresh(), $aiAgent)) {
+                    GenerateAiAgentReply::dispatch($conversation->id, $aiAgent->id, $message->id);
+                }
             }
 
             // Dispatch media download if message has media

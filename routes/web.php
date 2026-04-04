@@ -59,6 +59,16 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
         return Inertia::render('Pipeline/Index');
     })->name('pipeline');
 
+    // Orders
+    Route::get('/orders', function () {
+        return Inertia::render('Orders/Index');
+    })->name('orders');
+
+    // Reservations
+    Route::get('/reservations', function () {
+        return Inertia::render('Reservations/Index');
+    })->name('reservations');
+
     // Tasks
     Route::get('/tasks', function () {
         return Inertia::render('Tasks/Index');
@@ -96,6 +106,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
     Route::get('/settings/automations', function () {
         return Inertia::render('Settings/Automations');
     })->name('settings.automations');
+
+    Route::get('/settings/ai-agent', function () {
+        return Inertia::render('Settings/AiAgent');
+    })->name('settings.ai-agent');
 
     Route::get('/settings/webhooks', function () {
         return Inertia::render('Settings/Webhooks');

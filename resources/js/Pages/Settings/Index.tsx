@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
+import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Sparkles, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface SettingCard {
@@ -51,6 +51,14 @@ const CARDS: SettingCard[] = [
         icon: <Zap className="h-6 w-6 text-ari-600" />,
         href: '/settings/quick-replies',
         label: 'Gestionar respuestas',
+        roles: ['owner', 'admin'],
+    },
+    {
+        title: 'Agente IA',
+        description: 'Configura el asistente de inteligencia artificial que responde automáticamente tus conversaciones.',
+        icon: <Sparkles className="h-6 w-6 text-ari-600" />,
+        href: '/settings/ai-agent',
+        label: 'Configurar agente',
         roles: ['owner', 'admin'],
     },
     {

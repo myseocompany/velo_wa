@@ -35,6 +35,7 @@ class Conversation extends Model
         'channel',
         'assigned_to',
         'assigned_at',
+        'ai_agent_enabled',
         'first_message_at',
         'first_response_at',
         'last_message_at',
@@ -50,6 +51,7 @@ class Conversation extends Model
             'status' => ConversationStatus::class,
             'channel' => Channel::class,
             'assigned_at' => 'datetime',
+            'ai_agent_enabled' => 'boolean',
             'first_message_at' => 'datetime',
             'first_response_at' => 'datetime',
             'last_message_at' => 'datetime',
@@ -82,6 +84,16 @@ class Conversation extends Model
     public function deals(): HasMany
     {
         return $this->hasMany(PipelineDeal::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
     }
 
     /** Response time in seconds (Dt1). Returns null if no response yet. */

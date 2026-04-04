@@ -1,6 +1,7 @@
+import AiAgentToggle from '@/Components/Inbox/AiAgentToggle';
 import AppLayout from '@/Layouts/AppLayout';
 import { useTenantChannel, useTenantPresence } from '@/hooks/useEcho';
-import { Conversation, ConversationStatus, Message, PageProps, User } from '@/types';
+import { AiAgent, Conversation, ConversationStatus, Message, PageProps, User } from '@/types';
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
 import {
@@ -320,6 +321,8 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [showContactPanel, setShowContactPanel] = useState(false);
     const [unreadCounts, setUnreadCounts]       = useState<Record<string, number>>({});
     const [onlineUserIds, setOnlineUserIds]     = useState<Set<string>>(new Set());
+    const [aiAgentConfig, setAiAgentConfig] = useState<AiAgent | null>(null);
+    const [togglingAi, setTogglingAi] = useState(false);
 
     const conversationsRef = useRef<Conversation[]>([]);
     const activeConvRef    = useRef<Conversation | null>(null);
@@ -382,6 +385,13 @@ export default function InboxIndex({ activeConversationId }: Props) {
             })
             .finally(() => setLoadingConvs(false));
     }, [statusFilter, search]);
+
+    // Load AI agent config (global toggle state for per-conversation behavior)
+    useEffect(() => {
+        axios.get<{ data: AiAgent; available_models: string[] }>('/api/v1/ai-agent')
+            .then((res) => setAiAgentConfig(res.data.data))
+            .catch(() => setAiAgentConfig(null));
+    }, []);
 
     // Load agents for assignment
     useEffect(() => {
@@ -523,6 +533,26 @@ export default function InboxIndex({ activeConversationId }: Props) {
     function handleLoadOlderMessages(older: Message[], newNextCursor: string | null) {
         setMessages((prev) => [...older, ...prev]);
         setNextCursor(newNextCursor);
+    }
+
+    async function toggleAiForConversation() {
+        if (!activeConv || !aiAgentConfig) return;
+
+        const currentEffective = activeConv.ai_agent_enabled !== null
+            ? activeConv.ai_agent_enabled
+            : aiAgentConfig.is_enabled;
+
+        setTogglingAi(true);
+        try {
+            const res = await axios.patch<{ data: Conversation }>(
+                `/api/v1/conversations/${activeConv.id}/ai-agent-toggle`,
+                { enabled: !currentEffective },
+            );
+            setActiveConv(res.data.data);
+            updateConvInList(res.data.data);
+        } finally {
+            setTogglingAi(false);
+        }
     }
 
     async function closeConversation() {
@@ -671,6 +701,15 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                             onAssigned={handleAssigned}
                                         />
                                     </div>
+
+                                    {aiAgentConfig && (
+                                        <AiAgentToggle
+                                            globalEnabled={aiAgentConfig.is_enabled}
+                                            conversationOverride={activeConv.ai_agent_enabled}
+                                            loading={togglingAi}
+                                            onToggle={toggleAiForConversation}
+                                        />
+                                    )}
 
                                     {isClosed ? (
                                         <button

@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AssignConversationRequest;
 use App\Http\Requests\Api\StoreConversationRequest;
 use App\Http\Resources\ConversationResource;
+use App\Models\AiAgent;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -126,6 +127,26 @@ class ConversationController extends Controller
         }
 
         $conversation = $action->handle($conversation);
+
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+    }
+
+    public function toggleAiAgent(Request $request, Conversation $conversation): ConversationResource
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $agent = AiAgent::withoutGlobalScope('tenant')
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->first();
+
+        $globalEnabled = (bool) ($agent?->is_enabled ?? false);
+        $enabled = (bool) $validated['enabled'];
+
+        $conversation->update([
+            'ai_agent_enabled' => $enabled === $globalEnabled ? null : $enabled,
+        ]);
 
         return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
     }

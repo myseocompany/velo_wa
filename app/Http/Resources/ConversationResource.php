@@ -17,6 +17,7 @@ class ConversationResource extends JsonResource
             'channel'           => $this->channel->value,
             'assigned_to'       => $this->assigned_to,
             'assigned_at'       => $this->assigned_at?->toIso8601String(),
+            'ai_agent_enabled'  => $this->ai_agent_enabled,
             'first_message_at'  => $this->first_message_at?->toIso8601String(),
             'first_response_at' => $this->first_response_at?->toIso8601String(),
             'last_message_at'   => $this->last_message_at?->toIso8601String(),

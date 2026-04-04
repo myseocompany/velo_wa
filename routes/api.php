@@ -3,15 +3,19 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ActivityController;
+use App\Http\Controllers\Api\V1\AiAgentController;
 use App\Http\Controllers\Api\V1\AssignmentRuleController;
 use App\Http\Controllers\Api\V1\AutomationController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\LoyaltyController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\MetricsController;
+use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\QuickReplyController;
+use App\Http\Controllers\Api\V1\ReservationController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
@@ -39,6 +43,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
 
     // WhatsApp — status readable by all; connect/disconnect owner only
     Route::get('/whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
+    Route::get('/whatsapp/health-logs', [WhatsAppController::class, 'healthLogs'])->name('whatsapp.health-logs');
     Route::middleware(['role:owner', 'throttle:whatsapp-control'])->group(function () {
         Route::post('/whatsapp/connect', [WhatsAppController::class, 'connect'])->name('whatsapp.connect');
         Route::post('/whatsapp/disconnect', [WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
@@ -58,6 +63,15 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->middleware('throttle:messages')->name('messages.store-media');
     Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->middleware('throttle:messages')->name('messages.store-quick-reply');
 
+
+    // AI agent
+    Route::get('/ai-agent', [AiAgentController::class, 'show'])->name('ai-agent.show');
+    Route::patch('/conversations/{conversation}/ai-agent-toggle', [ConversationController::class, 'toggleAiAgent'])->name('conversations.ai-agent-toggle');
+    Route::middleware('role:admin')->group(function () {
+        Route::put('/ai-agent', [AiAgentController::class, 'upsert'])->name('ai-agent.upsert');
+        Route::patch('/ai-agent/toggle', [AiAgentController::class, 'toggle'])->name('ai-agent.toggle');
+    });
+
     // Team — members/workload readable by all; management admin+
     Route::get('/team/members', [TeamController::class, 'members'])->name('team.members');
     Route::get('/team/workload', [TeamController::class, 'workload'])->name('team.workload');
@@ -75,6 +89,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::get('/contacts/duplicates', [ContactController::class, 'duplicates'])->name('contacts.duplicates');
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
     Route::patch('/contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
+    Route::get('/loyalty/contacts/{contact}/account', [LoyaltyController::class, 'account'])->name('loyalty.account');
+    Route::get('/loyalty/contacts/{contact}/events', [LoyaltyController::class, 'events'])->name('loyalty.events');
+    Route::post('/loyalty/contacts/{contact}/adjust', [LoyaltyController::class, 'adjust'])->middleware('role:admin')->name('loyalty.adjust');
     Route::middleware('role:admin')->group(function () {
         Route::post('/contacts', [ContactController::class, 'store'])->name('contacts.store');
         Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');
@@ -106,6 +123,23 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::put('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'update'])->name('pipeline.deals.update');
     Route::patch('/pipeline/deals/{pipelineDeal}/stage', [PipelineDealController::class, 'updateStage'])->name('pipeline.deals.update-stage');
     Route::delete('/pipeline/deals/{pipelineDeal}', [PipelineDealController::class, 'destroy'])->middleware('role:admin')->name('pipeline.deals.destroy');
+
+    // Orders — all can read/create/update; delete admin+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->middleware('role:admin')->name('orders.destroy');
+
+    // Reservations — all can read/create/update; delete admin+
+    Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
+    Route::get('/reservations/slots', [ReservationController::class, 'slots'])->name('reservations.slots');
+    Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
+    Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show');
+    Route::put('/reservations/{reservation}', [ReservationController::class, 'update'])->name('reservations.update');
+    Route::patch('/reservations/{reservation}/status', [ReservationController::class, 'updateStatus'])->name('reservations.update-status');
+    Route::delete('/reservations/{reservation}', [ReservationController::class, 'destroy'])->middleware('role:admin')->name('reservations.destroy');
 
     // Metrics
     Route::get('/metrics/agents', [MetricsController::class, 'agents'])->name('metrics.agents');

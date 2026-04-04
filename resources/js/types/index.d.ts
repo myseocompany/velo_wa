@@ -7,6 +7,8 @@ export type ConversationStatus = 'open' | 'pending' | 'closed';
 export type MessageDirection = 'in' | 'out';
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
 export type DealStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+export type OrderStatus = 'new' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type ReservationStatus = 'requested' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show';
 export type AssignmentRuleType = 'round_robin' | 'least_busy' | 'tag_based' | 'manual';
 export type AutomationTriggerType = 'new_conversation' | 'keyword' | 'outside_hours' | 'no_response_timeout';
 export type AutomationActionType = 'send_message' | 'assign_agent' | 'add_tag' | 'move_stage';
@@ -34,6 +36,7 @@ export interface Tenant {
     timezone: string;
     business_hours: Record<string, BusinessHourDay> | null;
     auto_close_hours: number | null;
+    onboarding_vertical?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -95,6 +98,7 @@ export interface Conversation {
     channel: Channel;
     assigned_to: string | null;
     assigned_at: string | null;
+    ai_agent_enabled: boolean | null;
     first_message_at: string | null;
     first_response_at: string | null;
     last_message_at: string | null;
@@ -111,6 +115,19 @@ export interface Conversation {
         created_at: string;
         media_type: string | null;
     } | null;
+}
+
+
+export interface AiAgent {
+    id: string | null;
+    name: string;
+    system_prompt: string | null;
+    llm_model: string;
+    is_enabled: boolean;
+    context_messages: number;
+    is_configured: boolean;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 export interface Message {
@@ -155,6 +172,74 @@ export interface PipelineDeal {
     updated_at: string;
     contact?: Contact;
     assignee?: User;
+}
+
+export interface Order {
+    id: string;
+    tenant_id: string;
+    contact_id: string;
+    conversation_id: string | null;
+    assigned_to: string | null;
+    code: string;
+    status: OrderStatus;
+    total: string | null;
+    currency: string;
+    items: Array<{ name?: string; qty?: number; price?: number }>;
+    notes: string | null;
+    new_at: string | null;
+    confirmed_at: string | null;
+    preparing_at: string | null;
+    ready_at: string | null;
+    out_for_delivery_at: string | null;
+    delivered_at: string | null;
+    cancelled_at: string | null;
+    created_at: string;
+    updated_at: string;
+    contact?: Contact;
+    assignee?: User | null;
+}
+
+export interface Reservation {
+    id: string;
+    tenant_id: string;
+    contact_id: string;
+    conversation_id: string | null;
+    assigned_to: string | null;
+    code: string;
+    status: ReservationStatus;
+    starts_at: string;
+    ends_at: string;
+    party_size: number;
+    notes: string | null;
+    requested_at: string | null;
+    confirmed_at: string | null;
+    seated_at: string | null;
+    completed_at: string | null;
+    cancelled_at: string | null;
+    no_show_at: string | null;
+    created_at: string;
+    updated_at: string;
+    contact?: Contact;
+    assignee?: User | null;
+}
+
+export interface LoyaltyAccount {
+    id: string;
+    contact_id: string;
+    points_balance: number;
+    total_earned: number;
+    total_redeemed: number;
+}
+
+export interface LoyaltyEvent {
+    id: string;
+    loyalty_account_id: string;
+    contact_id: string;
+    order_id: string | null;
+    type: 'order_reward' | 'manual_adjustment' | 'redemption';
+    points: number;
+    description: string | null;
+    created_at: string;
 }
 
 export interface MenuItem {

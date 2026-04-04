@@ -125,7 +125,7 @@ export default function SettingsAiAgent() {
 
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                                <label className="mb-1 block text-xs font-medium text-gray-700">Modelo</label>
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Modelo (Anthropic / OpenAI / Gemini)</label>
                                 <select
                                     value={form.llm_model}
                                     onChange={(e) => setForm(prev => ({ ...prev, llm_model: e.target.value }))}

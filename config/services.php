@@ -39,6 +39,14 @@ return [
         'key' => env('ANTHROPIC_API_KEY', ''),
     ],
 
+    'openai' => [
+        'key' => env('OPENAI_API_KEY', ''),
+    ],
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY', ''),
+    ],
+
     'evolution' => [
         'url' => env('EVOLUTION_API_URL', 'http://127.0.0.1:8081'),
         'key' => env('EVOLUTION_API_KEY', ''),

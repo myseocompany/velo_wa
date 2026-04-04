@@ -13,6 +13,11 @@ class AiAgentRequest extends FormRequest
         'claude-haiku-4-5',
         'claude-sonnet-4-5',
         'claude-opus-4-1',
+        'gpt-4o-mini',
+        'gpt-4.1-mini',
+        'gpt-4.1',
+        'gemini-2.0-flash',
+        'gemini-1.5-pro',
     ];
 
     public function authorize(): bool

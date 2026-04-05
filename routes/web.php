@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Models\Conversation;
+use App\Support\PlanCatalog;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -16,7 +17,10 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
     }
-    return Inertia::render('Welcome');
+
+    return Inertia::render('Welcome', [
+        'plans' => array_values(PlanCatalog::publicPlans()),
+    ]);
 })->name('home');
 
 // Onboarding — runs before the onboarding middleware intercepts

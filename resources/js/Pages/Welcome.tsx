@@ -5,65 +5,49 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 const FEATURES = [
     {
         icon: <MessageSquare className="h-6 w-6 text-ari-600" />,
-        title: 'Inbox unificado',
-        desc: 'Gestiona todas las conversaciones de WhatsApp de tu equipo en un solo lugar, con asignación y seguimiento en tiempo real.',
+        title: 'Inbox colaborativo',
+        desc: 'Centraliza conversaciones de WhatsApp, asigna responsables y evita mensajes perdidos entre agentes.',
     },
     {
         icon: <Users className="h-6 w-6 text-ari-600" />,
-        title: 'Equipo colaborativo',
-        desc: 'Asigna conversaciones a agentes, define roles y mide el desempeño individual de cada miembro de tu equipo.',
+        title: 'Control de equipo',
+        desc: 'Roles, carga por agente y trazabilidad para saber quién respondió y cuándo.',
     },
     {
         icon: <Zap className="h-6 w-6 text-ari-600" />,
         title: 'Automatizaciones',
-        desc: 'Responde automáticamente fuera de horario, asigna por palabras clave y mueve deals según acciones del contacto.',
+        desc: 'Respuestas por palabras clave, fuera de horario, respuestas rápidas y agente IA configurable.',
     },
     {
         icon: <BarChart3 className="h-6 w-6 text-ari-600" />,
-        title: 'Métricas y pipeline',
-        desc: 'Visualiza Dt1, tasas de cierre, deals por etapa y desempeño de agentes con dashboards en tiempo real.',
+        title: 'Pipeline y operación',
+        desc: 'Gestiona oportunidades, pedidos, reservas y tareas desde el mismo flujo de conversación.',
     },
     {
         icon: <Shield className="h-6 w-6 text-ari-600" />,
-        title: 'Multi-tenant seguro',
-        desc: 'Cada negocio tiene sus datos completamente aislados. Ningún agente ve información de otra cuenta, jamás.',
+        title: 'Datos aislados por tenant',
+        desc: 'Cada cuenta opera aislada y segura, con control de acceso por rol para todo el equipo.',
     },
     {
         icon: <CheckCircle className="h-6 w-6 text-ari-600" />,
-        title: 'Sin bans de WhatsApp',
-        desc: 'Límites de velocidad automáticos para proteger tu número. Reconexión automática si la sesión se interrumpe.',
+        title: 'Métricas en tiempo real',
+        desc: 'Monitorea tiempos de respuesta, estado de conversaciones y productividad comercial.',
     },
 ];
 
-const PLANS = [
-    {
-        name: 'Starter',
-        price: '$29',
-        period: '/mes',
-        desc: 'Perfecto para equipos pequeños.',
-        features: ['3 agentes', '2.000 contactos', '1 número de WhatsApp', 'Automatizaciones básicas', 'Soporte por email'],
-        cta: 'Empezar gratis',
-        highlight: false,
-    },
-    {
-        name: 'Growth',
-        price: '$79',
-        period: '/mes',
-        desc: 'Para equipos en crecimiento.',
-        features: ['10 agentes', '15.000 contactos', '1 número de WhatsApp', 'Automatizaciones avanzadas', 'Pipeline de ventas', 'Soporte prioritario'],
-        cta: 'Prueba 14 días gratis',
-        highlight: true,
-    },
-    {
-        name: 'Scale',
-        price: '$199',
-        period: '/mes',
-        desc: 'Para operaciones grandes.',
-        features: ['Agentes ilimitados', 'Contactos ilimitados', 'Multi-número', 'API de integración', 'SLA 99.9%', 'Soporte dedicado'],
-        cta: 'Hablar con ventas',
-        highlight: false,
-    },
-];
+interface WelcomePlan {
+    name: string;
+    price: string;
+    period: string;
+    desc: string;
+    features: string[];
+    cta: string;
+    highlight: boolean;
+}
+
+interface Props {
+    plans?: WelcomePlan[];
+}
 
 const TESTIMONIALS = [
     {
@@ -78,7 +62,7 @@ const TESTIMONIALS = [
     },
 ];
 
-export default function Welcome() {
+export default function Welcome({ plans = [] }: Props) {
     return (
         <div className="min-h-screen bg-gray-50 text-gray-900">
             <Head title="AriCRM — CRM de WhatsApp para equipos de ventas" />
@@ -115,14 +99,14 @@ export default function Welcome() {
                 <div className="relative mx-auto max-w-4xl px-6">
                     <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-ari-200 bg-ari-50 px-3 py-1 text-xs text-ari-700">
                         <Star size={12} />
-                        WhatsApp CRM para equipos de ventas
+                        Plataforma de operación por WhatsApp
                     </div>
                     <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-gray-900 md:text-6xl">
                         Cierra más ventas<br />
                         <span className="text-ari-600">desde WhatsApp</span>
                     </h1>
                     <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-500">
-                        AriCRM convierte tu WhatsApp en un CRM completo. Gestiona contactos, asigna conversaciones a tu equipo, automatiza respuestas y mide resultados — todo en un solo lugar.
+                        AriCRM convierte WhatsApp en tu centro de operación comercial y de servicio: conversaciones, automatizaciones, pipeline, pedidos y reservas en una sola plataforma.
                     </p>
                     <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                         <Link
@@ -140,7 +124,7 @@ export default function Welcome() {
                         </a>
                     </div>
                     <p className="mt-4 text-xs text-gray-400">
-                        14 días gratis · Sin tarjeta de crédito · Cancela cuando quieras
+                        14 días gratis · Sin permanencia · Cambia de plan cuando quieras
                     </p>
                 </div>
             </section>
@@ -190,7 +174,7 @@ export default function Welcome() {
                         <p className="mt-3 text-gray-500">Empieza gratis. Escala cuando lo necesites.</p>
                     </div>
                     <div className="grid gap-6 md:grid-cols-3">
-                        {PLANS.map(plan => (
+                        {plans.map(plan => (
                             <div
                                 key={plan.name}
                                 className={`relative rounded-2xl border p-8 ${
@@ -213,7 +197,7 @@ export default function Welcome() {
                                 <ul className="my-6 space-y-2">
                                     {plan.features.map(f => (
                                         <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                                            <CheckCircle size={14} className="shrari-0 text-ari-600" />
+                                            <CheckCircle size={14} className="shrink-0 text-ari-600" />
                                             {f}
                                         </li>
                                     ))}

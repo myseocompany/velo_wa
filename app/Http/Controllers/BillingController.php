@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\TenantPlan;
+use App\Support\PlanCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,32 +13,6 @@ use Inertia\Response;
 
 class BillingController extends Controller
 {
-    private const PLANS = [
-        'seed' => [
-            'name'         => 'Semilla',
-            'price_id_key' => 'services.stripe.price_seed',
-            'price'        => 'USD 19/mes',
-            'max_agents'   => 1,
-            'max_contacts' => 500,
-            'features'     => ['Inbox', 'Contactos', 'Menú digital', 'Tareas', '3 automatizaciones'],
-        ],
-        'grow' => [
-            'name'         => 'Crecer',
-            'price_id_key' => 'services.stripe.price_grow',
-            'price'        => 'USD 29/mes',
-            'max_agents'   => 3,
-            'max_contacts' => 2000,
-            'features'     => ['Todo Semilla', 'Pipeline Kanban', 'Pedidos', 'Reservas', 'Automatizaciones ilimitadas'],
-        ],
-        'scale' => [
-            'name'         => 'Escalar',
-            'price_id_key' => 'services.stripe.price_scale',
-            'price'        => 'USD 59/mes',
-            'max_agents'   => null,
-            'max_contacts' => null,
-            'features'     => ['Todo Crecer', 'Agentes ilimitados', 'Contactos ilimitados', 'API access', 'Soporte prioritario'],
-        ],
-    ];
 
     /** GET /settings/billing */
     public function show(Request $request): Response
@@ -50,7 +25,7 @@ class BillingController extends Controller
             $plan['price_id'] = config($plan['price_id_key']);
             unset($plan['price_id_key']);
             return $plan;
-        }, self::PLANS);
+        }, PlanCatalog::billingPlans());
 
         return Inertia::render('Settings/Billing', [
             'plans'        => $plans,

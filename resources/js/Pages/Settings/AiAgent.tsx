@@ -23,6 +23,26 @@ interface AgentPayload {
     context_messages: number;
 }
 
+
+function extractApiError(err: unknown, fallback: string): string {
+    if (!axios.isAxiosError(err)) return fallback;
+
+    const message = err.response?.data?.message;
+    if (typeof message === 'string' && message.trim() !== '') return message;
+
+    const firstError = err.response?.data?.errors
+        ? Object.values(err.response.data.errors)[0]
+        : null;
+
+    if (Array.isArray(firstError) && firstError.length > 0) {
+        return String(firstError[0]);
+    }
+
+    if (typeof firstError === 'string') return firstError;
+
+    return fallback;
+}
+
 export default function SettingsAiAgent() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -88,6 +108,7 @@ export default function SettingsAiAgent() {
 
     async function createAgent() {
         setBusy(true);
+        setErrors({});
         try {
             const nextNumber = agents.length + 1;
             const payload: AgentPayload = {
@@ -103,6 +124,8 @@ export default function SettingsAiAgent() {
             const nextList = [created, ...agents];
             setAgents(nextList);
             selectAgent(created);
+        } catch (err: unknown) {
+            setErrors({ form: extractApiError(err, 'No se pudo crear el agente.') });
         } finally {
             setBusy(false);
         }
@@ -135,6 +158,7 @@ export default function SettingsAiAgent() {
     async function toggleSelected() {
         if (!selectedId || !selectedAgent) return;
         setBusy(true);
+        setErrors({});
         try {
             const res = await axios.patch<{ data: AiAgentConfig }>(`/api/v1/ai-agents/${selectedId}/toggle`, {
                 enabled: !selectedAgent.is_enabled,
@@ -142,6 +166,8 @@ export default function SettingsAiAgent() {
             const updated = res.data.data;
             setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
             selectAgent(updated);
+        } catch (err: unknown) {
+            setErrors({ form: extractApiError(err, 'No se pudo cambiar el estado del agente.') });
         } finally {
             setBusy(false);
         }
@@ -150,9 +176,13 @@ export default function SettingsAiAgent() {
     async function setDefaultSelected() {
         if (!selectedId) return;
         setBusy(true);
+        setErrors({});
         try {
-            await axios.patch(`/api/v1/ai-agents/${selectedId}/default`);
-            setAgents((prev) => prev.map((a) => ({ ...a, is_default: a.id === selectedId })));
+            const res = await axios.patch<{ data: AiAgentConfig }>(`/api/v1/ai-agents/${selectedId}/default`);
+            const updated = res.data.data;
+            setAgents((prev) => prev.map((a) => ({ ...a, is_default: a.id === updated.id })));
+        } catch (err: unknown) {
+            setErrors({ form: extractApiError(err, 'No se pudo marcar el agente como predeterminado.') });
         } finally {
             setBusy(false);
         }
@@ -163,6 +193,7 @@ export default function SettingsAiAgent() {
         if (!window.confirm(`Eliminar ${selectedAgent.name}?`)) return;
 
         setBusy(true);
+        setErrors({});
         try {
             await axios.delete(`/api/v1/ai-agents/${selectedId}`);
             const next = agents.filter((a) => a.id !== selectedId);
@@ -181,6 +212,8 @@ export default function SettingsAiAgent() {
                     context_messages: 10,
                 });
             }
+        } catch (err: unknown) {
+            setErrors({ form: extractApiError(err, 'No se pudo eliminar el agente.') });
         } finally {
             setBusy(false);
         }
@@ -320,6 +353,8 @@ export default function SettingsAiAgent() {
                                         />
                                         {errors.system_prompt && <p className="mt-1 text-xs text-red-500">{errors.system_prompt}</p>}
                                     </div>
+
+                                    {errors.form && <p className="text-sm text-red-600">{errors.form}</p>}
 
                                     <div className="flex justify-end">
                                         <button

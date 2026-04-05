@@ -78,9 +78,9 @@ class AiAgentController extends Controller
         ], 201);
     }
 
-    public function update(AiAgentRequest $request, AiAgent $aiAgent): JsonResponse
+    public function update(AiAgentRequest $request, string $aiAgent): JsonResponse
     {
-        $this->authorizeAgent($request, $aiAgent);
+        $aiAgent = $this->resolveAgent($request, $aiAgent);
 
         $aiAgent->update([
             'name' => $request->input('name'),
@@ -96,9 +96,9 @@ class AiAgentController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, AiAgent $aiAgent): JsonResponse
+    public function destroy(Request $request, string $aiAgent): JsonResponse
     {
-        $this->authorizeAgent($request, $aiAgent);
+        $aiAgent = $this->resolveAgent($request, $aiAgent);
 
         $tenantId = $request->user()->tenant_id;
         $wasDefault = (bool) $aiAgent->is_default;
@@ -119,9 +119,9 @@ class AiAgentController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function setDefault(Request $request, AiAgent $aiAgent): JsonResponse
+    public function setDefault(Request $request, string $aiAgent): JsonResponse
     {
-        $this->authorizeAgent($request, $aiAgent);
+        $aiAgent = $this->resolveAgent($request, $aiAgent);
 
         $tenantId = $request->user()->tenant_id;
 
@@ -137,13 +137,13 @@ class AiAgentController extends Controller
         ]);
     }
 
-    public function toggleAgent(Request $request, AiAgent $aiAgent): JsonResponse
+    public function toggleAgent(Request $request, string $aiAgent): JsonResponse
     {
         $request->validate([
             'enabled' => ['nullable', 'boolean'],
         ]);
 
-        $this->authorizeAgent($request, $aiAgent);
+        $aiAgent = $this->resolveAgent($request, $aiAgent);
 
         $enabled = $request->has('enabled')
             ? $request->boolean('enabled')
@@ -233,10 +233,17 @@ class AiAgentController extends Controller
             ->orderBy('created_at');
     }
 
-    private function authorizeAgent(Request $request, AiAgent $aiAgent): void
+    private function resolveAgent(Request $request, string $aiAgentId): AiAgent
     {
-        if ($aiAgent->tenant_id !== $request->user()->tenant_id) {
-            abort(404);
+        $agent = AiAgent::withoutGlobalScope('tenant')
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->where('id', $aiAgentId)
+            ->first();
+
+        if (! $agent) {
+            abort(404, 'AI agent not found.');
         }
+
+        return $agent;
     }
 }

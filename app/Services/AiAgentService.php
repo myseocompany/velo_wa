@@ -17,6 +17,15 @@ use Illuminate\Support\Facades\Log;
 
 class AiAgentService
 {
+    /**
+     * @var array<string, string>
+     */
+    private const DEFAULT_MODELS_BY_PROVIDER = [
+        'anthropic' => 'claude-haiku-4-5',
+        'openai' => 'gpt-4o-mini',
+        'gemini' => 'gemini-2.0-flash',
+    ];
+
     public function agentForTenant(string $tenantId): ?AiAgent
     {
         $query = AiAgent::withoutGlobalScope('tenant')
@@ -132,24 +141,55 @@ class AiAgentService
      */
     public function generateReply(AiAgent $agent, string $prompt, array $history): ?string
     {
-        [$provider, $model] = $this->resolveProviderAndModel($agent->llm_model);
-        $apiKey = $this->providerApiKey($provider);
+        [$primaryProvider, $primaryModel] = $this->resolveProviderAndModel($agent->llm_model);
+        $attempts = $this->providerFallbackChain($primaryProvider, $primaryModel);
+        $lastException = null;
 
-        if ($apiKey === '') {
-            Log::warning('AiAgent: missing provider API key', [
-                'agent_id' => $agent->id,
-                'provider' => $provider,
-            ]);
+        foreach ($attempts as $index => [$provider, $model]) {
+            $apiKey = $this->providerApiKey($provider);
+            if ($apiKey === '') {
+                Log::warning('AiAgent: missing provider API key', [
+                    'agent_id' => $agent->id,
+                    'provider' => $provider,
+                ]);
 
-            return null;
+                continue;
+            }
+
+            try {
+                return match ($provider) {
+                    'anthropic' => $this->generateAnthropicReply($apiKey, $model, $prompt, $history, $agent->id),
+                    'openai' => $this->generateOpenAiReply($apiKey, $model, $prompt, $history, $agent->id),
+                    'gemini' => $this->generateGeminiReply($apiKey, $model, $prompt, $history, $agent->id),
+                    default => throw new \RuntimeException('Unsupported provider: '.$provider),
+                };
+            } catch (\RuntimeException $exception) {
+                $lastException = $exception;
+                $isLastAttempt = $index === array_key_last($attempts);
+
+                if (! $this->shouldFallbackAfterProviderFailure($exception) || $isLastAttempt) {
+                    throw $exception;
+                }
+
+                Log::warning('AiAgent: provider failed, trying fallback provider', [
+                    'agent_id' => $agent->id,
+                    'failed_provider' => $provider,
+                    'failed_model' => $model,
+                    'next_provider' => $attempts[$index + 1][0] ?? null,
+                ]);
+            }
         }
 
-        return match ($provider) {
-            'anthropic' => $this->generateAnthropicReply($apiKey, $model, $prompt, $history, $agent->id),
-            'openai' => $this->generateOpenAiReply($apiKey, $model, $prompt, $history, $agent->id),
-            'gemini' => $this->generateGeminiReply($apiKey, $model, $prompt, $history, $agent->id),
-            default => throw new \RuntimeException('Unsupported provider: '.$provider),
-        };
+        if ($lastException instanceof \RuntimeException) {
+            throw $lastException;
+        }
+
+        Log::warning('AiAgent: no provider available for reply generation', [
+            'agent_id' => $agent->id,
+            'requested_model' => $agent->llm_model,
+        ]);
+
+        return null;
     }
 
     /**
@@ -190,6 +230,34 @@ class AiAgentService
             'gemini' => (string) config('services.gemini.key', ''),
             default => '',
         };
+    }
+
+    /**
+     * @return array<int, array{0: string, 1: string}>
+     */
+    private function providerFallbackChain(string $primaryProvider, string $primaryModel): array
+    {
+        $chain = [[$primaryProvider, $primaryModel]];
+
+        foreach (array_keys(self::DEFAULT_MODELS_BY_PROVIDER) as $provider) {
+            if ($provider === $primaryProvider) {
+                continue;
+            }
+
+            $chain[] = [$provider, self::DEFAULT_MODELS_BY_PROVIDER[$provider]];
+        }
+
+        return $chain;
+    }
+
+    private function shouldFallbackAfterProviderFailure(\RuntimeException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, ' api request failed: 429')
+            || str_contains($message, 'insufficient_quota')
+            || str_contains($message, 'rate_limit')
+            || str_contains($message, '429');
     }
 
     /**
@@ -332,6 +400,6 @@ class AiAgentService
             'body' => $body,
         ]);
 
-        throw new \RuntimeException(ucfirst($provider).' API request failed: '.$status);
+        throw new \RuntimeException(ucfirst($provider).' API request failed: '.$status.' body='.$body);
     }
 }

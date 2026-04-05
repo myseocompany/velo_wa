@@ -68,18 +68,20 @@ class SendWhatsAppMessage implements ShouldQueue
                 : ($contact->phone ?? preg_replace('/@.*/', '', $waId));
 
             if ($message->hasMedia() && $message->media_url) {
-                // Evolution API runs in Docker and cannot reach the host MinIO URL.
-                // Read the file from S3 and pass it as a base64 data URI instead.
-                $diskName = (string) config('filesystems.media_disk', config('filesystems.default', 'local'));
-                $filePath = $this->resolveStoredPath($message->media_url);
-                $binary   = Storage::disk($diskName)->get($filePath);
-                $mediaB64 = base64_encode($binary);
+                // For stored media use base64 payload; for external URLs pass URL directly.
+                $mediaPayload = $this->resolveStoredPath($message->media_url);
+
+                if (! $this->isExternalUrl($mediaPayload)) {
+                    $diskName = (string) config('filesystems.media_disk', config('filesystems.default', 'local'));
+                    $binary   = Storage::disk($diskName)->get($mediaPayload);
+                    $mediaPayload = base64_encode($binary);
+                }
 
                 $result = $client->sendMedia(
                     $instanceName,
                     $phone,
                     $message->media_type,
-                    $mediaB64,
+                    $mediaPayload,
                     $message->body,
                 );
             } else {
@@ -153,5 +155,11 @@ class SendWhatsAppMessage implements ShouldQueue
         }
 
         return $mediaUrl;
+    }
+
+
+    private function isExternalUrl(string $value): bool
+    {
+        return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');
     }
 }

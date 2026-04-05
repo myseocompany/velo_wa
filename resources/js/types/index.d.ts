@@ -11,7 +11,7 @@ export type OrderStatus = 'new' | 'confirmed' | 'preparing' | 'ready' | 'out_for
 export type ReservationStatus = 'requested' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show';
 export type AssignmentRuleType = 'round_robin' | 'least_busy' | 'tag_based' | 'manual';
 export type AutomationTriggerType = 'new_conversation' | 'keyword' | 'outside_hours' | 'no_response_timeout';
-export type AutomationActionType = 'send_message' | 'assign_agent' | 'add_tag' | 'move_stage';
+export type AutomationActionType = 'send_message' | 'assign_agent' | 'add_tag' | 'move_stage' | 'send_sequence' | 'send_menu';
 export type Channel = 'whatsapp' | 'manual';
 export type ContactSource = 'whatsapp' | 'manual' | 'import';
 

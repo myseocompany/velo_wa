@@ -9,6 +9,7 @@ use App\Enums\AutomationTriggerType;
 use App\Enums\DealStage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class AutomationRequest extends FormRequest
 {
@@ -56,7 +57,7 @@ class AutomationRequest extends FormRequest
 
             'action_type'   => ['required', 'string', Rule::in(array_column(AutomationActionType::cases(), 'value'))],
             'action_config' => [
-                $actionType === AutomationActionType::SendMenu->value ? 'nullable' : 'required',
+                in_array($actionType, [AutomationActionType::SendMenu->value], true) ? 'nullable' : 'required',
                 'array',
             ],
             // Send message
@@ -66,6 +67,23 @@ class AutomationRequest extends FormRequest
                 'string',
                 'max:4096',
             ],
+            // Send sequence
+            'action_config.steps' => [
+                Rule::requiredIf($actionType === AutomationActionType::SendSequence->value),
+                'nullable',
+                'array',
+                'min:1',
+                'max:12',
+            ],
+            'action_config.steps.*.type' => [
+                Rule::requiredIf($actionType === AutomationActionType::SendSequence->value),
+                'nullable',
+                'string',
+                Rule::in(['text', 'image', 'video', 'audio', 'document']),
+            ],
+            'action_config.steps.*.body' => ['nullable', 'string', 'max:4096'],
+            'action_config.steps.*.media_url' => ['nullable', 'string', 'max:2048'],
+            'action_config.steps.*.delay_seconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
             // Assign agent
             'action_config.agent_id'  => [
                 Rule::requiredIf($actionType === AutomationActionType::AssignAgent->value),
@@ -88,5 +106,43 @@ class AutomationRequest extends FormRequest
             'is_active' => ['boolean'],
             'priority'  => ['integer', 'min:1', 'max:999'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->input('action_type') !== AutomationActionType::SendSequence->value) {
+                return;
+            }
+
+            $steps = $this->input('action_config.steps', []);
+            if (! is_array($steps)) {
+                return;
+            }
+
+            foreach ($steps as $index => $step) {
+                if (! is_array($step)) {
+                    continue;
+                }
+
+                $type = (string) ($step['type'] ?? '');
+                $body = trim((string) ($step['body'] ?? ''));
+                $mediaUrl = trim((string) ($step['media_url'] ?? ''));
+
+                if ($type === 'text' && $body === '') {
+                    $validator->errors()->add(
+                        "action_config.steps.$index.body",
+                        'Los pasos de texto requieren contenido en body.'
+                    );
+                }
+
+                if ($type !== '' && $type !== 'text' && $mediaUrl === '') {
+                    $validator->errors()->add(
+                        "action_config.steps.$index.media_url",
+                        'Los pasos multimedia requieren media_url.'
+                    );
+                }
+            }
+        });
     }
 }

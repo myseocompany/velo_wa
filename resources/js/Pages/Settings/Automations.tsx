@@ -21,7 +21,7 @@ import { useEffect, useState } from 'react';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TriggerType = 'new_conversation' | 'keyword' | 'outside_hours' | 'no_response_timeout';
-type ActionType = 'send_message' | 'assign_agent' | 'add_tag' | 'move_stage';
+type ActionType = 'send_message' | 'assign_agent' | 'add_tag' | 'move_stage' | 'send_sequence' | 'send_menu';
 type DealStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
 
 interface TriggerConfig {
@@ -31,11 +31,19 @@ interface TriggerConfig {
     minutes?: number;
 }
 
+interface SequenceStep {
+    type: 'text' | 'image' | 'video' | 'audio' | 'document';
+    body?: string;
+    media_url?: string;
+    delay_seconds?: number;
+}
+
 interface ActionConfig {
     message?: string;
     agent_id?: string;
     tags?: string[];
     stage?: DealStage;
+    steps?: SequenceStep[];
 }
 
 interface Automation {
@@ -94,6 +102,8 @@ const TRIGGER_DESCRIPTIONS: Record<TriggerType, string> = {
 
 const ACTION_LABELS: Record<ActionType, string> = {
     send_message: 'Enviar mensaje',
+    send_sequence: 'Enviar secuencia',
+    send_menu: 'Enviar menú',
     assign_agent: 'Asignar agente',
     add_tag: 'Agregar etiqueta',
     move_stage: 'Mover etapa',
@@ -101,6 +111,8 @@ const ACTION_LABELS: Record<ActionType, string> = {
 
 const ACTION_COLORS: Record<ActionType, string> = {
     send_message: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    send_sequence: 'bg-teal-50 text-teal-700 border-teal-200',
+    send_menu: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     assign_agent: 'bg-sky-50 text-sky-700 border-sky-200',
     add_tag: 'bg-orange-50 text-orange-700 border-orange-200',
     move_stage: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -273,6 +285,11 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
     const [agentId, setAgentId] = useState(automation?.action_config?.agent_id ?? '');
     const [tags, setTags] = useState<string>((automation?.action_config?.tags ?? []).join(', '));
     const [stage, setStage] = useState<DealStage>(automation?.action_config?.stage ?? 'lead');
+    const [sequenceSteps, setSequenceSteps] = useState<SequenceStep[]>(
+        automation?.action_config?.steps?.length
+            ? automation.action_config.steps
+            : [{ type: 'text', body: '', delay_seconds: 0 }],
+    );
 
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -295,10 +312,33 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
         }
     }
 
+    function updateSequenceStep(index: number, patch: Partial<SequenceStep>) {
+        setSequenceSteps((prev) => prev.map((step, i) => (i === index ? { ...step, ...patch } : step)));
+    }
+
+    function removeSequenceStep(index: number) {
+        setSequenceSteps((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+    }
+
+    function addSequenceStep() {
+        setSequenceSteps((prev) => [...prev, { type: 'text', body: '', delay_seconds: 0 }]);
+    }
+
     function buildActionConfig(): ActionConfig {
         switch (actionType) {
             case 'send_message':
                 return { message };
+            case 'send_sequence':
+                return {
+                    steps: sequenceSteps.map((step) => ({
+                        type: step.type,
+                        body: (step.body ?? '').trim() || undefined,
+                        media_url: (step.media_url ?? '').trim() || undefined,
+                        delay_seconds: Number(step.delay_seconds ?? 0),
+                    })),
+                };
+            case 'send_menu':
+                return {};
             case 'assign_agent':
                 return { agent_id: agentId };
             case 'add_tag':
@@ -544,6 +584,111 @@ function AutomationModal({ automation, agents, onClose, onSaved }: ModalProps) {
                             </div>
                         )}
 
+
+
+                        {/* Config: send_sequence */}
+                        {actionType === 'send_sequence' && (
+                            <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-medium text-gray-600">Pasos de la secuencia</label>
+                                    <button
+                                        type="button"
+                                        onClick={addSequenceStep}
+                                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+                                    >
+                                        + Añadir paso
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {sequenceSteps.map((step, index) => (
+                                        <div key={index} className="rounded-lg border border-gray-200 bg-white p-3">
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <p className="text-xs font-semibold text-gray-600">Paso {index + 1}</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeSequenceStep(index)}
+                                                    className="text-xs text-red-600 hover:text-red-700"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            </div>
+
+                                            <div className="grid gap-2 sm:grid-cols-3">
+                                                <div>
+                                                    <label className="mb-1 block text-xs text-gray-500">Tipo</label>
+                                                    <select
+                                                        value={step.type}
+                                                        onChange={(e) => updateSequenceStep(index, { type: e.target.value as SequenceStep['type'] })}
+                                                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
+                                                    >
+                                                        <option value="text">Texto</option>
+                                                        <option value="image">Imagen</option>
+                                                        <option value="video">Video</option>
+                                                        <option value="audio">Audio</option>
+                                                        <option value="document">Documento</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="mb-1 block text-xs text-gray-500">Delay (seg)</label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={86400}
+                                                        value={step.delay_seconds ?? 0}
+                                                        onChange={(e) => updateSequenceStep(index, { delay_seconds: Number(e.target.value) })}
+                                                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-2">
+                                                <label className="mb-1 block text-xs text-gray-500">Texto / caption</label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={step.body ?? ''}
+                                                    onChange={(e) => updateSequenceStep(index, { body: e.target.value })}
+                                                    className="w-full resize-y rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
+                                                    placeholder="Hola {{name}}, te comparto la info..."
+                                                />
+                                            </div>
+
+                                            {step.type !== 'text' && (
+                                                <div className="mt-2">
+                                                    <label className="mb-1 block text-xs text-gray-500">Media URL</label>
+                                                    <input
+                                                        value={step.media_url ?? ''}
+                                                        onChange={(e) => updateSequenceStep(index, { media_url: e.target.value })}
+                                                        placeholder="https://..."
+                                                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-ari-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <p className="text-xs text-gray-400">
+                                    Cada paso se programa con su delay acumulado. Variables disponibles: <code>{'{{name}}'}</code>, <code>{'{{phone}}'}</code>, <code>{'{{company}}'}</code>.
+                                </p>
+                                {(errors['action_config.steps'] || errors['action_config.steps.0.type'] || errors['action_config.steps.0.media_url']) && (
+                                    <p className="text-xs text-red-600">
+                                        {errors['action_config.steps'] || errors['action_config.steps.0.type'] || errors['action_config.steps.0.media_url']}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Config: send_menu */}
+                        {actionType === 'send_menu' && (
+                            <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <p className="text-xs text-gray-500">
+                                    Enviará automáticamente el menú actual del tenant como varios mensajes de texto.
+                                </p>
+                            </div>
+                        )}
+
                         {/* Config: assign_agent */}
                         {actionType === 'assign_agent' && (
                             <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -710,6 +855,10 @@ function AutomationCard({
                 return cfg.message
                     ? `"${cfg.message.slice(0, 55)}${cfg.message.length > 55 ? '…' : ''}"`
                     : '—';
+            case 'send_sequence':
+                return `${cfg.steps?.length ?? 0} paso(s)`;
+            case 'send_menu':
+                return 'Menú del tenant';
             case 'assign_agent': {
                 const agent = agents.find((a) => a.id === cfg.agent_id);
                 return agent ? agent.name : (cfg.agent_id ?? '—');

@@ -10,6 +10,7 @@ enum AutomationActionType: string
     case AssignAgent = 'assign_agent';
     case AddTag = 'add_tag';
     case MoveStage = 'move_stage';
+    case SendSequence = 'send_sequence';
     case SendMenu = 'send_menu';
 
     public function label(): string
@@ -19,6 +20,7 @@ enum AutomationActionType: string
             self::AssignAgent => 'Asignar agente',
             self::AddTag => 'Agregar etiqueta',
             self::MoveStage => 'Mover etapa',
+            self::SendSequence => 'Enviar secuencia',
             self::SendMenu => 'Enviar menú',
         };
     }

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Actions\Pipeline\MoveDealToStage;
 use App\Enums\AutomationActionType;
+use App\Jobs\SendAutomationSequenceStep;
 use App\Services\MenuFormatterService;
 use App\Enums\AutomationTriggerType;
 use App\Enums\DealStage;
@@ -187,6 +188,7 @@ class AutomationEngineService
             AutomationActionType::AssignAgent => $this->actionAssignAgent($automation, $conversation),
             AutomationActionType::AddTag      => $this->actionAddTag($automation, $conversation),
             AutomationActionType::MoveStage   => $this->actionMoveStage($automation, $conversation),
+            AutomationActionType::SendSequence => $this->actionSendSequence($automation, $conversation),
             AutomationActionType::SendMenu    => $this->actionSendMenu($conversation),
         };
 
@@ -199,17 +201,12 @@ class AutomationEngineService
 
     private function actionSendMessage(Automation $automation, Conversation $conversation): void
     {
-        $template = $automation->action_config['message'] ?? '';
-        if (! $template) {
+        $template = trim((string) ($automation->action_config['message'] ?? ''));
+        if ($template === '') {
             return;
         }
 
-        $contact = $conversation->contact;
-        $body    = strtr($template, [
-            '{{name}}'    => $contact?->name ?? $contact?->push_name ?? 'Cliente',
-            '{{phone}}'   => $contact?->phone ?? '',
-            '{{company}}' => $contact?->company ?? '',
-        ]);
+        $body = $this->renderTemplate($template, $conversation);
 
         $msg = Message::create([
             'tenant_id'       => $conversation->tenant_id,
@@ -221,6 +218,91 @@ class AutomationEngineService
         ]);
 
         dispatch(new \App\Jobs\SendWhatsAppMessage($msg));
+    }
+
+    private function actionSendSequence(Automation $automation, Conversation $conversation): void
+    {
+        $steps = $automation->action_config['steps'] ?? [];
+        if (! is_array($steps) || $steps === []) {
+            return;
+        }
+
+        $startedAt = now();
+        $cumulativeDelay = 0;
+
+        foreach ($steps as $step) {
+            if (! is_array($step)) {
+                continue;
+            }
+
+            $normalized = $this->normalizeSequenceStep($step, $conversation);
+            if ($normalized === null) {
+                continue;
+            }
+
+            $delaySeconds = (int) ($normalized['delay_seconds'] ?? 0);
+            $delaySeconds = max(0, min($delaySeconds, 86400));
+            $cumulativeDelay += $delaySeconds;
+
+            SendAutomationSequenceStep::dispatch(
+                (string) $automation->id,
+                (string) $conversation->id,
+                $normalized,
+                $startedAt->toIso8601String(),
+            )->delay($startedAt->copy()->addSeconds($cumulativeDelay));
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $step
+     * @return array{type:string,body?:string,media_url?:string,delay_seconds:int}|null
+     */
+    private function normalizeSequenceStep(array $step, Conversation $conversation): ?array
+    {
+        $type = strtolower(trim((string) ($step['type'] ?? '')));
+        if (! in_array($type, ['text', 'image', 'video', 'audio', 'document'], true)) {
+            return null;
+        }
+
+        $body = trim((string) ($step['body'] ?? ''));
+        if ($body !== '') {
+            $body = $this->renderTemplate($body, $conversation);
+        }
+
+        $normalized = [
+            'type' => $type,
+            'delay_seconds' => (int) ($step['delay_seconds'] ?? 0),
+        ];
+
+        if ($body !== '') {
+            $normalized['body'] = $body;
+        }
+
+        if ($type !== 'text') {
+            $mediaUrl = trim((string) ($step['media_url'] ?? ''));
+            if ($mediaUrl === '') {
+                return null;
+            }
+
+            $normalized['media_url'] = $mediaUrl;
+        }
+
+        if ($type === 'text' && ! array_key_exists('body', $normalized)) {
+            return null;
+        }
+
+        return $normalized;
+    }
+
+    private function renderTemplate(string $template, Conversation $conversation): string
+    {
+        $contact = $conversation->contact;
+
+        return strtr($template, [
+            '{{name}}'    => $contact?->name ?? $contact?->push_name ?? 'Cliente',
+            '{{phone}}'   => $contact?->phone ?? '',
+            '{{company}}' => $contact?->company ?? '',
+        ]);
     }
 
     private function actionAssignAgent(Automation $automation, Conversation $conversation): void

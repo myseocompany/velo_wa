@@ -139,8 +139,12 @@ class ConversationController extends Controller
         return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
     }
 
-    public function destroy(Conversation $conversation): Response
+    public function destroy(Request $request, Conversation $conversation): Response
     {
+        if (! in_array($request->user()->role, ['owner', 'admin'], true)) {
+            abort(403, 'No autorizado para eliminar conversaciones.');
+        }
+
         DB::transaction(function () use ($conversation): void {
             $tenantId = (string) $conversation->tenant_id;
             $conversationId = (string) $conversation->id;

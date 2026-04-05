@@ -12,6 +12,7 @@ import {
     MessageSquare,
     Plus,
     RotateCcw,
+    Trash2,
     UserCheck,
     X,
 } from 'lucide-react';
@@ -323,6 +324,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [onlineUserIds, setOnlineUserIds]     = useState<Set<string>>(new Set());
     const [aiAgentConfig, setAiAgentConfig] = useState<AiAgent | null>(null);
     const [togglingAi, setTogglingAi] = useState(false);
+    const [deletingConversation, setDeletingConversation] = useState(false);
 
     const conversationsRef = useRef<Conversation[]>([]);
     const activeConvRef    = useRef<Conversation | null>(null);
@@ -569,6 +571,28 @@ export default function InboxIndex({ activeConversationId }: Props) {
         updateConvInList(res.data.data);
     }
 
+    async function deleteConversation() {
+        if (!activeConv) return;
+        if (!window.confirm('¿Eliminar esta conversación? Esta acción no se puede deshacer.')) return;
+
+        const deletedId = activeConv.id;
+        setDeletingConversation(true);
+        try {
+            await axios.delete(`/api/v1/conversations/${deletedId}`);
+            setConversations((prev) => prev.filter((c) => c.id !== deletedId));
+            setUnreadCounts((prev) => {
+                const next = { ...prev };
+                delete next[deletedId];
+                return next;
+            });
+            setActiveConv(null);
+            setMessages([]);
+            setShowContactPanel(false);
+        } finally {
+            setDeletingConversation(false);
+        }
+    }
+
     function updateConvInList(conv: Conversation) {
         setConversations((prev) => prev.map((c) => (c.id === conv.id ? conv : c)));
     }
@@ -597,6 +621,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
     }
 
     const isClosed = activeConv?.status === 'closed';
+    const canDeleteConversation = auth.user.role === 'admin' || auth.user.role === 'owner';
 
     function handleBackToList() {
         setActiveConv(null);
@@ -726,6 +751,17 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                         >
                                             <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                                             Cerrar
+                                        </button>
+                                    )}
+
+                                    {canDeleteConversation && (
+                                        <button
+                                            onClick={deleteConversation}
+                                            disabled={deletingConversation}
+                                            className="hidden items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 md:flex"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            {deletingConversation ? 'Eliminando…' : 'Eliminar'}
                                         </button>
                                     )}
 

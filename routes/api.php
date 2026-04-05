@@ -56,7 +56,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::patch('/conversations/{conversation}/assign', [ConversationController::class, 'assign'])->name('conversations.assign');
     Route::patch('/conversations/{conversation}/close', [ConversationController::class, 'close'])->name('conversations.close');
     Route::patch('/conversations/{conversation}/reopen', [ConversationController::class, 'reopen'])->name('conversations.reopen');
-    Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->middleware('role:admin')->name('conversations.destroy');
+    Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
 
     // Messages — all authenticated users (message sends have dedicated throttle)
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index'])->name('messages.index');

@@ -120,6 +120,19 @@ return [
     |
     */
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI Agent Queue
+    |--------------------------------------------------------------------------
+    |
+    | Queue used by AI auto-reply jobs. Keep as `default` when running a single
+    | worker, or set to `ai` if you have a dedicated worker/supervisor.
+    |
+    */
+
+    'ai_agent_queue' => env('AI_AGENT_QUEUE', 'default'),
+
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
         'database' => env('DB_CONNECTION', 'sqlite'),

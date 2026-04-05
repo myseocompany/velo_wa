@@ -27,7 +27,7 @@ class GenerateAiAgentReply implements ShouldQueue
         private readonly string $agentId,
         private readonly string $triggeringMessageId,
     ) {
-        $this->onQueue('ai');
+        $this->onQueue((string) config('queue.ai_agent_queue', 'default'));
     }
 
     public function handle(AiAgentService $service): void

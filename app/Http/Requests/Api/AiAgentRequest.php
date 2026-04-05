@@ -29,7 +29,7 @@ class AiAgentRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'system_prompt' => ['nullable', 'string', 'max:12000'],
+            'system_prompt' => ['nullable', 'string', 'max:40000'],
             'llm_model' => ['required', 'string', Rule::in(self::AVAILABLE_MODELS)],
             'context_messages' => ['required', 'integer', 'min:3', 'max:50'],
             'is_enabled' => ['sometimes', 'boolean'],

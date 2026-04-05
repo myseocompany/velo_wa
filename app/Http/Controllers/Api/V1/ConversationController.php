@@ -15,11 +15,19 @@ use App\Http\Requests\Api\AssignConversationRequest;
 use App\Http\Requests\Api\StoreConversationRequest;
 use App\Http\Resources\ConversationResource;
 use App\Models\AiAgent;
+use App\Models\AutomationLog;
 use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\Order;
+use App\Models\PipelineDeal;
+use App\Models\Reservation;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class ConversationController extends Controller
 {
@@ -129,6 +137,48 @@ class ConversationController extends Controller
         $conversation = $action->handle($conversation);
 
         return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+    }
+
+    public function destroy(Conversation $conversation): Response
+    {
+        DB::transaction(function () use ($conversation): void {
+            $tenantId = (string) $conversation->tenant_id;
+            $conversationId = (string) $conversation->id;
+
+            Message::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('conversation_id', $conversationId)
+                ->delete();
+
+            AutomationLog::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('conversation_id', $conversationId)
+                ->delete();
+
+            PipelineDeal::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('conversation_id', $conversationId)
+                ->update(['conversation_id' => null]);
+
+            Order::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('conversation_id', $conversationId)
+                ->update(['conversation_id' => null]);
+
+            Reservation::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('conversation_id', $conversationId)
+                ->update(['conversation_id' => null]);
+
+            Task::withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('conversation_id', $conversationId)
+                ->update(['conversation_id' => null]);
+
+            $conversation->delete();
+        });
+
+        return response()->noContent();
     }
 
     public function toggleAiAgent(Request $request, Conversation $conversation): ConversationResource

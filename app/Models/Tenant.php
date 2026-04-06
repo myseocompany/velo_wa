@@ -31,6 +31,9 @@ class Tenant extends Model
         'business_hours',
         'auto_close_hours',
         'onboarding_completed_at',
+        'onboarding_vertical',
+        'wa_health_consecutive_failures',
+        'wa_health_last_alert_at',
         'webhook_url',
         'webhook_secret',
     ];
@@ -46,6 +49,8 @@ class Tenant extends Model
             'media_retention_days' => 'integer',
             'auto_close_hours'          => 'integer',
             'onboarding_completed_at'   => 'datetime',
+            'wa_health_consecutive_failures' => 'integer',
+            'wa_health_last_alert_at' => 'datetime',
         ];
     }
 

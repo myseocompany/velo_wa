@@ -9,6 +9,12 @@ interface TenantInfo {
     name: string;
     wa_status: string;
     wa_phone: string | null;
+    onboarding_vertical: string | null;
+}
+
+interface UserInfo {
+    name: string;
+    email: string;
 }
 
 const STEPS = [
@@ -49,9 +55,52 @@ interface WaStatusPayload {
     qr_code: string | null;
 }
 
-export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
+const VERTICALS = [
+    { id: 'restaurant', label: 'Restaurante', description: 'Pedidos y reservas por WhatsApp' },
+    { id: 'health', label: 'Salud', description: 'Confirmaciones y seguimiento de pacientes' },
+    { id: 'retail', label: 'Retail', description: 'Atención y conversión de leads a ventas' },
+    { id: 'services', label: 'Servicios', description: 'Agenda y seguimiento de casos' },
+    { id: 'education', label: 'Educación', description: 'Inscripciones y soporte a estudiantes' },
+    { id: 'other', label: 'Otro', description: 'Configuración general adaptable' },
+] as const;
+
+const GUIDE_BY_VERTICAL: Record<string, string[]> = {
+    restaurant: [
+        'Configura tu menú en Ajustes → Menú para responder con catálogo.',
+        'Activa Reservas y define horarios en Ajustes → General.',
+        'Usa etiquetas por tipo de pedido: domicilio, recoger, mesa.',
+    ],
+    health: [
+        'Configura mensajes de confirmación y recordatorio en Automatizaciones.',
+        'Define horarios de atención y tiempos de cierre automático.',
+        'Crea respuestas rápidas para triage y preguntas frecuentes.',
+    ],
+    retail: [
+        'Activa Pipeline para llevar cada lead hasta venta cerrada.',
+        'Define respuestas rápidas para stock, envíos y pagos.',
+        'Usa tareas para seguimiento de cotizaciones pendientes.',
+    ],
+    services: [
+        'Crea etapas de pipeline según tu proceso comercial.',
+        'Usa tareas con vencimiento para compromisos con clientes.',
+        'Configura automatizaciones por palabras clave de servicio.',
+    ],
+    education: [
+        'Crea automatizaciones para admisiones y seguimiento.',
+        'Usa etiquetas por programa o cohorte para segmentar.',
+        'Mide tiempos de respuesta por canal y agente en Dashboard.',
+    ],
+    other: [
+        'Invita tu equipo y define roles por operación.',
+        'Configura respuestas rápidas para preguntas repetitivas.',
+        'Revisa Dashboard cada semana para optimizar tiempos.',
+    ],
+};
+
+export default function Onboarding({ tenant, user }: { tenant: TenantInfo; user: UserInfo }) {
     const [step, setStep] = useState(1);
     const [completing, setCompleting] = useState(false);
+    const [vertical, setVertical] = useState(tenant.onboarding_vertical ?? 'services');
 
     const [waStatus, setWaStatus] = useState(tenant.wa_status);
     const [qrCode, setQrCode]     = useState<string | null>(null);
@@ -86,10 +135,13 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
 
     const handleComplete = () => {
         setCompleting(true);
-        router.post('/onboarding/complete', {}, {
+        router.post('/onboarding/complete', { vertical }, {
             onError: () => setCompleting(false),
         });
     };
+
+    const selectedGuide = GUIDE_BY_VERTICAL[vertical] ?? GUIDE_BY_VERTICAL.other;
+    const displayName = user.name?.trim() || user.email || tenant.name;
 
     return (
         <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-4">
@@ -114,11 +166,34 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                     <div className="rounded-2xl border border-gray-800 bg-gray-900 p-8 space-y-6">
                         <div className="text-center">
                             <h1 className="text-2xl font-bold text-white">
-                                ¡Hola, {tenant.name}!
+                                ¡Hola, {displayName}!
                             </h1>
                             <p className="mt-2 text-gray-400">
                                 Vamos a configurar tu cuenta en 3 pasos. Solo tomará 2 minutos.
                             </p>
+                        </div>
+
+                        <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                ¿Cuál es tu vertical?
+                            </p>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {VERTICALS.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => setVertical(item.id)}
+                                        className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                                            vertical === item.id
+                                                ? 'border-amber-500 bg-amber-500/10'
+                                                : 'border-gray-700 bg-gray-900/30 hover:bg-gray-800'
+                                        }`}
+                                    >
+                                        <p className="text-sm font-medium text-white">{item.label}</p>
+                                        <p className="text-xs text-gray-500">{item.description}</p>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="space-y-3">
@@ -155,6 +230,9 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                             <p className="mt-1 text-sm text-gray-400">
                                 Genera el código QR y escanéalo desde tu teléfono en{' '}
                                 <span className="text-white">WhatsApp → Dispositivos vinculados</span>.
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Vertical seleccionada: {VERTICALS.find(v => v.id === vertical)?.label ?? 'Otro'}
                             </p>
                         </div>
 
@@ -252,20 +330,16 @@ export default function Onboarding({ tenant }: { tenant: TenantInfo }) {
                         </div>
 
                         <div className="rounded-xl bg-gray-800/50 p-4 text-left space-y-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Próximos pasos</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                Guía recomendada ({VERTICALS.find(v => v.id === vertical)?.label ?? 'General'})
+                            </p>
                             <ul className="space-y-1.5 text-sm text-gray-400">
-                                <li className="flex items-center gap-2">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                                    Invita agentes desde <span className="text-white">Ajustes → Equipo</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                                    Configura respuestas rápidas en <span className="text-white">Ajustes → Respuestas</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                                    Activa automatizaciones desde <span className="text-white">Ajustes → Automatizaciones</span>
-                                </li>
+                                {selectedGuide.map((item) => (
+                                    <li key={item} className="flex items-center gap-2">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                                        {item}
+                                    </li>
+                                ))}
                             </ul>
                         </div>
 

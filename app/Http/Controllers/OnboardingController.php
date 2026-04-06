@@ -21,11 +21,16 @@ class OnboardingController extends Controller
         }
 
         return Inertia::render('Onboarding', [
+            'user' => [
+                'name' => $request->user()->name,
+                'email' => $request->user()->email,
+            ],
             'tenant' => [
-                'id'         => $tenant->id,
-                'name'       => $tenant->name,
-                'wa_status'  => $tenant->wa_status->value,
-                'wa_phone'   => $tenant->wa_phone,
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'wa_status' => $tenant->wa_status->value,
+                'wa_phone' => $tenant->wa_phone,
+                'onboarding_vertical' => $tenant->onboarding_vertical,
             ],
         ]);
     }
@@ -34,8 +39,14 @@ class OnboardingController extends Controller
     public function complete(Request $request): RedirectResponse
     {
         $tenant = $request->user()->tenant;
+        $data = $request->validate([
+            'vertical' => ['nullable', 'string', 'in:restaurant,health,retail,services,education,other'],
+        ]);
 
-        $tenant->update(['onboarding_completed_at' => now()]);
+        $tenant->update([
+            'onboarding_completed_at' => now(),
+            'onboarding_vertical' => $data['vertical'] ?? $tenant->onboarding_vertical,
+        ]);
 
         return redirect()->route('dashboard')->with('success', '¡Bienvenido a AriCRM! Tu cuenta está lista.');
     }

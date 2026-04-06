@@ -164,14 +164,6 @@ DB::transaction(function () use ($tenantId, $sourceContactId, $sourceConversatio
         }
 
         if (! $contact) {
-            $contact = ContactIdentityAlias::withoutGlobalScope('tenant')
-                ->where('tenant_id', $tenantId)
-                ->where('alias', $target['alias'])
-                ->lockForUpdate()
-                ->first()?->contact;
-        }
-
-        if (! $contact) {
             $contact = Contact::withoutGlobalScopes()->create([
                 'id' => (string) Str::uuid(),
                 'tenant_id' => $tenantId,

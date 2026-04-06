@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AriCRM — Estrategia de Contenidos</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --purple: #820AD1;
+    --purple-dark: #5A0092;
+    --purple-light: #F3E8FF;
+    --dark: #1B1B2E;
+    --surface: #F0F0F5;
+    --green: #00C986;
+    --text-secondary: #6B6B7B;
+    --white: #ffffff;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--surface);
+    color: var(--dark);
+    padding: 40px 24px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--purple);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    font-weight: 900;
+  }
+
+  .logo-text {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--purple);
+    letter-spacing: -0.5px;
+  }
+
+  .header-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+
+  .header-title {
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--dark);
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+
+  .header-title span {
+    color: var(--purple);
+  }
+
+  .header-sub {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  /* AXIS STRIP */
+  .axis-strip {
+    background: var(--purple);
+    border-radius: 20px;
+    padding: 32px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .axis-left h2 {
+    font-size: 28px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .axis-left p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.75);
+    max-width: 440px;
+    line-height: 1.5;
+  }
+
+  .axis-right {
+    display: flex;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+
+  .axis-stat {
+    text-align: center;
+    background: rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 16px 24px;
+  }
+
+  .axis-stat .num {
+    font-size: 32px;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+  }
+
+  .axis-stat .label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 4px;
+  }
+
+  /* JOURNEY BAR */
+  .journey {
+    margin-bottom: 48px;
+  }
+
+  .journey-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .journey-bar {
+    display: flex;
+    border-radius: 16px;
+    overflow: hidden;
+    height: 64px;
+    gap: 3px;
+  }
+
+  .journey-step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    padding: 0 12px;
+    text-align: center;
+    cursor: default;
+    transition: opacity 0.2s;
+    line-height: 1.2;
+  }
+
+  .journey-step:hover { opacity: 0.9; }
+
+  .js-1 { flex: 25; background: #820AD1; }
+  .js-2 { flex: 20; background: #6E08B3; }
+  .js-3 { flex: 20; background: #5A0092; }
+  .js-4 { flex: 20; background: #420070; }
+  .js-5 { flex: 15; background: #00C986; border-radius: 0 16px 16px 0; }
+
+  /* PILLARS GRID */
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  @media (max-width: 900px) {
+    .pillars-grid { grid-template-columns: repeat(2, 1fr); }
+    .pillar-card:last-child { grid-column: span 2; }
+  }
+
+  .pillar-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px 20px;
+    border-top: 4px solid var(--purple);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pillar-card.green { border-top-color: var(--green); }
+
+  .pillar-number {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .pillar-pct {
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--purple);
+    line-height: 1;
+  }
+
+  .pillar-card.green .pillar-pct { color: var(--green); }
+
+  .pillar-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1.3;
+  }
+
+  .pillar-pain {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    font-style: italic;
+    border-left: 2px solid var(--purple-light);
+    padding-left: 10px;
+  }
+
+  .pillar-card.green .pillar-pain { border-left-color: #d0fff0; }
+
+  .pillar-topics {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pillar-topics li {
+    font-size: 12px;
+    color: var(--dark);
+    line-height: 1.4;
+    padding-left: 14px;
+    position: relative;
+  }
+
+  .pillar-topics li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--purple);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .pillar-card.green .pillar-topics li::before { color: var(--green); }
+
+  .pillar-formats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: auto;
+  }
+
+  .fmt-tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 20px;
+    background: var(--purple-light);
+    color: var(--purple);
+  }
+
+  .pillar-card.green .fmt-tag {
+    background: #d0fff0;
+    color: #008a5c;
+  }
+
+  /* CALENDAR */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+
+  @media (max-width: 700px) {
+    .calendar-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .day-card {
+    background: white;
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+  }
+
+  .day-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+  }
+
+  .day-post {
+    background: var(--purple);
+    border-radius: 10px;
+    padding: 10px 8px;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+
+  .day-post.green { background: var(--green); color: #003d28; }
+  .day-post.light { background: var(--purple-light); color: var(--purple); }
+  .day-post.empty { background: var(--surface); color: var(--text-secondary); font-weight: 400; }
+
+  .day-format {
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+
+  /* MIX BAR */
+  .mix-section {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 36px;
+    margin-bottom: 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+
+  @media (max-width: 700px) {
+    .mix-section { grid-template-columns: 1fr; }
+  }
+
+  .mix-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+
+  .mix-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .mix-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mix-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mix-item-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dark);
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  .mix-bar-bg {
+    flex: 1;
+    height: 12px;
+    background: var(--surface);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .mix-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    background: var(--purple);
+    transition: width 0.3s;
+  }
+
+  .mix-bar-fill.green { background: var(--green); }
+
+  .mix-pct {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dark);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .format-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .fmt-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-radius: 12px;
+  }
+
+  .fmt-emoji { font-size: 20px; }
+
+  .fmt-info { flex: 1; }
+
+  .fmt-info strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dark);
+    display: block;
+  }
+
+  .fmt-info span {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .fmt-pct-pill {
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--purple);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* COPY EXAMPLES */
+  .copy-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  @media (max-width: 700px) {
+    .copy-grid { grid-template-columns: 1fr; }
+  }
+
+  .copy-card {
+    background: var(--purple-dark);
+    border-radius: 20px;
+    padding: 28px 24px;
+  }
+
+  .copy-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 12px;
+  }
+
+  .copy-text {
+    font-size: 17px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+
+  .copy-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.5;
+  }
+
+  /* KPIs */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  @media (max-width: 700px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .kpi-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .kpi-num {
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--purple);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .kpi-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 4px;
+  }
+
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .footer strong { color: var(--purple); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">✓</div>
+    <div class="logo-text">AriCRM</div>
+  </div>
+  <div class="header-label">Estrategia de Contenidos · Instagram · 2026</div>
+  <h1 class="header-title">Haz que te<br><span>digan sí</span></h1>
+  <p class="header-sub">El contenido de AriCRM enseña a convertir conversaciones de WhatsApp en ventas. El producto aparece como consecuencia natural, no como interrupción.</p>
+</div>
+
+<!-- AXIS STRIP -->
+<div class="axis-strip">
+  <div class="axis-left">
+    <h2>Ari = sí. Cada pieza de contenido lleva al cliente un paso más cerca del sí.</h2>
+    <p>El dueño Pyme en LATAM no pierde ventas por falta de clientes — las pierde porque no sabe llevar una conversación de WhatsApp hasta el cierre. Ese es el dolor. Ese es el contenido.</p>
+  </div>
+  <div class="axis-right">
+    <div class="axis-stat">
+      <div class="num">4</div>
+      <div class="label">posts / semana</div>
+    </div>
+    <div class="axis-stat">
+      <div class="num">5</div>
+      <div class="label">pilares</div>
+    </div>
+    <div class="axis-stat">
+      <div class="num">∞</div>
+      <div class="label">síes posibles</div>
+    </div>
+  </div>
+</div>
+
+<!-- JOURNEY BAR -->
+<div class="journey">
+  <div class="journey-title">El viaje del sí — de desconocido a cliente fiel</div>
+  <div class="journey-bar">
+    <div class="journey-step js-1">El primer<br>sí · 25%</div>
+    <div class="journey-step js-2">El sí que<br>no muere · 20%</div>
+    <div class="journey-step js-3">El sí que<br>cierra · 20%</div>
+    <div class="journey-step js-4">El sí que<br>vuelve · 20%</div>
+    <div class="journey-step js-5">El sí<br>automático · 15%</div>
+  </div>
+</div>
+
+<!-- PILLARS -->
+<div class="section-title">Los 5 pilares</div>
+<div class="pillars-grid">
+
+  <div class="pillar-card">
+    <div class="pillar-number">Pilar 01 · 25%</div>
+    <div class="pillar-pct">25%</div>
+    <div class="pillar-name">El primer sí</div>
+    <div class="pillar-pain">"Le escribo y me dejan en visto"</div>
+    <ul class="pillar-topics">
+      <li>El mensaje de apertura que sí responden</li>
+      <li>A qué hora escribir según el negocio</li>
+      <li>Cómo presentar el precio sin asustar</li>
+      <li>El error del primer WhatsApp</li>
+      <li>Palabras que cierran vs. palabras que espantan</li>
+    </ul>
+    <div class="pillar-formats">
+      <span class="fmt-tag">Reel</span>
+      <span class="fmt-tag">Carrusel</span>
+    </div>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-number">Pilar 02 · 20%</div>
+    <div class="pillar-pct">20%</div>
+    <div class="pillar-name">El sí que no muere</div>
+    <div class="pillar-pain">"Dijo que iba a pensar y desapareció"</div>
+    <ul class="pillar-topics">
+      <li>El segundo mensaje que no asfixia</li>
+      <li>Cuánto tiempo esperar antes de insistir</li>
+      <li>Qué decir cuando te dejan en visto</li>
+      <li>El recordatorio perfecto</li>
+      <li>Seguimiento sin parecer desesperado</li>
+    </ul>
+    <div class="pillar-formats">
+      <span class="fmt-tag">Carrusel</span>
+      <span class="fmt-tag">Reel corto</span>
+    </div>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-number">Pilar 03 · 20%</div>
+    <div class="pillar-pct">20%</div>
+    <div class="pillar-name">El sí que cierra</div>
+    <div class="pillar-pain">"Llega hasta el precio y se va"</div>
+    <ul class="pillar-topics">
+      <li>Cómo pedir el sí sin presionar</li>
+      <li>Manejar "está muy caro" por WhatsApp</li>
+      <li>La oferta que convence sin descuento</li>
+      <li>El cierre suave en 1 mensaje</li>
+      <li>Crear urgencia real, no falsa</li>
+    </ul>
+    <div class="pillar-formats">
+      <span class="fmt-tag">Reel</span>
+      <span class="fmt-tag">Historia</span>
+    </div>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-number">Pilar 04 · 20%</div>
+    <div class="pillar-pct">20%</div>
+    <div class="pillar-name">El sí que vuelve</div>
+    <div class="pillar-pain">"Compró una vez y nunca más"</div>
+    <ul class="pillar-topics">
+      <li>Cómo reactivar un cliente frío</li>
+      <li>El mensaje que hace que regresen</li>
+      <li>La fidelización por WhatsApp</li>
+      <li>Cuándo y cómo pedir referidos</li>
+      <li>El cliente que volvió: qué hizo diferente</li>
+    </ul>
+    <div class="pillar-formats">
+      <span class="fmt-tag">Carrusel</span>
+      <span class="fmt-tag">Post</span>
+    </div>
+  </div>
+
+  <div class="pillar-card green">
+    <div class="pillar-number">Pilar 05 · 15%</div>
+    <div class="pillar-pct">15%</div>
+    <div class="pillar-name">El sí automático</div>
+    <div class="pillar-pain">"No tengo tiempo de hacer todo esto"</div>
+    <ul class="pillar-topics">
+      <li>Cómo Ari responde mientras duermes</li>
+      <li>Demo: del caos al orden en 5 min</li>
+      <li>Resultado de cliente real (por rubro)</li>
+      <li>Qué automatizar primero</li>
+      <li>Ari en acción: seguimiento automático</li>
+    </ul>
+    <div class="pillar-formats">
+      <span class="fmt-tag">Demo</span>
+      <span class="fmt-tag">Testimonio</span>
+      <span class="fmt-tag">Reel</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- MIX + FORMATS -->
+<div class="mix-section">
+  <div>
+    <div class="mix-title">Mix de contenido</div>
+    <div class="mix-sub">85% enseña a vender por WhatsApp. 15% muestra el producto. El software aparece como la solución obvia, no como una interrupción.</div>
+    <div class="mix-bar-row">
+      <div class="mix-item">
+        <div class="mix-item-label">Educación</div>
+        <div class="mix-bar-bg"><div class="mix-bar-fill" style="width:85%"></div></div>
+        <div class="mix-pct">85%</div>
+      </div>
+      <div class="mix-item">
+        <div class="mix-item-label">Producto</div>
+        <div class="mix-bar-bg"><div class="mix-bar-fill green" style="width:15%"></div></div>
+        <div class="mix-pct">15%</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="format-breakdown">
+      <div class="fmt-row">
+        <div class="fmt-emoji">🎬</div>
+        <div class="fmt-info">
+          <strong>Reels</strong>
+          <span>Alcance orgánico · Tips rápidos y técnicas de venta</span>
+        </div>
+        <div class="fmt-pct-pill">45%</div>
+      </div>
+      <div class="fmt-row">
+        <div class="fmt-emoji">📑</div>
+        <div class="fmt-info">
+          <strong>Carruseles</strong>
+          <span>Guardados y compartidos · Frameworks y guías paso a paso</span>
+        </div>
+        <div class="fmt-pct-pill">30%</div>
+      </div>
+      <div class="fmt-row">
+        <div class="fmt-emoji">⭕</div>
+        <div class="fmt-info">
+          <strong>Historias</strong>
+          <span>Comunidad · Polls, preguntas, demos cortas</span>
+        </div>
+        <div class="fmt-pct-pill">15%</div>
+      </div>
+      <div class="fmt-row">
+        <div class="fmt-emoji">📸</div>
+        <div class="fmt-info">
+          <strong>Posts estáticos</strong>
+          <span>Prueba social · Datos, quotes, resultados</span>
+        </div>
+        <div class="fmt-pct-pill">10%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WEEKLY CALENDAR -->
+<div class="section-title">Ritmo semanal</div>
+<div class="calendar-grid">
+  <div class="day-card">
+    <div class="day-name">Lun</div>
+    <div class="day-post">Reel educativo</div>
+    <div class="day-format">Técnica de venta</div>
+  </div>
+  <div class="day-card">
+    <div class="day-name">Mar</div>
+    <div class="day-post empty">Descanso</div>
+    <div class="day-format">—</div>
+  </div>
+  <div class="day-card">
+    <div class="day-name">Mié</div>
+    <div class="day-post light">Carrusel</div>
+    <div class="day-format">Framework o guía</div>
+  </div>
+  <div class="day-card">
+    <div class="day-name">Jue</div>
+    <div class="day-post empty">Descanso</div>
+    <div class="day-format">—</div>
+  </div>
+  <div class="day-card">
+    <div class="day-name">Vie</div>
+    <div class="day-post">Reel / Demo</div>
+    <div class="day-format">Producto o prueba social</div>
+  </div>
+  <div class="day-card">
+    <div class="day-name">Sáb</div>
+    <div class="day-post light">Historia</div>
+    <div class="day-format">Poll / Pregunta</div>
+  </div>
+  <div class="day-card">
+    <div class="day-name">Dom</div>
+    <div class="day-post empty">Descanso</div>
+    <div class="day-format">—</div>
+  </div>
+</div>
+
+<!-- COPY EXAMPLES -->
+<div class="section-title">Ejemplos de copy — el tono del canal</div>
+<div class="copy-grid">
+  <div class="copy-card">
+    <div class="copy-tag">El primer sí</div>
+    <div class="copy-text">"El error que arruina el primer WhatsApp al cliente (y cómo evitarlo)"</div>
+    <div class="copy-sub">Habla al dolor: le escribí bien pero no me respondió. Da una técnica concreta. Guardable.</div>
+  </div>
+  <div class="copy-card">
+    <div class="copy-tag">El sí que no muere</div>
+    <div class="copy-text">"¿Te dejaron en visto? Este mensaje reactiva la conversación sin parecer desesperado"</div>
+    <div class="copy-sub">Dolor universal. Solución en 1 mensaje. Fácil de compartir entre dueños de negocio.</div>
+  </div>
+  <div class="copy-card">
+    <div class="copy-tag">El sí que vuelve</div>
+    <div class="copy-text">"Tu cliente ya compró una vez. Este mensaje hace que vuelva sin que tengas que perseguirlo"</div>
+    <div class="copy-sub">El dolor oculto: la recompra perdida. Conecta con el dato: adquirir cuesta 5x más que retener.</div>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="section-title">Métricas que importan (primeros 90 días)</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-num">1K</div>
+    <div class="kpi-label">Seguidores meta</div>
+    <div class="kpi-sub">Mes 1–2, orgánico</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num">5%</div>
+    <div class="kpi-label">Tasa de engagement</div>
+    <div class="kpi-sub">Mínimo viable por post</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num">3</div>
+    <div class="kpi-label">Leads / semana</div>
+    <div class="kpi-sub">DMs o links bio</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num">1</div>
+    <div class="kpi-label">Cliente nuevo / mes</div>
+    <div class="kpi-sub">Meta conservadora</div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>AriCRM</strong> · Más síes para tu negocio · <strong>Ari = sí en quechua</strong> · Estrategia de contenidos 2026
+</div>
+
+</body>
+</html>

@@ -28,7 +28,11 @@ class CreateOrUpdateContact
             $waData['aliases'] ?? [],
         ));
         $primaryWaId = $this->selectPrimaryWaId($aliases);
-        $phone       = $this->resolvePhone($aliases, $waData['phone'] ?? null);
+        $phone       = $this->sanitizeResolvedPhone(
+            $tenant,
+            $this->resolvePhone($aliases, $waData['phone'] ?? null),
+            $primaryWaId,
+        );
 
         return DB::transaction(function () use ($tenant, $primaryWaId, $aliases, $phone, $waData): Contact {
             /** @var Contact|null $contact */
@@ -127,6 +131,26 @@ class CreateOrUpdateContact
 
         // LID/JID aliases are not always phone numbers.
         return null;
+    }
+
+    private function sanitizeResolvedPhone(Tenant $tenant, ?string $phone, ?string $primaryWaId): ?string
+    {
+        if ($phone === null) {
+            return null;
+        }
+
+        $tenantPhone = $this->normalizePhone($tenant->wa_phone);
+        $tenantWaId = $tenantPhone ? $tenantPhone.'@s.whatsapp.net' : null;
+
+        if ($tenantPhone !== null && $phone === $tenantPhone && $primaryWaId !== $tenantWaId) {
+            if ($primaryWaId && str_ends_with($primaryWaId, '@s.whatsapp.net')) {
+                return $this->normalizePhone($this->extractPhone($primaryWaId));
+            }
+
+            return null;
+        }
+
+        return $phone;
     }
 
     private function normalizePhone(?string $value): ?string

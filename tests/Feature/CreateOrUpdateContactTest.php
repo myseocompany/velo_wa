@@ -217,6 +217,28 @@ class CreateOrUpdateContactTest extends TestCase
         $this->assertDatabaseCount('contacts', 1);
     }
 
+    public function test_does_not_merge_different_contact_when_phone_hint_matches_tenant_number(): void
+    {
+        $this->tenant->update(['wa_phone' => '573116672109']);
+
+        $existing = Contact::withoutGlobalScopes()->create([
+            'tenant_id' => $this->tenant->id,
+            'phone'     => '573116672109',
+            'name'      => 'Contacto Equivocado',
+            'wa_id'     => '573012881060@s.whatsapp.net',
+        ]);
+
+        $contact = $this->action->handle($this->tenant, $this->waData([
+            'remoteJid' => '573133892681@s.whatsapp.net',
+            'phone'     => '573116672109',
+        ]));
+
+        $this->assertNotSame($existing->id, $contact->id);
+        $this->assertSame('573133892681@s.whatsapp.net', $contact->wa_id);
+        $this->assertSame('573133892681', $contact->phone);
+        $this->assertDatabaseCount('contacts', 2);
+    }
+
     public function test_tracks_identity_aliases_for_same_contact(): void
     {
         $contact = $this->action->handle($this->tenant, $this->waData([

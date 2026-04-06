@@ -258,11 +258,6 @@ class HandleInboundMessage implements ShouldQueue
             }
         }
 
-        // Self-sent messages may not include participant phone; use the connected WA number.
-        if ($fromMe && is_string($tenant->wa_phone) && $tenant->wa_phone !== '') {
-            return $this->normalizePhone($tenant->wa_phone);
-        }
-
         return null;
     }
 

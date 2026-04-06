@@ -1,5 +1,5 @@
 import { Link, usePage, router } from '@inertiajs/react';
-import { Activity, LayoutDashboard, LogOut, Shield, Building2, ChevronDown } from 'lucide-react';
+import { Activity, LayoutDashboard, LogOut, Shield, Building2, ChevronDown, HeartPulse } from 'lucide-react';
 import { PropsWithChildren, useState } from 'react';
 
 interface PlatformAdmin {
@@ -16,6 +16,7 @@ interface SuperAdminPageProps {
 
 const navItems = [
     { label: 'Dashboard',  href: '/superadmin',         icon: <LayoutDashboard size={18} />, routeName: 'superadmin.dashboard' },
+    { label: 'Monitoring', href: '/superadmin/monitoring', icon: <HeartPulse size={18} />, routeName: 'superadmin.monitoring' },
     { label: 'Tenants',    href: '/superadmin/tenants',  icon: <Building2 size={18} />,       routeName: 'superadmin.tenants.index' },
     { label: 'Auditoría',  href: '/superadmin/audit',    icon: <Activity size={18} />,        routeName: 'superadmin.audit' },
 ];

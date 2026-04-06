@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\SuperAdmin\AuditController;
 use App\Http\Controllers\SuperAdmin\AuthController;
 use App\Http\Controllers\SuperAdmin\DashboardController;
+use App\Http\Controllers\SuperAdmin\MonitoringController;
 use App\Http\Controllers\SuperAdmin\TenantController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,7 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
 
         // Dashboard
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('monitoring', [MonitoringController::class, 'index'])->name('monitoring');
 
         // 2FA setup
         Route::get('2fa/setup', [AuthController::class, 'showTwoFactorSetup'])->name('2fa.setup');

@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('platform_admin_audit_logs', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(\Illuminate\Support\Facades\DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->foreignUuid('platform_admin_id')->constrained('platform_admins')->cascadeOnDelete();
             $table->string('action');                          // e.g. impersonate, update_plan, disconnect_wa
             $table->string('target_type')->nullable();         // e.g. App\Models\Tenant

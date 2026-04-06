@@ -2,6 +2,8 @@
 
 This document defines the boundaries, responsibilities, and communication patterns of each service/agent in the AriCRM platform.
 
+> Brand identity, tone of voice, and marketing context: see [`BRAND.md`](BRAND.md)
+
 ---
 
 ## Development Handoff Notes

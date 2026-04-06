@@ -2,6 +2,8 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     BarChart2,
     CheckSquare,
+    ClipboardList,
+    CalendarClock,
     ChevronDown,
     Inbox,
     LayoutDashboard,
@@ -54,6 +56,18 @@ const navItems: NavItem[] = [
         href: '/pipeline',
         icon: <BarChart2 size={18} />,
         routeName: 'pipeline',
+    },
+    {
+        label: 'Pedidos',
+        href: '/orders',
+        icon: <ClipboardList size={18} />,
+        routeName: 'orders',
+    },
+    {
+        label: 'Reservas',
+        href: '/reservations',
+        icon: <CalendarClock size={18} />,
+        routeName: 'reservations',
     },
     {
         label: 'Tareas',

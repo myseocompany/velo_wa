@@ -3,14 +3,29 @@ import { useTenantChannel } from '@/hooks/useEcho';
 import { PageProps, WaStatus } from '@/types';
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { CheckCircle, Loader2, QrCode, WifiOff } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { CheckCircle, Loader2, QrCode, RefreshCw, WifiOff } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface WaStatusPayload {
     status: WaStatus;
     phone: string | null;
     connected_at: string | null;
     qr_code: string | null;
+}
+
+interface HealthLog {
+    id: string;
+    instance_name: string;
+    state: string | null;
+    is_healthy: boolean;
+    response_ms: number | null;
+    error_message: string | null;
+    checked_at: string | null;
+}
+
+interface HealthMeta {
+    consecutive_failures: number;
+    last_alert_at: string | null;
 }
 
 function StatusBadge({ status }: { status: WaStatus }) {
@@ -38,6 +53,9 @@ export default function WhatsApp() {
     const [qrCode, setQrCode]       = useState<string | null>(null);
     const [loading, setLoading]     = useState(false);
     const [error, setError]         = useState<string | null>(null);
+    const [healthLogs, setHealthLogs] = useState<HealthLog[]>([]);
+    const [healthMeta, setHealthMeta] = useState<HealthMeta>({ consecutive_failures: 0, last_alert_at: null });
+    const [healthLoading, setHealthLoading] = useState(false);
 
     // Real-time status updates
     const handleStatusUpdate = useCallback((data: unknown) => {
@@ -54,6 +72,23 @@ export default function WhatsApp() {
     }, []);
 
     useTenantChannel(tenant.id, 'wa.status.updated', handleStatusUpdate);
+
+    async function loadHealthLogs() {
+        setHealthLoading(true);
+        try {
+            const res = await axios.get<{ data: HealthLog[]; meta?: HealthMeta }>('/api/v1/whatsapp/health-logs', {
+                params: { limit: 20 },
+            });
+            setHealthLogs(res.data.data ?? []);
+            setHealthMeta(res.data.meta ?? { consecutive_failures: 0, last_alert_at: null });
+        } finally {
+            setHealthLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        loadHealthLogs();
+    }, []);
 
     async function handleConnect() {
         setLoading(true);
@@ -181,6 +216,73 @@ export default function WhatsApp() {
                         )}
                     </div>
                 )}
+
+                {/* Health monitoring */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-gray-900">Monitoreo Evolution API</h2>
+                            <p className="text-xs text-gray-500">Histórico de salud del chequeo automático cada 5 minutos.</p>
+                        </div>
+                        <button
+                            onClick={loadHealthLogs}
+                            disabled={healthLoading}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            <RefreshCw className={`h-3.5 w-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
+                            Actualizar
+                        </button>
+                    </div>
+
+                    <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        <span className="font-medium">Fallas consecutivas:</span> {healthMeta.consecutive_failures}
+                        {healthMeta.last_alert_at && (
+                            <span className="ml-3">
+                                <span className="font-medium">Última alerta:</span>{' '}
+                                {new Date(healthMeta.last_alert_at).toLocaleString('es-CO')}
+                            </span>
+                        )}
+                    </div>
+
+                    {healthLogs.length === 0 ? (
+                        <p className="text-sm text-gray-500">{healthLoading ? 'Cargando...' : 'Sin registros todavía.'}</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-100 text-sm">
+                                <thead>
+                                    <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+                                        <th className="px-2 py-2">Estado</th>
+                                        <th className="px-2 py-2">Latency</th>
+                                        <th className="px-2 py-2">Instancia</th>
+                                        <th className="px-2 py-2">Detalle</th>
+                                        <th className="px-2 py-2">Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {healthLogs.map((log) => (
+                                        <tr key={log.id}>
+                                            <td className="px-2 py-2">
+                                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                    log.is_healthy ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                                }`}>
+                                                    {log.is_healthy ? 'OK' : 'ERROR'}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-2 text-gray-700">{log.response_ms ?? '—'} ms</td>
+                                            <td className="px-2 py-2 text-gray-600">{log.instance_name}</td>
+                                            <td className="max-w-[260px] truncate px-2 py-2 text-gray-500" title={log.error_message ?? (log.state ?? '')}>
+                                                {log.error_message ?? `state=${log.state ?? 'unknown'}`}
+                                            </td>
+                                            <td className="px-2 py-2 text-gray-500">
+                                                {log.checked_at ? new Date(log.checked_at).toLocaleString('es-CO') : '—'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </AppLayout>
     );

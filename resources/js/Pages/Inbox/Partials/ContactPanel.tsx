@@ -1,15 +1,17 @@
-import { Contact, Conversation, PipelineDeal, Task, User } from '@/types';
+import { Contact, Conversation, LoyaltyAccount, LoyaltyEvent, Order, PageProps, PipelineDeal, Reservation, Task, User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
     AlertCircle,
     Briefcase,
     Building2,
+    CalendarClock,
     Check,
     CheckSquare,
     ChevronRight,
     Clock,
     Mail,
+    Package,
     Phone,
     Plus,
     Tag,
@@ -19,6 +21,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import ContactAvatar from './ContactAvatar';
 
 // ─── Quick task form ──────────────────────────────────────────────────────────
@@ -81,6 +84,159 @@ function QuickTaskForm({
     );
 }
 
+function QuickOrderForm({
+    contactId,
+    conversationId,
+    onCreated,
+    onCancel,
+}: {
+    contactId: string;
+    conversationId: string;
+    onCreated: (o: Order) => void;
+    onCancel: () => void;
+}) {
+    const [total, setTotal] = useState('');
+    const [notes, setNotes] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    async function submit(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const res = await axios.post<{ data: Order }>('/api/v1/orders', {
+                contact_id: contactId,
+                conversation_id: conversationId,
+                total: total !== '' ? total : null,
+                notes: notes.trim() || null,
+            });
+            onCreated(res.data.data);
+            setTotal('');
+            setNotes('');
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <form onSubmit={submit} className="mt-2 space-y-1.5">
+            <input
+                value={total}
+                onChange={(e) => setTotal(e.target.value)}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Total del pedido (opcional)"
+                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+            />
+            <input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Nota corta (opcional)"
+                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+            />
+            <div className="flex justify-end gap-1.5">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-500 hover:bg-gray-50"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-lg bg-ari-600 px-2 py-1 text-[11px] text-white disabled:opacity-40"
+                >
+                    Crear
+                </button>
+            </div>
+        </form>
+    );
+}
+
+function QuickReservationForm({
+    contactId,
+    conversationId,
+    onCreated,
+    onCancel,
+}: {
+    contactId: string;
+    conversationId: string;
+    onCreated: (r: Reservation) => void;
+    onCancel: () => void;
+}) {
+    const [startsAt, setStartsAt] = useState('');
+    const [partySize, setPartySize] = useState(2);
+    const [notes, setNotes] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    async function submit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!startsAt) return;
+
+        setSaving(true);
+        try {
+            const start = new Date(startsAt);
+            const end = new Date(start.getTime() + 60 * 60 * 1000);
+            const res = await axios.post<{ data: Reservation }>('/api/v1/reservations', {
+                contact_id: contactId,
+                conversation_id: conversationId,
+                starts_at: start.toISOString(),
+                ends_at: end.toISOString(),
+                party_size: partySize,
+                notes: notes.trim() || null,
+            });
+            onCreated(res.data.data);
+            setStartsAt('');
+            setNotes('');
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <form onSubmit={submit} className="mt-2 space-y-1.5">
+            <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+            />
+            <input
+                type="number"
+                min={1}
+                max={100}
+                value={partySize}
+                onChange={(e) => setPartySize(Number(e.target.value))}
+                placeholder="Personas"
+                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+            />
+            <input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Nota corta (opcional)"
+                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-ari-400 focus:outline-none"
+            />
+            <div className="flex justify-end gap-1.5">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-500 hover:bg-gray-50"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    disabled={saving || !startsAt}
+                    className="rounded-lg bg-ari-600 px-2 py-1 text-[11px] text-white disabled:opacity-40"
+                >
+                    Crear
+                </button>
+            </div>
+        </form>
+    );
+}
+
 interface Props {
     conversation: Conversation;
     onClose: () => void;
@@ -104,6 +260,25 @@ const STAGE_LABELS: Record<string, string> = {
     negotiation: 'Negociación', closed_won: 'Ganado', closed_lost: 'Perdido',
 };
 
+const ORDER_LABELS: Record<string, string> = {
+    new: 'Nuevo',
+    confirmed: 'Confirmado',
+    preparing: 'Preparando',
+    ready: 'Listo',
+    out_for_delivery: 'En camino',
+    delivered: 'Entregado',
+    cancelled: 'Cancelado',
+};
+
+const RESERVATION_LABELS: Record<string, string> = {
+    requested: 'Solicitada',
+    confirmed: 'Confirmada',
+    seated: 'En servicio',
+    completed: 'Completada',
+    cancelled: 'Cancelada',
+    no_show: 'No show',
+};
+
 function fmtValue(v: number, currency = 'COP') {
     if (v >= 1_000_000) return `${currency} ${(v / 1_000_000).toFixed(1)}M`;
     if (v >= 1_000)     return `${currency} ${(v / 1_000).toFixed(0)}K`;
@@ -111,6 +286,7 @@ function fmtValue(v: number, currency = 'COP') {
 }
 
 export default function ContactPanel({ conversation, onClose }: Props) {
+    const { auth } = usePage<PageProps>().props;
     const contact  = conversation.contact as Contact | undefined;
     const assignee = conversation.assignee as User | undefined;
 
@@ -119,6 +295,16 @@ export default function ContactPanel({ conversation, onClose }: Props) {
     const [tasks, setTasks]               = useState<Task[]>([]);
     const [tasksLoading, setTasksLoading] = useState(false);
     const [addingTask, setAddingTask]     = useState(false);
+    const [orders, setOrders]               = useState<Order[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(false);
+    const [addingOrder, setAddingOrder]     = useState(false);
+    const [reservations, setReservations]               = useState<Reservation[]>([]);
+    const [reservationsLoading, setReservationsLoading] = useState(false);
+    const [addingReservation, setAddingReservation]     = useState(false);
+    const [loyaltyAccount, setLoyaltyAccount] = useState<LoyaltyAccount | null>(null);
+    const [loyaltyEvents, setLoyaltyEvents] = useState<LoyaltyEvent[]>([]);
+    const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+    const [loyaltyAdjusting, setLoyaltyAdjusting] = useState(false);
 
     useEffect(() => {
         if (!contact?.id) { setDeals([]); return; }
@@ -136,9 +322,61 @@ export default function ContactPanel({ conversation, onClose }: Props) {
             .finally(() => setTasksLoading(false));
     }, [contact?.id]);
 
+    useEffect(() => {
+        if (!contact?.id) { setOrders([]); return; }
+        setOrdersLoading(true);
+        axios.get('/api/v1/orders', { params: { contact_id: contact.id, per_page: 5 } })
+            .then(r => setOrders(r.data.data ?? []))
+            .finally(() => setOrdersLoading(false));
+    }, [contact?.id]);
+
+    useEffect(() => {
+        if (!contact?.id) { setReservations([]); return; }
+        setReservationsLoading(true);
+        axios.get('/api/v1/reservations', { params: { contact_id: contact.id, per_page: 5 } })
+            .then(r => setReservations(r.data.data ?? []))
+            .finally(() => setReservationsLoading(false));
+    }, [contact?.id]);
+
+    useEffect(() => {
+        if (!contact?.id) {
+            setLoyaltyAccount(null);
+            setLoyaltyEvents([]);
+            return;
+        }
+
+        setLoyaltyLoading(true);
+        Promise.all([
+            axios.get('/api/v1/loyalty/contacts/' + contact.id + '/account'),
+            axios.get('/api/v1/loyalty/contacts/' + contact.id + '/events', { params: { per_page: 5 } }),
+        ])
+            .then(([accountRes, eventsRes]) => {
+                setLoyaltyAccount(accountRes.data.data ?? null);
+                setLoyaltyEvents(eventsRes.data.data ?? []);
+            })
+            .finally(() => setLoyaltyLoading(false));
+    }, [contact?.id]);
+
     async function completeTask(task: Task) {
         await axios.patch(`/api/v1/tasks/${task.id}/complete`);
         setTasks(prev => prev.filter(t => t.id !== task.id));
+    }
+
+    async function adjustLoyalty(points: number) {
+        if (!contact?.id) return;
+        setLoyaltyAdjusting(true);
+        try {
+            const accountRes = await axios.post(`/api/v1/loyalty/contacts/${contact.id}/adjust`, {
+                points,
+                description: points > 0 ? 'Ajuste manual +' : 'Canje manual',
+            });
+            setLoyaltyAccount(accountRes.data.data ?? null);
+
+            const eventsRes = await axios.get(`/api/v1/loyalty/contacts/${contact.id}/events`, { params: { per_page: 5 } });
+            setLoyaltyEvents(eventsRes.data.data ?? []);
+        } finally {
+            setLoyaltyAdjusting(false);
+        }
     }
 
     const displayName =
@@ -286,6 +524,62 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                     </div>
                 </div>
 
+                {/* Loyalty */}
+                {contact?.id && (
+                    <div className="border-b border-gray-100 px-4 py-2">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Fidelización</p>
+                            {(auth.user.role === 'owner' || auth.user.role === 'admin') && (
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        disabled={loyaltyAdjusting}
+                                        onClick={() => adjustLoyalty(10)}
+                                        className="rounded border border-gray-200 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                                    >
+                                        +10
+                                    </button>
+                                    <button
+                                        disabled={loyaltyAdjusting}
+                                        onClick={() => adjustLoyalty(-10)}
+                                        className="rounded border border-gray-200 px-1.5 py-0.5 text-[10px] text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                                    >
+                                        -10
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {loyaltyLoading ? (
+                            <p className="text-xs text-gray-400">Cargando…</p>
+                        ) : (
+                            <>
+                                <div className="mb-2 rounded-lg bg-amber-50 px-3 py-2">
+                                    <p className="text-[10px] uppercase tracking-wide text-amber-700">Puntos disponibles</p>
+                                    <p className="text-lg font-semibold text-amber-900">{loyaltyAccount?.points_balance ?? 0}</p>
+                                    <p className="text-[10px] text-amber-700">
+                                        Ganados: {loyaltyAccount?.total_earned ?? 0} · Canjeados: {loyaltyAccount?.total_redeemed ?? 0}
+                                    </p>
+                                </div>
+
+                                {loyaltyEvents.length === 0 ? (
+                                    <p className="text-xs text-gray-400">Sin movimientos</p>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {loyaltyEvents.slice(0, 4).map((event) => (
+                                            <div key={event.id} className="rounded border border-gray-100 bg-gray-50 px-2 py-1">
+                                                <p className="text-[11px] font-medium text-gray-700">
+                                                    {event.points > 0 ? '+' : ''}{event.points} pts
+                                                </p>
+                                                <p className="text-[10px] text-gray-500">{event.description ?? event.type}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+
                 {/* Tasks */}
                 {contact?.id && (
                     <div className="border-b border-gray-100 px-4 py-2">
@@ -334,6 +628,111 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                                 conversationId={conversation.id}
                                 onCreated={(t) => { setTasks(prev => [t, ...prev]); setAddingTask(false); }}
                                 onCancel={() => setAddingTask(false)}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {/* Orders */}
+                {contact?.id && (
+                    <div className="border-b border-gray-100 px-4 py-2">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                <Package size={10} /> Pedidos
+                            </p>
+                            <button
+                                onClick={() => setAddingOrder(true)}
+                                className="flex items-center gap-0.5 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-ari-600"
+                                title="Crear pedido"
+                            >
+                                <Plus size={13} />
+                            </button>
+                        </div>
+
+                        {ordersLoading && <p className="text-xs text-gray-400">Cargando…</p>}
+
+                        {!ordersLoading && orders.length === 0 && !addingOrder && (
+                            <p className="text-xs text-gray-400">Sin pedidos</p>
+                        )}
+
+                        {!ordersLoading && orders.map(order => (
+                            <div key={order.id} className="mb-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2">
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-semibold text-gray-800">{order.code}</p>
+                                    <span className="rounded bg-white px-1.5 py-0.5 text-[10px] text-gray-500">
+                                        {ORDER_LABELS[order.status] ?? order.status}
+                                    </span>
+                                </div>
+                                <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
+                                    {order.total && (
+                                        <span className="font-semibold text-gray-700">{fmtValue(Number(order.total), order.currency)}</span>
+                                    )}
+                                    {order.notes && <span className="line-clamp-1">{order.notes}</span>}
+                                </div>
+                            </div>
+                        ))}
+
+                        {addingOrder && (
+                            <QuickOrderForm
+                                contactId={contact.id}
+                                conversationId={conversation.id}
+                                onCreated={(order) => { setOrders(prev => [order, ...prev]); setAddingOrder(false); }}
+                                onCancel={() => setAddingOrder(false)}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {/* Reservations */}
+                {contact?.id && (
+                    <div className="border-b border-gray-100 px-4 py-2">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                <CalendarClock size={10} /> Reservas
+                            </p>
+                            <button
+                                onClick={() => setAddingReservation(true)}
+                                className="flex items-center gap-0.5 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-ari-600"
+                                title="Crear reserva"
+                            >
+                                <Plus size={13} />
+                            </button>
+                        </div>
+
+                        {reservationsLoading && <p className="text-xs text-gray-400">Cargando…</p>}
+
+                        {!reservationsLoading && reservations.length === 0 && !addingReservation && (
+                            <p className="text-xs text-gray-400">Sin reservas</p>
+                        )}
+
+                        {!reservationsLoading && reservations.map(reservation => (
+                            <div key={reservation.id} className="mb-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2">
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-semibold text-gray-800">{reservation.code}</p>
+                                    <span className="rounded bg-white px-1.5 py-0.5 text-[10px] text-gray-500">
+                                        {RESERVATION_LABELS[reservation.status] ?? reservation.status}
+                                    </span>
+                                </div>
+                                <div className="mt-1 text-[11px] text-gray-500">
+                                    <p>
+                                        {new Date(reservation.starts_at).toLocaleString('es-CO', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })} · {reservation.party_size} pax
+                                    </p>
+                                    {reservation.notes && <p className="line-clamp-1">{reservation.notes}</p>}
+                                </div>
+                            </div>
+                        ))}
+
+                        {addingReservation && (
+                            <QuickReservationForm
+                                contactId={contact.id}
+                                conversationId={conversation.id}
+                                onCreated={(reservation) => { setReservations(prev => [reservation, ...prev]); setAddingReservation(false); }}
+                                onCancel={() => setAddingReservation(false)}
                             />
                         )}
                     </div>

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\WaStatus;
 use App\Events\WaStatusUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\WaHealthLog;
 use App\Services\WhatsAppClientService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -127,6 +128,36 @@ class WhatsAppController extends Controller
         broadcast(new WaStatusUpdated($tenant->fresh(), null));
 
         return response()->json(['ok' => true]);
+    }
+
+    public function healthLogs(Request $request): JsonResponse
+    {
+        $tenant = $request->user()->tenant;
+        $tenantId = (string) $tenant->id;
+        $limit = max(1, min((int) $request->integer('limit', 30), 200));
+
+        $logs = WaHealthLog::query()
+            ->where('tenant_id', $tenantId)
+            ->latest('checked_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn (WaHealthLog $log) => [
+                'id' => $log->id,
+                'instance_name' => $log->instance_name,
+                'state' => $log->state,
+                'is_healthy' => $log->is_healthy,
+                'response_ms' => $log->response_ms,
+                'error_message' => $log->error_message,
+                'checked_at' => $log->checked_at?->toIso8601String(),
+            ]);
+
+        return response()->json([
+            'data' => $logs,
+            'meta' => [
+                'consecutive_failures' => (int) ($tenant->wa_health_consecutive_failures ?? 0),
+                'last_alert_at' => $tenant->wa_health_last_alert_at?->toIso8601String(),
+            ],
+        ]);
     }
 
     /**

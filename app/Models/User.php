@@ -59,6 +59,11 @@ class User extends Authenticatable
         return $this->belongsTo(Tenant::class);
     }
 
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(TenantUserMembership::class);
+    }
+
     public function assignedConversations(): HasMany
     {
         return $this->hasMany(Conversation::class, 'assigned_to');

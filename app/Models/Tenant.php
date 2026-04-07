@@ -59,6 +59,11 @@ class Tenant extends Model
         return $this->hasMany(User::class);
     }
 
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(TenantUserMembership::class);
+    }
+
     public function contacts(): HasMany
     {
         return $this->hasMany(Contact::class);

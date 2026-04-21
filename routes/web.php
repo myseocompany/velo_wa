@@ -127,6 +127,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
         return Inertia::render('Settings/DataQuality');
     })->name('settings.data-quality');
 
+    Route::get('/settings/tags', function () {
+        return Inertia::render('Settings/Tags');
+    })->name('settings.tags');
+
     // Billing — owner only
     Route::middleware('role:owner')->group(function () {
         Route::get('/settings/billing', [BillingController::class, 'show'])->name('settings.billing');

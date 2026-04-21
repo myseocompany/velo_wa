@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Sparkles, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
+import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Sparkles, Tag, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface SettingCard {
@@ -75,6 +75,14 @@ const CARDS: SettingCard[] = [
         icon: <UtensilsCrossed className="h-6 w-6 text-ari-600" />,
         href: '/settings/menu',
         label: 'Gestionar menú',
+        roles: ['owner', 'admin'],
+    },
+    {
+        title: 'Etiquetas',
+        description: 'Crea y gestiona etiquetas para segmentar contactos. Controla cuáles se excluyen del cálculo de DT1.',
+        icon: <Tag className="h-6 w-6 text-ari-600" />,
+        href: '/settings/tags',
+        label: 'Gestionar etiquetas',
         roles: ['owner', 'admin'],
     },
     {

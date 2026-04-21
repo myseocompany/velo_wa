@@ -15,6 +15,7 @@ use App\Models\AutomationLog;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\PipelineDeal;
+use App\Models\Tag;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
@@ -333,15 +334,21 @@ class AutomationEngineService
 
     private function actionAddTag(Automation $automation, Conversation $conversation): void
     {
-        $tags    = $automation->action_config['tags'] ?? [];
+        // action_config['tags'] stores tag slugs (strings)
+        $slugs   = $automation->action_config['tags'] ?? [];
         $contact = $conversation->contact;
-        if (! $contact || empty($tags)) {
+
+        if (! $contact || empty($slugs)) {
             return;
         }
 
-        $existing = $contact->tags ?? [];
-        $merged   = array_values(array_unique(array_merge($existing, $tags)));
-        $contact->update(['tags' => $merged]);
+        $tagIds = Tag::where('tenant_id', $contact->tenant_id)
+            ->whereIn('slug', $slugs)
+            ->pluck('id');
+
+        if ($tagIds->isNotEmpty()) {
+            $contact->tags()->syncWithoutDetaching($tagIds->all());
+        }
     }
 
     private function actionMoveStage(Automation $automation, Conversation $conversation): void

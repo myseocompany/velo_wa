@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Contact, Task, User } from '@/types';
+import { Contact, Tag as TagType, Task, User } from '@/types';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
@@ -41,39 +41,80 @@ const STATUS_COLORS: Record<string, string> = {
     closed:  'bg-gray-100 text-gray-600',
 };
 
-function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+function TagInput({ selected, available, onChange }: {
+    selected: TagType[];
+    available: TagType[];
+    onChange: (tags: TagType[]) => void;
+}) {
     const [input, setInput] = useState('');
 
-    function addTag() {
-        const trimmed = input.trim().toLowerCase();
-        if (trimmed && !tags.includes(trimmed)) {
-            onChange([...tags, trimmed]);
+    const suggestions = input.trim()
+        ? available.filter(
+            (t) => t.name.toLowerCase().includes(input.toLowerCase()) &&
+                   !selected.find((s) => s.id === t.id)
+          )
+        : [];
+
+    function addTag(tag: TagType) {
+        if (!selected.find((s) => s.id === tag.id)) {
+            onChange([...selected, tag]);
         }
         setInput('');
     }
 
-    function removeTag(tag: string) {
-        onChange(tags.filter((t) => t !== tag));
+    function removeTag(id: string) {
+        onChange(selected.filter((t) => t.id !== id));
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2">
-            {tags.map((tag) => (
-                <span key={tag} className="flex items-center gap-1 rounded-full bg-ari-100 px-2 py-0.5 text-xs font-medium text-ari-700">
-                    {tag}
-                    <button onClick={() => removeTag(tag)}><X className="h-3 w-3" /></button>
-                </span>
-            ))}
-            <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); }
-                    if (e.key === 'Backspace' && !input && tags.length) onChange(tags.slice(0, -1));
-                }}
-                placeholder="Añadir etiqueta…"
-                className="min-w-[100px] flex-1 border-none bg-transparent text-sm outline-none placeholder-gray-400"
-            />
+        <div className="relative">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2">
+                {selected.map((tag) => (
+                    <span
+                        key={tag.id}
+                        className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                        style={{ backgroundColor: tag.color }}
+                    >
+                        {tag.name}
+                        <button type="button" onClick={() => removeTag(tag.id)}>
+                            <X className="h-3 w-3" />
+                        </button>
+                    </span>
+                ))}
+                <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !input && selected.length) {
+                            onChange(selected.slice(0, -1));
+                        }
+                    }}
+                    placeholder="Buscar etiqueta…"
+                    className="min-w-[120px] flex-1 border-none bg-transparent text-sm outline-none placeholder-gray-400"
+                />
+            </div>
+            {suggestions.length > 0 && (
+                <ul className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                    {suggestions.map((tag) => (
+                        <li key={tag.id}>
+                            <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                                onClick={() => addTag(tag)}
+                            >
+                                <span
+                                    className="h-2.5 w-2.5 rounded-full"
+                                    style={{ backgroundColor: tag.color }}
+                                />
+                                {tag.name}
+                                {tag.exclude_from_metrics && (
+                                    <span className="ml-auto text-xs text-gray-400">excluye métricas</span>
+                                )}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 }
@@ -95,12 +136,14 @@ export default function ContactShow({ contactId }: Props) {
     const [editEmail, setEditEmail]       = useState('');
     const [editCompany, setEditCompany]   = useState('');
     const [editNotes, setEditNotes]       = useState('');
-    const [editTags, setEditTags]         = useState<string[]>([]);
+    const [editTags, setEditTags]         = useState<TagType[]>([]);
+    const [availableTags, setAvailableTags] = useState<TagType[]>([]);
     const [editAssigned, setEditAssigned] = useState('');
     const [editCustomFields, setEditCustomFields] = useState<Record<string, string>>({});
 
     useEffect(() => {
         axios.get<{ data: User[] }>('/api/v1/team/members').then((r) => setAgents(r.data.data));
+        axios.get<{ data: TagType[] }>('/api/v1/tags').then((r) => setAvailableTags(r.data.data));
     }, []);
 
     useEffect(() => {
@@ -166,7 +209,7 @@ export default function ContactShow({ contactId }: Props) {
                 email:       editEmail || null,
                 company:     editCompany || null,
                 notes:       editNotes || null,
-                tags:        editTags,
+                tag_ids:     editTags.map((t) => t.id),
                 custom_fields: editCustomFields,
                 assigned_to: editAssigned || null,
             });
@@ -250,7 +293,13 @@ export default function ContactShow({ contactId }: Props) {
                                         <Tag className="mt-0.5 h-4 w-4 text-gray-400" />
                                         <div className="flex flex-wrap gap-1">
                                             {(contact.tags ?? []).map((tag) => (
-                                                <span key={tag} className="rounded-full bg-ari-50 px-2 py-0.5 text-xs font-medium text-ari-700">{tag}</span>
+                                                <span
+                                                    key={tag.id}
+                                                    className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                                                    style={{ backgroundColor: tag.color }}
+                                                >
+                                                    {tag.name}
+                                                </span>
                                             ))}
                                         </div>
                                     </div>
@@ -465,8 +514,8 @@ export default function ContactShow({ contactId }: Props) {
                                 </div>
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-medium text-gray-700">Etiquetas (Enter para añadir)</label>
-                                <TagInput tags={editTags} onChange={setEditTags} />
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Etiquetas</label>
+                                <TagInput selected={editTags} available={availableTags} onChange={setEditTags} />
                             </div>
                             <div>
                                 <label className="mb-1 block text-xs font-medium text-gray-700">Agente asignado</label>

@@ -17,6 +17,14 @@ export type ContactSource = 'whatsapp' | 'manual' | 'import';
 
 // ─── Models ──────────────────────────────────────────────────────────────────
 
+export interface Tag {
+    id: string;
+    name: string;
+    slug: string;
+    color: string;
+    exclude_from_metrics: boolean;
+}
+
 export interface BusinessHourDay {
     enabled: boolean;
     start: string;
@@ -78,7 +86,7 @@ export interface Contact {
     email: string | null;
     company: string | null;
     notes: string | null;
-    tags: string[];
+    tags: Tag[];
     custom_fields: Record<string, unknown>;
     assigned_to: string | null;
     source: ContactSource;

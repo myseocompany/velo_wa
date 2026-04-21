@@ -10,6 +10,7 @@ use App\Http\Requests\Api\ContactRequest;
 use App\Http\Requests\Api\StoreContactRequest;
 use App\Http\Resources\ContactResource;
 use App\Models\Contact;
+use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,7 +21,7 @@ class ContactController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Contact::query()->with('assignee');
+        $query = Contact::query()->with(['assignee', 'tags']);
         $driver = DB::connection()->getDriverName();
 
         $search = $this->sanitizeSearchTerm(trim($request->string('search')->toString()));
@@ -39,13 +40,19 @@ class ContactController extends Controller
             });
         }
 
-        // Tag filter: ?tags[]=vip&tags[]=premium OR ?tags=vip,premium
-        $tags = $request->input('tags');
-        if ($tags) {
-            $tagList = is_array($tags) ? $tags : explode(',', $tags);
-            $tagList = array_filter(array_map('trim', $tagList));
-            foreach ($tagList as $tag) {
-                $query->whereRaw('tags @> ?::jsonb', [json_encode([$tag])]);
+        // Tag filter: ?tag_ids[]=uuid OR ?tags[]=slug (slug form for backward compat)
+        $tagIds   = $request->input('tag_ids');
+        $tagSlugs = $request->input('tags');
+
+        if ($tagIds) {
+            $ids = array_filter(is_array($tagIds) ? $tagIds : explode(',', $tagIds));
+            foreach ($ids as $id) {
+                $query->whereHas('tags', fn ($q) => $q->where('tags.id', $id));
+            }
+        } elseif ($tagSlugs) {
+            $slugs = array_filter(array_map('trim', is_array($tagSlugs) ? $tagSlugs : explode(',', $tagSlugs)));
+            foreach ($slugs as $slug) {
+                $query->whereHas('tags', fn ($q) => $q->where('tags.slug', $slug));
             }
         }
 
@@ -90,18 +97,21 @@ class ContactController extends Controller
     public function store(StoreContactRequest $request): ContactResource
     {
         $contact = Contact::create([
-            'phone'       => $request->string('phone')->toString(),
-            'name'        => $request->input('name'),
-            'email'       => $request->input('email'),
-            'company'     => $request->input('company'),
-            'notes'       => $request->input('notes'),
-            'tags'        => $request->input('tags', []),
+            'phone'         => $request->string('phone')->toString(),
+            'name'          => $request->input('name'),
+            'email'         => $request->input('email'),
+            'company'       => $request->input('company'),
+            'notes'         => $request->input('notes'),
             'custom_fields' => $request->input('custom_fields', []),
-            'assigned_to' => $request->input('assigned_to'),
-            'source'      => ContactSource::Manual,
+            'assigned_to'   => $request->input('assigned_to'),
+            'source'        => ContactSource::Manual,
         ]);
 
-        return new ContactResource($contact->fresh('assignee'));
+        if ($request->filled('tag_ids')) {
+            $contact->tags()->sync($request->input('tag_ids'));
+        }
+
+        return new ContactResource($contact->fresh(['assignee', 'tags']));
     }
 
     /** Merge $source into $target: transfer relationships, merge tags, soft-delete source. */
@@ -118,6 +128,9 @@ class ContactController extends Controller
             abort(403);
         }
 
+        $contact->load('tags');
+        $target->load('tags');
+
         DB::transaction(function () use ($contact, $target): void {
             // Transfer conversations
             $contact->conversations()->update(['contact_id' => $target->id]);
@@ -125,12 +138,13 @@ class ContactController extends Controller
             // Transfer deals
             $contact->deals()->update(['contact_id' => $target->id]);
 
-            // Merge tags (union, deduplicated)
-            $mergedTags = array_values(array_unique(array_merge(
-                $target->tags ?? [],
-                $contact->tags ?? [],
-            )));
-            $target->update(['tags' => $mergedTags]);
+            // Merge tags (union, deduplicated by ID)
+            $mergedTagIds = $target->tags->pluck('id')
+                ->merge($contact->tags->pluck('id'))
+                ->unique()
+                ->values()
+                ->all();
+            $target->tags()->sync($mergedTagIds);
 
             // Carry over fields missing from target
             $updates = [];
@@ -151,12 +165,12 @@ class ContactController extends Controller
             $contact->delete();
         });
 
-        return new ContactResource($target->fresh(['assignee', 'conversations']));
+        return new ContactResource($target->fresh(['assignee', 'conversations', 'tags']));
     }
 
     public function show(Contact $contact): ContactResource
     {
-        $contact->load(['assignee', 'conversations']);
+        $contact->load(['assignee', 'conversations', 'tags']);
 
         return new ContactResource($contact);
     }
@@ -164,10 +178,14 @@ class ContactController extends Controller
     public function update(ContactRequest $request, Contact $contact): ContactResource
     {
         $contact->update($request->only([
-            'name', 'email', 'company', 'notes', 'tags', 'custom_fields', 'assigned_to',
+            'name', 'email', 'company', 'notes', 'custom_fields', 'assigned_to',
         ]));
 
-        return new ContactResource($contact->fresh('assignee'));
+        if ($request->has('tag_ids')) {
+            $contact->tags()->sync($request->input('tag_ids', []));
+        }
+
+        return new ContactResource($contact->fresh(['assignee', 'tags']));
     }
 
     public function destroy(Contact $contact): Response
@@ -215,15 +233,10 @@ class ContactController extends Controller
         return response()->json(['data' => $groups]);
     }
 
-    /** All unique tags used across contacts in this tenant. */
+    /** All tags for this tenant (used by tag pickers). */
     public function tags(): \Illuminate\Http\JsonResponse
     {
-        $tags = Contact::query()
-            ->selectRaw("DISTINCT jsonb_array_elements_text(tags) AS tag")
-            ->whereNotNull('tags')
-            ->where('tags', '!=', '[]')
-            ->orderBy('tag')
-            ->pluck('tag');
+        $tags = Tag::query()->orderBy('name')->get();
 
         return response()->json(['data' => $tags]);
     }

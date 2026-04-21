@@ -114,19 +114,19 @@ class AssignmentEngineService
 
     private function tagBased(AssignmentRule $rule, Conversation $conversation): ?User
     {
-        $contact = Contact::withoutGlobalScope('tenant')->find($conversation->contact_id);
+        $contact = Contact::withoutGlobalScope('tenant')->with('tags')->find($conversation->contact_id);
         if (! $contact) {
             return null;
         }
 
-        $contactTags = $contact->tags ?? [];
-        $mappings    = $rule->config['tag_mappings'] ?? []; // [ ['tag' => 'vip', 'agent_ids' => [...]] ]
+        $contactTagSlugs = $contact->tags->pluck('slug')->all();
+        $mappings        = $rule->config['tag_mappings'] ?? []; // [ ['tag' => 'vip', 'agent_ids' => [...]] ]
 
         foreach ($mappings as $mapping) {
             $tag      = $mapping['tag'] ?? null;
             $agentIds = $mapping['agent_ids'] ?? [];
 
-            if ($tag && in_array($tag, $contactTags, true) && ! empty($agentIds)) {
+            if ($tag && in_array($tag, $contactTagSlugs, true) && ! empty($agentIds)) {
                 $agent = User::withoutGlobalScope('tenant')
                     ->where('tenant_id', $rule->tenant_id)
                     ->where('is_active', true)

@@ -23,8 +23,8 @@ class ContactRequest extends FormRequest
             'email'       => ['nullable', 'email', 'max:254'],
             'company'     => ['nullable', 'string', 'max:120'],
             'notes'       => ['nullable', 'string', 'max:2000'],
-            'tags'        => ['nullable', 'array'],
-            'tags.*'      => ['string', 'max:50'],
+            'tag_ids'   => ['nullable', 'array'],
+            'tag_ids.*' => ['uuid', 'exists:tags,id'],
             'custom_fields'   => ['nullable', 'array'],
             'custom_fields.*' => ['nullable', 'string', 'max:500'],
             'assigned_to' => [

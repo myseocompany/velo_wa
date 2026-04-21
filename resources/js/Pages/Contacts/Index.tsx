@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Contact, PaginatedData, User } from '@/types';
+import { Contact, PaginatedData, Tag as TagType, User } from '@/types';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
@@ -285,8 +285,8 @@ export default function ContactsIndex() {
     const [sort, setSort]                         = useState<SortField>('last_contact_at');
     const [dir, setDir]                           = useState<SortDir>('desc');
     const [agents, setAgents]                     = useState<User[]>([]);
-    const [availableTags, setAvailableTags]       = useState<string[]>([]);
-    const [selectedTags, setSelectedTags]         = useState<string[]>([]);
+    const [availableTags, setAvailableTags]       = useState<TagType[]>([]);
+    const [selectedTags, setSelectedTags]         = useState<string[]>([]); // stores tag IDs
     const [assignedFilter, setAssignedFilter]     = useState('');
     const [showTagPicker, setShowTagPicker]       = useState(false);
     const [showCreateModal, setShowCreateModal]   = useState(false);
@@ -295,7 +295,7 @@ export default function ContactsIndex() {
 
     useEffect(() => {
         axios.get<{ data: User[] }>('/api/v1/team/members').then((r) => setAgents(r.data.data));
-        axios.get<{ data: string[] }>('/api/v1/contacts/tags').then((r) => setAvailableTags(r.data.data));
+        axios.get<{ data: TagType[] }>('/api/v1/tags').then((r) => setAvailableTags(r.data.data));
     }, []);
 
     useEffect(() => {
@@ -322,7 +322,7 @@ export default function ContactsIndex() {
                     direction: dir,
                 };
                 if (search.trim())       params.search      = search.trim();
-                if (selectedTags.length) params['tags[]']   = selectedTags;
+                if (selectedTags.length) params['tag_ids[]'] = selectedTags;
                 if (assignedFilter)      params.assigned    = assignedFilter;
 
                 const res = await axios.get<PaginatedData<Contact>>('/api/v1/contacts', { params });
@@ -417,14 +417,17 @@ export default function ContactsIndex() {
                                     <p className="px-3 py-3 text-xs text-gray-400">Sin etiquetas disponibles</p>
                                 ) : availableTags.map((tag) => (
                                     <button
-                                        key={tag}
-                                        onClick={() => toggleTag(tag)}
+                                        key={tag.id}
+                                        onClick={() => toggleTag(tag.id)}
                                         className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 ${
-                                            selectedTags.includes(tag) ? 'font-semibold text-ari-600' : 'text-gray-800'
+                                            selectedTags.includes(tag.id) ? 'font-semibold text-ari-600' : 'text-gray-800'
                                         }`}
                                     >
-                                        <span className={`h-2 w-2 flex-shrari-0 rounded-full ${selectedTags.includes(tag) ? 'bg-ari-600' : 'bg-gray-300'}`} />
-                                        {tag}
+                                        <span
+                                            className="h-2 w-2 flex-shrink-0 rounded-full"
+                                            style={{ backgroundColor: selectedTags.includes(tag.id) ? tag.color : '#d1d5db' }}
+                                        />
+                                        {tag.name}
                                     </button>
                                 ))}
                             </div>
@@ -442,12 +445,19 @@ export default function ContactsIndex() {
                         {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
 
-                    {selectedTags.map((tag) => (
-                        <span key={tag} className="flex items-center gap-1 rounded-full bg-ari-100 px-2.5 py-1 text-xs font-medium text-ari-700">
-                            {tag}
-                            <button onClick={() => toggleTag(tag)}><X className="h-3 w-3" /></button>
-                        </span>
-                    ))}
+                    {selectedTags.map((tagId) => {
+                        const tag = availableTags.find((t) => t.id === tagId);
+                        return tag ? (
+                            <span
+                                key={tagId}
+                                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
+                                style={{ backgroundColor: tag.color }}
+                            >
+                                {tag.name}
+                                <button onClick={() => toggleTag(tagId)}><X className="h-3 w-3" /></button>
+                            </span>
+                        ) : null;
+                    })}
                 </div>
 
                 {/* Table */}
@@ -496,7 +506,13 @@ export default function ContactsIndex() {
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-1">
                                                 {(contact.tags ?? []).slice(0, 3).map((tag) => (
-                                                    <span key={tag} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{tag}</span>
+                                                    <span
+                                                        key={tag.id}
+                                                        className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                                                        style={{ backgroundColor: tag.color }}
+                                                    >
+                                                        {tag.name}
+                                                    </span>
                                                 ))}
                                                 {(contact.tags ?? []).length > 3 && (
                                                     <span className="text-xs text-gray-400">+{(contact.tags ?? []).length - 3}</span>

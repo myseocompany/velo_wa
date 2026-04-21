@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -39,7 +40,6 @@ class Contact extends Model
         'email',
         'company',
         'notes',
-        'tags',
         'custom_fields',
         'assigned_to',
         'source',
@@ -50,12 +50,16 @@ class Contact extends Model
     protected function casts(): array
     {
         return [
-            'tags' => 'array',
             'custom_fields' => 'array',
             'source' => ContactSource::class,
             'first_contact_at' => 'datetime',
             'last_contact_at' => 'datetime',
         ];
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'contact_tag')->orderBy('name');
     }
 
     public function assignee(): BelongsTo

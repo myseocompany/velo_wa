@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\QuickReplyController;
 use App\Http\Controllers\Api\V1\ReservationController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
@@ -93,9 +94,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
         Route::patch('/team/{member}/reactivate', [TeamController::class, 'reactivate'])->name('team.reactivate');
     });
 
+    // Tags master — read open to all; write admin+
+    Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
+        Route::patch('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+        Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
+    });
+
     // Contacts — read open to all; destructive operations admin+
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
-    Route::get('/contacts/tags', [ContactController::class, 'tags'])->name('contacts.tags');
+    Route::get('/contacts/tags', [ContactController::class, 'tags'])->name('contacts.tags'); // alias → /tags
     Route::get('/contacts/duplicates', [ContactController::class, 'duplicates'])->name('contacts.duplicates');
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
     Route::patch('/contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');

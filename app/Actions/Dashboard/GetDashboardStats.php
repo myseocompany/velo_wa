@@ -61,32 +61,39 @@ class GetDashboardStats
 
     private function computeStats(string $timezone, CarbonImmutable $startUtc, CarbonImmutable $endUtc): array
     {
+        // Conversations opened (created) within the selected period that are still open/pending
         $openConversations = Conversation::query()
             ->whereIn('status', [ConversationStatus::Open->value, ConversationStatus::Pending->value])
+            ->whereBetween('created_at', [$startUtc, $endUtc])
             ->count();
 
+        // Conversations closed within the period — regardless of current status (handles reopen cases)
         $closedInPeriod = Conversation::query()
-            ->where('status', ConversationStatus::Closed->value)
+            ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$startUtc, $endUtc])
             ->count();
 
-        $totalContacts = Contact::query()->count();
+        // Contacts created within the selected period
+        $totalContacts = Contact::query()
+            ->whereBetween('created_at', [$startUtc, $endUtc])
+            ->count();
 
-        $todayStart    = CarbonImmutable::now($timezone)->startOfDay()->setTimezone('UTC');
-        $todayEnd      = CarbonImmutable::now($timezone)->endOfDay()->setTimezone('UTC');
-        $messagesToday = Message::query()->whereBetween('created_at', [$todayStart, $todayEnd])->count();
+        // Messages sent/received within the selected period
+        $messagesInPeriod = Message::query()
+            ->whereBetween('created_at', [$startUtc, $endUtc])
+            ->count();
 
-        $inboundToday = Message::query()
+        $inboundInPeriod = Message::query()
             ->where('direction', 'in')
-            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->whereBetween('created_at', [$startUtc, $endUtc])
             ->count();
 
         return [
             'open_conversations' => $openConversations,
             'closed_in_period'   => $closedInPeriod,
             'total_contacts'     => $totalContacts,
-            'messages_today'     => $messagesToday,
-            'inbound_today'      => $inboundToday,
+            'messages_today'     => $messagesInPeriod,
+            'inbound_today'      => $inboundInPeriod,
         ];
     }
 
@@ -98,6 +105,14 @@ class GetDashboardStats
             ->whereNotNull('first_message_at')
             ->whereNotNull('first_response_at')
             ->whereBetween('created_at', [$startUtc, $endUtc])
+            ->whereNotExists(function ($q): void {
+                // Exclude conversations whose contact has any tag marked exclude_from_metrics
+                $q->select(DB::raw(1))
+                    ->from('contact_tag')
+                    ->join('tags', 'tags.id', '=', 'contact_tag.tag_id')
+                    ->whereColumn('contact_tag.contact_id', 'conversations.contact_id')
+                    ->where('tags.exclude_from_metrics', true);
+            })
             ->selectRaw("
                 COUNT(*) as total,
                 ROUND(AVG(EXTRACT(EPOCH FROM (first_response_at - first_message_at))))::int AS avg_dt1,
@@ -143,6 +158,13 @@ class GetDashboardStats
             ->whereNotNull('first_response_at')
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->whereRaw($whereClause)
+            ->whereNotExists(function ($q): void {
+                $q->select(DB::raw(1))
+                    ->from('contact_tag')
+                    ->join('tags', 'tags.id', '=', 'contact_tag.tag_id')
+                    ->whereColumn('contact_tag.contact_id', 'conversations.contact_id')
+                    ->where('tags.exclude_from_metrics', true);
+            })
             ->selectRaw("
                 COUNT(*) as total,
                 ROUND(AVG(EXTRACT(EPOCH FROM (first_response_at - first_message_at))))::int AS avg_dt1,

@@ -447,10 +447,11 @@ export default function ContactPanel({ conversation, onClose }: Props) {
                                 <div className="mt-1 flex flex-wrap gap-1">
                                     {contact.tags.map((tag) => (
                                         <span
-                                            key={tag}
-                                            className="rounded-full bg-ari-50 px-2 py-0.5 text-xs font-medium text-ari-700"
+                                            key={tag.id}
+                                            className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                                            style={{ backgroundColor: tag.color }}
                                         >
-                                            {tag}
+                                            {tag.name}
                                         </span>
                                     ))}
                                 </div>

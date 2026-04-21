@@ -21,7 +21,15 @@ class ContactResource extends JsonResource
             'email'           => $this->email,
             'company'         => $this->company,
             'notes'           => $this->notes,
-            'tags'            => $this->tags ?? [],
+            'tags'            => $this->whenLoaded('tags', fn () =>
+                $this->tags->map(fn ($t) => [
+                    'id'                   => $t->id,
+                    'name'                 => $t->name,
+                    'slug'                 => $t->slug,
+                    'color'                => $t->color,
+                    'exclude_from_metrics' => $t->exclude_from_metrics,
+                ])->values()->all()
+            , []),
             'custom_fields'   => $this->custom_fields ?? [],
             'assigned_to'     => $this->assigned_to,
             'source'          => $this->source?->value,

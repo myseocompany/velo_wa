@@ -385,10 +385,10 @@ export default function Dashboard({
 
                 {/* KPI row 1 — conversations */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <StatCard label="Abiertas"      value={stats.open_conversations}  icon={<Inbox size={17} />}        accent="blue" />
-                    <StatCard label="Cerradas (período)" value={stats.closed_in_period} icon={<CheckCheck size={17} />}  accent="emerald" />
-                    <StatCard label="Contactos"     value={stats.total_contacts}       icon={<Users size={17} />}        accent="violet" />
-                    <StatCard label="Mensajes hoy"  value={stats.messages_today}
+                    <StatCard label="Abiertas (período)"  value={stats.open_conversations}  icon={<Inbox size={17} />}        accent="blue" />
+                    <StatCard label="Cerradas (período)"  value={stats.closed_in_period}    icon={<CheckCheck size={17} />}   accent="emerald" />
+                    <StatCard label="Contactos nuevos"    value={stats.total_contacts}       icon={<Users size={17} />}        accent="violet" />
+                    <StatCard label="Mensajes (período)"  value={stats.messages_today}
                         sub={`${stats.inbound_today} entrantes`}
                         icon={<MessageSquare size={17} />} accent="orange" />
                 </div>

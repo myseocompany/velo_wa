@@ -2,12 +2,16 @@ import { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MessageSquare } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import ContactAvatar from './ContactAvatar';
 
 interface Props {
     conversations: Conversation[];
     activeId: string | null;
     unreadCounts: Record<string, number>;
+    hasMore: boolean;
+    loadingMore: boolean;
+    onLoadMore: () => void;
     onSelect: (conversation: Conversation) => void;
 }
 
@@ -30,7 +34,33 @@ function getLastMessagePreview(conversation: Conversation): string {
     return 'Mensaje sin texto';
 }
 
-export default function ConversationList({ conversations, activeId, unreadCounts, onSelect }: Props) {
+export default function ConversationList({
+    conversations,
+    activeId,
+    unreadCounts,
+    hasMore,
+    loadingMore,
+    onLoadMore,
+    onSelect,
+}: Props) {
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!hasMore || !loadMoreRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && !loadingMore) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 },
+        );
+
+        observer.observe(loadMoreRef.current);
+        return () => observer.disconnect();
+    }, [hasMore, loadingMore, onLoadMore]);
+
     if (conversations.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-gray-400">
@@ -41,8 +71,9 @@ export default function ConversationList({ conversations, activeId, unreadCounts
     }
 
     return (
-        <ul className="divide-y divide-gray-100">
-            {conversations.map((conv) => {
+        <>
+            <ul className="divide-y divide-gray-100">
+                {conversations.map((conv) => {
                 const contact     = conv.contact;
                 const displayName = contact?.name ?? contact?.push_name ?? contact?.phone ?? 'Desconocido';
                 const isActive    = conv.id === activeId;
@@ -88,6 +119,22 @@ export default function ConversationList({ conversations, activeId, unreadCounts
                     </li>
                 );
             })}
-        </ul>
+            </ul>
+
+            {(hasMore || loadingMore) && (
+                <div ref={loadMoreRef} className="flex justify-center px-4 py-4">
+                    {loadingMore ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-ari-600 border-t-transparent" />
+                    ) : (
+                        <button
+                            onClick={onLoadMore}
+                            className="text-xs font-medium text-ari-600 hover:underline"
+                        >
+                            Cargar más conversaciones
+                        </button>
+                    )}
+                </div>
+            )}
+        </>
     );
 }

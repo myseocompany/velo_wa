@@ -28,6 +28,12 @@ interface Props {
 
 type ConversationUpdatedPayload = Conversation;
 interface MessageReceivedPayload extends Message { conversation_id: string; }
+interface CursorPaginatedResponse<T> {
+    data: T[];
+    links: {
+        next: string | null;
+    };
+}
 
 // ─── Status filter tabs ───────────────────────────────────────────────────────
 
@@ -307,6 +313,7 @@ function CreateConversationModal({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function InboxIndex({ activeConversationId }: Props) {
+    const CONVERSATION_PAGE_SIZE = 25;
     const { auth } = usePage<PageProps>().props;
 
     const [conversations, setConversations]     = useState<Conversation[]>([]);
@@ -314,7 +321,9 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [messages, setMessages]               = useState<Message[]>([]);
     const [nextCursor, setNextCursor]           = useState<string | null>(null);
     const [loadingConvs, setLoadingConvs]       = useState(true);
+    const [loadingMoreConvs, setLoadingMoreConvs] = useState(false);
     const [loadingMessages, setLoadingMessages] = useState(false);
+    const [conversationsNextCursor, setConversationsNextCursor] = useState<string | null>(null);
     const [statusFilter, setStatusFilter]       = useState<ConversationStatus | 'all'>('all');
     const [search, setSearch]                   = useState('');
     const [agents, setAgents]                   = useState<User[]>([]);
@@ -331,17 +340,90 @@ export default function InboxIndex({ activeConversationId }: Props) {
     useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
     useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
+    const extractNextCursor = useCallback((nextUrl: string | null | undefined) => {
+        if (!nextUrl) return null;
+
+        return new URL(nextUrl).searchParams.get('cursor');
+    }, []);
+
+    const buildConversationParams = useCallback((options?: {
+        cursor?: string | null;
+        limit?: number;
+    }) => {
+        const params: Record<string, string> = {
+            limit: String(options?.limit ?? CONVERSATION_PAGE_SIZE),
+        };
+
+        if (statusFilter !== 'all') params.status = statusFilter;
+        if (search) params.search = search;
+        if (options?.cursor) params.cursor = options.cursor;
+
+        return params;
+    }, [CONVERSATION_PAGE_SIZE, search, statusFilter]);
+
+    const mergeConversationPages = useCallback((current: Conversation[], incoming: Conversation[]) => {
+        const byId = new Map(current.map((conversation) => [conversation.id, conversation]));
+
+        incoming.forEach((conversation) => {
+            const previous = byId.get(conversation.id);
+            byId.set(conversation.id, previous ? { ...previous, ...conversation } : conversation);
+        });
+
+        return [...byId.values()].sort((a, b) => {
+            const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+            const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+
+            if (bTime !== aTime) return bTime - aTime;
+
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+    }, []);
+
+    const fetchConversations = useCallback(async (options?: {
+        cursor?: string | null;
+        limit?: number;
+    }) => {
+        const res = await axios.get<CursorPaginatedResponse<Conversation>>('/api/v1/conversations', {
+            params: buildConversationParams(options),
+        });
+
+        return {
+            conversations: res.data.data,
+            nextCursor: extractNextCursor(res.data.links?.next),
+        };
+    }, [buildConversationParams, extractNextCursor]);
+
     const refetchingRef = useRef(false);
     const refetchConversations = useCallback(() => {
         if (refetchingRef.current) return;
         refetchingRef.current = true;
-        const params: Record<string, string> = {};
-        if (statusFilter !== 'all') params.status = statusFilter;
-        if (search) params.search = search;
-        axios.get<{ data: Conversation[] }>('/api/v1/conversations', { params })
-            .then((res) => setConversations(res.data.data))
+        const loadedCount = Math.max(conversationsRef.current.length, CONVERSATION_PAGE_SIZE);
+
+        fetchConversations({ limit: loadedCount })
+            .then(({ conversations: refreshedConversations, nextCursor: refreshedNextCursor }) => {
+                setConversations(refreshedConversations);
+                setConversationsNextCursor(refreshedNextCursor);
+            })
             .finally(() => { refetchingRef.current = false; });
-    }, [statusFilter, search]);
+    }, [CONVERSATION_PAGE_SIZE, fetchConversations]);
+
+    const loadMoreConversations = useCallback(async () => {
+        if (loadingMoreConvs || !conversationsNextCursor) return;
+
+        setLoadingMoreConvs(true);
+
+        try {
+            const { conversations: moreConversations, nextCursor: nextConversationsCursor } = await fetchConversations({
+                cursor: conversationsNextCursor,
+                limit: CONVERSATION_PAGE_SIZE,
+            });
+
+            setConversations((prev) => mergeConversationPages(prev, moreConversations));
+            setConversationsNextCursor(nextConversationsCursor);
+        } finally {
+            setLoadingMoreConvs(false);
+        }
+    }, [CONVERSATION_PAGE_SIZE, conversationsNextCursor, fetchConversations, loadingMoreConvs, mergeConversationPages]);
 
     const loadLatestMessages = useCallback(async (conversationId: string) => {
         const res = await axios.get<{ data: Message[]; links: { next: string | null } }>(
@@ -372,21 +454,19 @@ export default function InboxIndex({ activeConversationId }: Props) {
     // Load conversations when filter changes
     useEffect(() => {
         setLoadingConvs(true);
-        const params: Record<string, string> = {};
-        if (statusFilter !== 'all') params.status = statusFilter;
-        if (search) params.search = search;
+        setConversationsNextCursor(null);
 
-        axios.get<{ data: Conversation[] }>('/api/v1/conversations', { params })
-            .then((res) => {
-                const convs = res.data.data;
+        fetchConversations({ limit: CONVERSATION_PAGE_SIZE })
+            .then(({ conversations: convs, nextCursor: firstPageNextCursor }) => {
                 setConversations(convs);
+                setConversationsNextCursor(firstPageNextCursor);
                 if (activeConversationId && statusFilter === 'all' && !search) {
                     const found = convs.find((c) => c.id === activeConversationId);
                     if (found) selectConversation(found);
                 }
             })
             .finally(() => setLoadingConvs(false));
-    }, [statusFilter, search]);
+    }, [CONVERSATION_PAGE_SIZE, activeConversationId, fetchConversations, search, statusFilter]);
 
     // Load AI agent config (global toggle state for per-conversation behavior)
     useEffect(() => {
@@ -682,6 +762,9 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                 conversations={conversations}
                                 activeId={activeConv?.id ?? null}
                                 unreadCounts={unreadCounts}
+                                hasMore={conversationsNextCursor !== null}
+                                loadingMore={loadingMoreConvs}
+                                onLoadMore={loadMoreConversations}
                                 onSelect={selectConversation}
                             />
                         )}

@@ -21,6 +21,7 @@ class QuickReply extends Model
         'has_variables',
         'category',
         'usage_count',
+        'is_auto_reply',
     ];
 
     protected function casts(): array
@@ -28,6 +29,7 @@ class QuickReply extends Model
         return [
             'has_variables' => 'boolean',
             'usage_count' => 'integer',
+            'is_auto_reply' => 'boolean',
         ];
     }
 

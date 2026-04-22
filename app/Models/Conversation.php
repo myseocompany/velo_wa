@@ -43,6 +43,8 @@ class Conversation extends Model
         'closed_at',
         'closed_by',
         'reopen_count',
+        'first_human_response_at',
+        'dt1_minutes_business',
     ];
 
     protected function casts(): array
@@ -54,10 +56,12 @@ class Conversation extends Model
             'ai_agent_enabled' => 'boolean',
             'first_message_at' => 'datetime',
             'first_response_at' => 'datetime',
+            'first_human_response_at' => 'datetime',
             'last_message_at' => 'datetime',
             'closed_at' => 'datetime',
             'message_count' => 'integer',
             'reopen_count' => 'integer',
+            'dt1_minutes_business' => 'integer',
         ];
     }
 

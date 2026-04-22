@@ -101,9 +101,14 @@ class GetDashboardStats
 
     private function computeDt1Stats(CarbonImmutable $startUtc, CarbonImmutable $endUtc): array
     {
+        // Use dt1_minutes_business (precise, business-hours-aware) when available;
+        // fall back to raw wall-clock seconds for historical rows that predate the migration.
         $row = Conversation::query()
             ->whereNotNull('first_message_at')
-            ->whereNotNull('first_response_at')
+            ->where(function ($q): void {
+                $q->whereNotNull('dt1_minutes_business')
+                  ->orWhereNotNull('first_response_at');
+            })
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->whereNotExists(function ($q): void {
                 // Exclude conversations whose contact has any tag marked exclude_from_metrics
@@ -115,9 +120,15 @@ class GetDashboardStats
             })
             ->selectRaw("
                 COUNT(*) as total,
-                ROUND(AVG(EXTRACT(EPOCH FROM (first_response_at - first_message_at))))::int AS avg_dt1,
-                PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_message_at))) AS median_dt1,
-                PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_message_at))) AS p95_dt1
+                ROUND(AVG(
+                    COALESCE(dt1_minutes_business * 60, EXTRACT(EPOCH FROM (first_response_at - first_message_at)))
+                ))::int AS avg_dt1,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                    COALESCE(dt1_minutes_business * 60, EXTRACT(EPOCH FROM (first_response_at - first_message_at)))
+                ) AS median_dt1,
+                PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY
+                    COALESCE(dt1_minutes_business * 60, EXTRACT(EPOCH FROM (first_response_at - first_message_at)))
+                ) AS p95_dt1
             ")
             ->first();
 
@@ -155,7 +166,10 @@ class GetDashboardStats
 
         $row = Conversation::query()
             ->whereNotNull('first_message_at')
-            ->whereNotNull('first_response_at')
+            ->where(function ($q): void {
+                $q->whereNotNull('dt1_minutes_business')
+                  ->orWhereNotNull('first_response_at');
+            })
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->whereRaw($whereClause)
             ->whereNotExists(function ($q): void {
@@ -167,9 +181,15 @@ class GetDashboardStats
             })
             ->selectRaw("
                 COUNT(*) as total,
-                ROUND(AVG(EXTRACT(EPOCH FROM (first_response_at - first_message_at))))::int AS avg_dt1,
-                PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_message_at))) AS median_dt1,
-                PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_message_at))) AS p95_dt1
+                ROUND(AVG(
+                    COALESCE(dt1_minutes_business * 60, EXTRACT(EPOCH FROM (first_response_at - first_message_at)))
+                ))::int AS avg_dt1,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                    COALESCE(dt1_minutes_business * 60, EXTRACT(EPOCH FROM (first_response_at - first_message_at)))
+                ) AS median_dt1,
+                PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY
+                    COALESCE(dt1_minutes_business * 60, EXTRACT(EPOCH FROM (first_response_at - first_message_at)))
+                ) AS p95_dt1
             ")
             ->first();
 
@@ -193,14 +213,14 @@ class GetDashboardStats
      */
     private function buildBusinessHoursConditions(?array $businessHours, string $timezone): array
     {
-        // Default: Mon–Fri, 09:00–18:00
+        // Default: Mon–Fri, 08:00–18:00
         $schedule = $businessHours && count($businessHours) > 0
             ? $businessHours
-            : ['mon' => ['open' => '09:00', 'close' => '18:00'],
-               'tue' => ['open' => '09:00', 'close' => '18:00'],
-               'wed' => ['open' => '09:00', 'close' => '18:00'],
-               'thu' => ['open' => '09:00', 'close' => '18:00'],
-               'fri' => ['open' => '09:00', 'close' => '18:00']];
+            : ['mon' => ['open' => '08:00', 'close' => '18:00'],
+               'tue' => ['open' => '08:00', 'close' => '18:00'],
+               'wed' => ['open' => '08:00', 'close' => '18:00'],
+               'thu' => ['open' => '08:00', 'close' => '18:00'],
+               'fri' => ['open' => '08:00', 'close' => '18:00']];
 
         $conditions = [];
 

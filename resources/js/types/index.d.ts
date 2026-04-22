@@ -303,6 +303,7 @@ export interface QuickReply {
     has_variables: boolean;
     category: string;
     usage_count: number;
+    is_auto_reply: boolean;
     created_at: string;
     updated_at: string;
 }

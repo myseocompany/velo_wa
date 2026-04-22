@@ -2,7 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { QuickReply } from '@/types';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
-import { Loader2, MessageSquareText, Pencil, Plus, Search, Trash2, X, Zap } from 'lucide-react';
+import { Bot, Loader2, MessageSquareText, Pencil, Plus, Search, Trash2, X, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface ValidationErrors {
@@ -28,6 +28,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
     const [title, setTitle] = useState(quickReply?.title ?? '');
     const [body, setBody] = useState(quickReply?.body ?? '');
     const [category, setCategory] = useState(quickReply?.category ?? 'general');
+    const [isAutoReply, setIsAutoReply] = useState(quickReply?.is_auto_reply ?? false);
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<ValidationErrors>({});
 
@@ -42,6 +43,7 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                 title: title.trim(),
                 body: body.trim(),
                 category: category.trim() || 'general',
+                is_auto_reply: isAutoReply,
             };
 
             if (isEdit) {
@@ -134,6 +136,24 @@ function QuickReplyModal({ quickReply, onClose, onSaved }: QuickReplyModalProps)
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none focus:ring-1 focus:ring-ari-500"
                         />
                         {errors.category && <p className="mt-1 text-xs text-red-600">{errors.category}</p>}
+                    </div>
+
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-amber-900">Auto-respuesta</p>
+                            <p className="mt-0.5 text-xs text-amber-700">
+                                Marca esta plantilla como respuesta automática (ej. fuera de horario). Solo puede haber una activa — activarla desactiva la anterior.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isAutoReply}
+                            onClick={() => setIsAutoReply((v) => !v)}
+                            className={`relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ari-500 focus:ring-offset-2 ${isAutoReply ? 'bg-ari-600' : 'bg-gray-200'}`}
+                        >
+                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isAutoReply ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
                     </div>
 
                     <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
@@ -289,6 +309,12 @@ export default function QuickRepliesPage() {
                                             <span className="text-xs text-gray-400">
                                                 Usos: {quickReply.usage_count}
                                             </span>
+                                            {quickReply.is_auto_reply && (
+                                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+                                                    <Bot className="h-3 w-3" />
+                                                    Auto-respuesta
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="mt-2 truncate text-sm text-gray-600">
                                             {quickReply.body}

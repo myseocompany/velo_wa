@@ -38,7 +38,8 @@ class QuickReplyRequest extends FormRequest
             ],
             'title'    => ['required', 'string', 'max:100'],
             'body'     => ['required', 'string', 'max:4096'],
-            'category' => ['nullable', 'string', 'max:50'],
+            'category'     => ['nullable', 'string', 'max:50'],
+            'is_auto_reply' => ['boolean'],
         ];
     }
 }

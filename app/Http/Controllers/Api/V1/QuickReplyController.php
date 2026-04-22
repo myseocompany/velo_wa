@@ -38,6 +38,14 @@ class QuickReplyController extends Controller
 
     public function store(QuickReplyRequest $request): JsonResponse
     {
+        $isAutoReply = (bool) $request->input('is_auto_reply', false);
+
+        if ($isAutoReply) {
+            QuickReply::where('tenant_id', $request->user()->tenant_id)
+                ->where('is_auto_reply', true)
+                ->update(['is_auto_reply' => false]);
+        }
+
         $quickReply = QuickReply::create([
             'tenant_id'     => $request->user()->tenant_id,
             'shortcut'      => $request->input('shortcut'),
@@ -46,6 +54,7 @@ class QuickReplyController extends Controller
             'has_variables' => str_contains($request->input('body'), '{{'),
             'category'      => $request->input('category', 'general'),
             'usage_count'   => 0,
+            'is_auto_reply' => $isAutoReply,
         ]);
 
         return (new QuickReplyResource($quickReply))->response()->setStatusCode(201);
@@ -53,12 +62,22 @@ class QuickReplyController extends Controller
 
     public function update(QuickReplyRequest $request, QuickReply $quickReply): QuickReplyResource
     {
+        $isAutoReply = (bool) $request->input('is_auto_reply', $quickReply->is_auto_reply);
+
+        if ($isAutoReply && ! $quickReply->is_auto_reply) {
+            // Deactivate any other auto-reply for this tenant
+            QuickReply::where('tenant_id', $quickReply->tenant_id)
+                ->where('is_auto_reply', true)
+                ->update(['is_auto_reply' => false]);
+        }
+
         $quickReply->update([
             'shortcut'      => $request->input('shortcut'),
             'title'         => $request->input('title'),
             'body'          => $request->input('body'),
             'has_variables' => str_contains($request->input('body'), '{{'),
             'category'      => $request->input('category', $quickReply->category),
+            'is_auto_reply' => $isAutoReply,
         ]);
 
         return new QuickReplyResource($quickReply);

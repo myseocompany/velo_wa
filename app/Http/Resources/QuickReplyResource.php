@@ -19,6 +19,7 @@ class QuickReplyResource extends JsonResource
             'has_variables' => $this->has_variables,
             'category'      => $this->category,
             'usage_count'   => $this->usage_count,
+            'is_auto_reply' => $this->is_auto_reply,
             'created_at'    => $this->created_at->toIso8601String(),
             'updated_at'    => $this->updated_at->toIso8601String(),
         ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Conversations\CalculateDt1;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Events\ConversationUpdated;
@@ -142,6 +143,25 @@ class MessageController extends Controller
         }
 
         $conversation->increment('message_count', 1, $updates);
+        $conversation->refresh();
+
+        // Calculate DT1 (business minutes to first human response) if applicable.
+        // is_automated=false is already guaranteed by all three callers (store/storeMedia/storeQuickReply).
+        // We still need to skip auto-reply quick replies to avoid polluting the metric.
+        if (! $message->is_automated && ! $this->isAutoReplyBody($message)) {
+            (new CalculateDt1())->handle($conversation, $message);
+        }
+    }
+
+    /**
+     * Returns true if the message body matches the tenant's configured auto-reply quick reply.
+     */
+    private function isAutoReplyBody(Message $message): bool
+    {
+        return QuickReply::where('tenant_id', $message->tenant_id)
+            ->where('is_auto_reply', true)
+            ->whereRaw('LOWER(TRIM(body)) = LOWER(TRIM(?))', [$message->body ?? ''])
+            ->exists();
     }
 
     private function detectMediaType(string $mimeType): string

@@ -25,10 +25,14 @@ export interface Tag {
     exclude_from_metrics: boolean;
 }
 
-export interface BusinessHourDay {
-    enabled: boolean;
+export interface BusinessHourBlock {
     start: string;
     end: string;
+}
+
+export interface BusinessHourDay {
+    enabled: boolean;
+    blocks: BusinessHourBlock[];
 }
 
 export interface Tenant {

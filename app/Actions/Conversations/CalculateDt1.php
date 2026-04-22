@@ -6,7 +6,6 @@ namespace App\Actions\Conversations;
 
 use App\Models\Conversation;
 use App\Models\Message;
-use App\Models\QuickReply;
 use Carbon\CarbonImmutable;
 
 /**
@@ -19,17 +18,22 @@ use Carbon\CarbonImmutable;
  * - Uses tenant's business_hours and timezone; falls back to Mon–Fri 08:00–18:00 / America/Bogota.
  * - If the agent responded before business hours opened → Δt1 = 0 min.
  * - If the agent responded after close → truncates to close.
+ *
+ * Business hours format:
+ *   ['monday' => ['enabled' => true, 'blocks' => [['start' => '08:00', 'end' => '12:00'], ...]]]
  */
 class CalculateDt1
 {
     private const DEFAULT_TIMEZONE = 'America/Bogota';
 
     private const DEFAULT_BUSINESS_HOURS = [
-        'mon' => ['open' => '08:00', 'close' => '18:00'],
-        'tue' => ['open' => '08:00', 'close' => '18:00'],
-        'wed' => ['open' => '08:00', 'close' => '18:00'],
-        'thu' => ['open' => '08:00', 'close' => '18:00'],
-        'fri' => ['open' => '08:00', 'close' => '18:00'],
+        'monday'    => ['enabled' => true,  'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+        'tuesday'   => ['enabled' => true,  'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+        'wednesday' => ['enabled' => true,  'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+        'thursday'  => ['enabled' => true,  'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+        'friday'    => ['enabled' => true,  'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+        'saturday'  => ['enabled' => false, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+        'sunday'    => ['enabled' => false, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
     ];
 
     public function handle(Conversation $conversation, Message $humanMessage): void
@@ -84,82 +88,94 @@ class CalculateDt1
     }
 
     /**
-     * Snap t_inicio to the start of the next (or current) business slot.
-     * If t is before opening hours on a business day → snap to today's open.
-     * If t is after closing hours or on a weekend → snap to next business open.
+     * Snap tInicio to the start of the next (or current) business slot.
+     * - Before first block → snap to that block's start.
+     * - Inside a block → take as-is.
+     * - Between blocks (lunch break) → snap to next block's start.
+     * - After all blocks or non-business day → snap to next business open.
      */
     private function projectStart(CarbonImmutable $t, array $businessHours): CarbonImmutable
     {
-        $dow   = strtolower($t->format('D'));
-        $hours = $businessHours[$dow] ?? null;
+        $blocks = $this->getDayBlocks($t, $businessHours);
 
-        if ($hours) {
-            $open  = $t->setTimeFromTimeString($hours['open']);
-            $close = $t->setTimeFromTimeString($hours['close']);
-
-            if ($t->greaterThanOrEqualTo($open) && $t->lessThanOrEqualTo($close)) {
-                return $t; // Inside hours
-            }
-
-            if ($t->lessThan($open)) {
-                return $open; // Before opening → snap to today's open
-            }
-            // After closing → fall through to next business open
+        if (empty($blocks)) {
+            return $this->nextBusinessOpen($t->addDay()->startOfDay(), $businessHours);
         }
 
+        foreach ($blocks as $block) {
+            $open  = $t->setTimeFromTimeString($block['start']);
+            $close = $t->setTimeFromTimeString($block['end']);
+
+            if ($t->lessThan($open)) {
+                return $open; // Before this block → snap to its start
+            }
+
+            if ($t->lessThanOrEqualTo($close)) {
+                return $t; // Inside this block
+            }
+            // After this block → check next
+        }
+
+        // After all blocks → next business open
         return $this->nextBusinessOpen($t->addDay()->startOfDay(), $businessHours);
     }
 
     /**
-     * Snap t_fin to the applicable business boundary:
-     * - Inside hours           → take as-is
-     * - Before today's opening → snap to today's open (produces Δt1 = 0 when ≤ startLab)
-     * - After today's closing  → truncate to today's close (Case 3)
-     * - Non-business day       → snap to next business open (produces Δt1 = 0 when ≤ startLab)
+     * Snap tFin to the applicable business boundary:
+     * - Inside a block → take as-is.
+     * - Before first block → snap to that block's start (→ Δt1 = 0 when ≤ startLab).
+     * - Between blocks → truncate to end of previous block.
+     * - After all blocks → truncate to last block's end (Case 3).
+     * - Non-business day → snap to next business open (→ Δt1 = 0 when ≤ startLab).
      */
     private function projectEnd(CarbonImmutable $t, array $businessHours): CarbonImmutable
     {
-        $dow   = strtolower($t->format('D'));
-        $hours = $businessHours[$dow] ?? null;
+        $blocks = $this->getDayBlocks($t, $businessHours);
 
-        if ($hours) {
-            $open  = $t->setTimeFromTimeString($hours['open']);
-            $close = $t->setTimeFromTimeString($hours['close']);
-
-            if ($t->greaterThanOrEqualTo($open) && $t->lessThanOrEqualTo($close)) {
-                return $t;
-            }
-
-            if ($t->lessThan($open)) {
-                return $open; // Before opening → snap to open
-            }
-
-            return $close; // After closing → truncate to close
+        if (empty($blocks)) {
+            return $this->nextBusinessOpen($t->startOfDay(), $businessHours);
         }
 
-        // Non-business day → snap to next business open
-        return $this->nextBusinessOpen($t->startOfDay(), $businessHours);
+        $prevClose = null;
+
+        foreach ($blocks as $block) {
+            $open  = $t->setTimeFromTimeString($block['start']);
+            $close = $t->setTimeFromTimeString($block['end']);
+
+            if ($t->lessThan($open)) {
+                // Before this block: either snap to its start (before first block)
+                // or truncate to previous block's end (during break)
+                return $prevClose ?? $open;
+            }
+
+            if ($t->lessThanOrEqualTo($close)) {
+                return $t; // Inside this block
+            }
+
+            $prevClose = $close;
+        }
+
+        // After all blocks → truncate to last block's end
+        return $prevClose;
     }
 
     /**
-     * Returns the opening time of the next business day from $from (inclusive day check).
+     * Opening time of the next business day from $from (inclusive day check).
      */
     private function nextBusinessOpen(CarbonImmutable $from, array $businessHours): CarbonImmutable
     {
         $cursor = $from->startOfDay();
 
         for ($i = 0; $i < 7; $i++) {
-            $dow   = strtolower($cursor->format('D'));
-            $hours = $businessHours[$dow] ?? null;
+            $blocks = $this->getDayBlocks($cursor, $businessHours);
 
-            if ($hours) {
-                return $cursor->setTimeFromTimeString($hours['open']);
+            if (! empty($blocks)) {
+                return $cursor->setTimeFromTimeString($blocks[0]['start']);
             }
 
             $cursor = $cursor->addDay()->startOfDay();
         }
 
-        // Should never reach here with valid business_hours
         return $from->addDay();
     }
 
@@ -173,41 +189,87 @@ class CalculateDt1
         array $businessHours,
     ): int {
         if ($startLab->isSameDay($endLab)) {
-            return max(0, (int) $startLab->diffInMinutes($endLab));
+            return $this->minutesInDayRange($startLab, $endLab, $businessHours);
         }
 
         $minutes = 0;
 
         // Remainder of first day
-        $dow         = strtolower($startLab->format('D'));
-        $firstHours  = $businessHours[$dow] ?? null;
-        if ($firstHours) {
-            $firstClose = $startLab->setTimeFromTimeString($firstHours['close']);
-            $minutes   += max(0, (int) $startLab->diffInMinutes($firstClose));
-        }
+        $minutes += $this->minutesInDayRange($startLab, $startLab->endOfDay(), $businessHours);
 
         // Full business days in between
         $cursor = $startLab->addDay()->startOfDay();
         while ($cursor->isBefore($endLab->startOfDay())) {
-            $dow   = strtolower($cursor->format('D'));
-            $hours = $businessHours[$dow] ?? null;
-            if ($hours) {
-                [$oh, $om] = array_map('intval', explode(':', $hours['open']));
-                [$ch, $cm] = array_map('intval', explode(':', $hours['close']));
-                $minutes  += ($ch * 60 + $cm) - ($oh * 60 + $om);
-            }
-            $cursor = $cursor->addDay()->startOfDay();
+            $minutes += $this->minutesInFullDay($cursor, $businessHours);
+            $cursor   = $cursor->addDay()->startOfDay();
         }
 
         // Fraction of last day
-        $dow        = strtolower($endLab->format('D'));
-        $lastHours  = $businessHours[$dow] ?? null;
-        if ($lastHours) {
-            $lastOpen  = $endLab->setTimeFromTimeString($lastHours['open']);
-            $minutes  += max(0, (int) $lastOpen->diffInMinutes($endLab));
-        }
+        $minutes += $this->minutesInDayRange($endLab->startOfDay(), $endLab, $businessHours);
 
         return max(0, $minutes);
+    }
+
+    /**
+     * Sum business minutes between $from and $to on the same day,
+     * respecting all blocks (handles lunch breaks, etc.).
+     */
+    private function minutesInDayRange(
+        CarbonImmutable $from,
+        CarbonImmutable $to,
+        array $businessHours,
+    ): int {
+        $blocks = $this->getDayBlocks($from, $businessHours);
+        $total  = 0;
+
+        foreach ($blocks as $block) {
+            $blockOpen  = $from->setTimeFromTimeString($block['start']);
+            $blockClose = $from->setTimeFromTimeString($block['end']);
+
+            $overlapStart = $from->isAfter($blockOpen) ? $from : $blockOpen;
+            $overlapEnd   = $to->isBefore($blockClose) ? $to : $blockClose;
+
+            if ($overlapEnd->isAfter($overlapStart)) {
+                $total += (int) $overlapStart->diffInMinutes($overlapEnd);
+            }
+        }
+
+        return max(0, $total);
+    }
+
+    /**
+     * Total business minutes in a full day (all blocks summed).
+     */
+    private function minutesInFullDay(CarbonImmutable $date, array $businessHours): int
+    {
+        $blocks = $this->getDayBlocks($date, $businessHours);
+        $total  = 0;
+
+        foreach ($blocks as $block) {
+            [$oh, $om] = array_map('intval', explode(':', $block['start']));
+            [$ch, $cm] = array_map('intval', explode(':', $block['end']));
+            $total += ($ch * 60 + $cm) - ($oh * 60 + $om);
+        }
+
+        return max(0, $total);
+    }
+
+    /**
+     * Returns sorted blocks for the given day, or empty array if not a business day.
+     */
+    private function getDayBlocks(CarbonImmutable $t, array $businessHours): array
+    {
+        $dow = strtolower($t->format('l')); // 'monday', 'tuesday', …
+        $day = $businessHours[$dow] ?? null;
+
+        if (! $day || empty($day['enabled']) || empty($day['blocks'])) {
+            return [];
+        }
+
+        $blocks = $day['blocks'];
+        usort($blocks, static fn (array $a, array $b): int => strcmp($a['start'], $b['start']));
+
+        return $blocks;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -221,7 +283,20 @@ class CalculateDt1
 
     private function resolveBusinessHours(?array $businessHours): array
     {
-        return (! empty($businessHours)) ? $businessHours : self::DEFAULT_BUSINESS_HOURS;
+        if (empty($businessHours)) {
+            return self::DEFAULT_BUSINESS_HOURS;
+        }
+
+        // Backwards-compat: convert old {start, end} format → new {blocks: [{start, end}]}
+        $first = reset($businessHours);
+        if (isset($first['start'])) {
+            return collect($businessHours)->map(static fn (array $day): array => [
+                'enabled' => $day['enabled'] ?? true,
+                'blocks'  => [['start' => $day['start'], 'end' => $day['end']]],
+            ])->toArray();
+        }
+
+        return $businessHours;
     }
 
     private function safeTimezone(?string $tz): string

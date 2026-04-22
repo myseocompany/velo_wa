@@ -2,7 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { PageProps, BusinessHourDay } from '@/types';
-import { Save, Clock, Globe, Timer } from 'lucide-react';
+import { Save, Clock, Globe, Timer, Plus, X } from 'lucide-react';
 import axios from 'axios';
 
 const DAYS = [
@@ -18,7 +18,7 @@ const DAYS = [
 const DEFAULT_HOURS: Record<string, BusinessHourDay> = Object.fromEntries(
     DAYS.map(({ key }) => [
         key,
-        { enabled: !['saturday', 'sunday'].includes(key), start: '09:00', end: '18:00' },
+        { enabled: !['saturday', 'sunday'].includes(key), blocks: [{ start: '08:00', end: '18:00' }] },
     ])
 );
 
@@ -68,15 +68,58 @@ export default function SettingsGeneral() {
         }
     };
 
-    const updateDay = (day: string, field: keyof BusinessHourDay, value: string | boolean) => {
+    const toggleDay = (day: string, enabled: boolean) => {
         if (!settings) return;
         setSettings(prev => ({
             ...prev!,
             business_hours: {
                 ...prev!.business_hours,
-                [day]: { ...prev!.business_hours[day], [field]: value },
+                [day]: { ...prev!.business_hours[day], enabled },
             },
         }));
+    };
+
+    const updateBlock = (day: string, index: number, field: 'start' | 'end', value: string) => {
+        if (!settings) return;
+        setSettings(prev => {
+            const blocks = [...prev!.business_hours[day].blocks];
+            blocks[index] = { ...blocks[index], [field]: value };
+            return {
+                ...prev!,
+                business_hours: {
+                    ...prev!.business_hours,
+                    [day]: { ...prev!.business_hours[day], blocks },
+                },
+            };
+        });
+    };
+
+    const addBlock = (day: string) => {
+        if (!settings) return;
+        setSettings(prev => ({
+            ...prev!,
+            business_hours: {
+                ...prev!.business_hours,
+                [day]: {
+                    ...prev!.business_hours[day],
+                    blocks: [...prev!.business_hours[day].blocks, { start: '08:00', end: '18:00' }],
+                },
+            },
+        }));
+    };
+
+    const removeBlock = (day: string, index: number) => {
+        if (!settings) return;
+        setSettings(prev => {
+            const blocks = prev!.business_hours[day].blocks.filter((_, i) => i !== index);
+            return {
+                ...prev!,
+                business_hours: {
+                    ...prev!.business_hours,
+                    [day]: { ...prev!.business_hours[day], blocks },
+                },
+            };
+        });
     };
 
     if (loading) {
@@ -124,7 +167,7 @@ export default function SettingsGeneral() {
                     >
                         {[
                             'America/Bogota', 'America/Lima', 'America/Caracas',
-                            'America/Bogota', 'America/Mexico_City', 'America/Santiago',
+                            'America/Mexico_City', 'America/Santiago',
                             'America/Buenos_Aires', 'America/Sao_Paulo', 'America/New_York',
                             'Europe/Madrid', 'UTC',
                         ].map(tz => (
@@ -172,39 +215,72 @@ export default function SettingsGeneral() {
                     <p className="mb-4 text-sm text-gray-500">
                         Usado para calcular el Dt1 y disparar automatizaciones fuera de horario.
                     </p>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {DAYS.map(({ key, label }) => {
-                            const day = settings?.business_hours?.[key] ?? { enabled: false, start: '09:00', end: '18:00' };
+                            const day = settings?.business_hours?.[key] ?? { enabled: false, blocks: [{ start: '08:00', end: '18:00' }] };
                             return (
-                                <div key={key} className="flex flex-col gap-3 rounded-lg border border-gray-100 p-3 sm:flex-row sm:items-center sm:border-0 sm:p-0">
-                                    <div className="flex w-full items-center gap-2 sm:w-28">
+                                <div key={key} className="rounded-lg border border-gray-100 p-3">
+                                    {/* Day toggle */}
+                                    <div className="flex items-center gap-2">
                                         <input
                                             type="checkbox"
                                             id={`day-${key}`}
                                             disabled={!isOwner}
                                             checked={day.enabled}
-                                            onChange={e => updateDay(key, 'enabled', e.target.checked)}
+                                            onChange={e => toggleDay(key, e.target.checked)}
                                             className="h-4 w-4 rounded border-gray-300 text-ari-600 focus:ring-ari-500"
                                         />
-                                        <label htmlFor={`day-${key}`} className="text-sm text-gray-700 sm:truncate">
+                                        <label htmlFor={`day-${key}`} className="w-24 text-sm font-medium text-gray-700">
                                             {label}
                                         </label>
+                                        {!day.enabled && (
+                                            <span className="text-xs text-gray-400">Cerrado</span>
+                                        )}
                                     </div>
-                                    <input
-                                        type="time"
-                                        disabled={!isOwner || !day.enabled}
-                                        value={day.start}
-                                        onChange={e => updateDay(key, 'start', e.target.value)}
-                                        className="min-w-0 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 sm:w-auto"
-                                    />
-                                    <span className="hidden text-sm text-gray-400 sm:inline">—</span>
-                                    <input
-                                        type="time"
-                                        disabled={!isOwner || !day.enabled}
-                                        value={day.end}
-                                        onChange={e => updateDay(key, 'end', e.target.value)}
-                                        className="min-w-0 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 sm:w-auto"
-                                    />
+
+                                    {/* Blocks */}
+                                    {day.enabled && (
+                                        <div className="mt-2 ml-6 space-y-2">
+                                            {day.blocks.map((block, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <input
+                                                        type="time"
+                                                        disabled={!isOwner}
+                                                        value={block.start}
+                                                        onChange={e => updateBlock(key, i, 'start', e.target.value)}
+                                                        className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                                    />
+                                                    <span className="text-sm text-gray-400">—</span>
+                                                    <input
+                                                        type="time"
+                                                        disabled={!isOwner}
+                                                        value={block.end}
+                                                        onChange={e => updateBlock(key, i, 'end', e.target.value)}
+                                                        className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-ari-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                                    />
+                                                    {isOwner && day.blocks.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeBlock(key, i)}
+                                                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                                            title="Eliminar franja"
+                                                        >
+                                                            <X className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+
+                                            {isOwner && (
+                                                <button
+                                                    onClick={() => addBlock(key)}
+                                                    className="flex items-center gap-1 text-xs text-ari-600 hover:text-ari-700"
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                    Agregar franja
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

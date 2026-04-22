@@ -65,42 +65,47 @@ AND NOT EXISTS (
 
 ### 2. Detección de eventos de inicio
 
-**Problema:** Una conversación puede tener múltiples "intentos" del cliente a lo largo del tiempo. Cada intento nuevo es un DT1 independiente.
+**Decisión:** Δt1 se mide **una sola vez por contacto** — en su primera conversación únicamente.
+
+- Es una métrica de **adquisición**, no de retención (lado izquierdo del bowtie).
+- Para clientes retenidos que vuelven a escribir, la métrica relevante es otra (resolución, CSAT).
+- Simplifica el modelo: no hay umbral de inactividad, no hay múltiples intentos.
 
 **Regla:**
-Un mensaje `in` es un **nuevo evento de inicio** si:
-- Es el primer mensaje de la conversación, O
-- Han pasado más de `N` minutos desde el último mensaje `in` del cliente (umbral de reinicio, configurable, default `1440 min = 24h`).
-
-**Algoritmo por conversación:**
 ```
-para cada mensaje IN (ordenado por created_at):
-    si (primer mensaje) O (created_at - último_in > umbral_reinicio):
-        marcar como INICIO_INTERACCION
-        buscar próxima RESPUESTA_HUMANA
+t_inicio = first_message_at de la primera conversación del contacto
 ```
 
-**Campo nuevo en `messages`:** `is_interaction_start BOOLEAN DEFAULT FALSE`
-Se calcula al procesar cada mensaje entrante en el webhook.
+```sql
+-- Primera conversación del contacto
+SELECT MIN(created_at) FROM conversations WHERE contact_id = :cid
+```
+
+**Campos eliminados del modelo original:**
+- ~~`is_interaction_start` en messages~~ — no necesario
+- ~~`inactivity_threshold_minutes` en tenants~~ — no necesario
 
 ---
 
 ### 3. Búsqueda de primera respuesta humana
 
-Dado un `INICIO_INTERACCION` en `t0`, la primera respuesta humana es el primer mensaje que cumpla:
+Dado `t_inicio`, la primera respuesta humana es el primer mensaje `out` que cumpla:
 
 ```sql
-SELECT * FROM messages
-WHERE conversation_id = :cid
-  AND direction = 'out'
-  AND created_at > :t0
-  AND is_automated = false
-  AND (body != :auto_reply_body OR :auto_reply_body IS NULL)
-ORDER BY created_at ASC
-LIMIT 1
+SELECT MIN(m.created_at)
+FROM messages m
+WHERE m.conversation_id = :first_conversation_id
+  AND m.direction = 'out'
+  AND m.is_automated = false
+  AND NOT EXISTS (
+      SELECT 1 FROM quick_replies qr
+      WHERE qr.tenant_id = m.tenant_id
+        AND qr.is_auto_reply = true
+        AND LOWER(TRIM(qr.body)) = LOWER(TRIM(m.body))
+  )
 ```
 
-Si no existe respuesta humana → DT1 = NULL (conversación sin responder).
+Si no existe → `dt1_minutes_business = NULL` (lead sin respuesta humana).
 
 ---
 
@@ -133,17 +138,27 @@ Equivalente a la fórmula Excel:
 Dado `t_raw` (timestamp UTC de la primera respuesta humana):
 
 ```
-si t_raw cae dentro de horario laboral:
+CASO 1 — t_raw dentro de horario laboral:
     t_fin_lab = t_raw
 
-si t_raw cae ANTES de apertura (madrugada / fin de semana):
-    t_fin_lab = ese día laboral (o próximo) a las HH_OPEN
-    → el agente respondió antes de que abriera → DT1 = 0 min efectivos
+CASO 2 — t_raw antes de apertura (madrugada / fin de semana):
+    → el agente ya respondió fuera de horario, el cliente no esperó ni un minuto laboral
+    → Δt1 = 0 min  ✓
 
-si t_raw cae DESPUÉS del cierre:
-    t_fin_lab = ese mismo día a las HH_CLOSE
-    → se trunca al cierre porque lo que importa es cuánto tardó dentro del horario
+CASO 3 — t_raw después del cierre (mismo día laboral):
+    t_fin_lab = ese día a HH_CLOSE
+    → se trunca: el equipo no respondió dentro del horario disponible
 ```
+
+**Tabla de casos combinados inicio + fin:**
+
+| t_inicio | t_fin | Δt1 |
+|---|---|---|
+| Dentro horario | Dentro horario | Minutos laborales entre los dos |
+| Dentro horario | Después del cierre | Desde t_inicio hasta HH_CLOSE |
+| Fuera horario | Antes de próxima apertura | 0 min |
+| Fuera horario | Dentro horario (día siguiente+) | Desde HH_OPEN hasta t_fin |
+| Fuera horario | Después del cierre | HH_CLOSE − HH_OPEN (día completo sin respuesta) |
 
 ---
 
@@ -251,10 +266,8 @@ Con fallback a la fórmula actual si `dt1_minutes_business IS NULL` (datos hist�
 | # | Migración | Descripción |
 |---|---|---|
 | 1 | `add_is_auto_reply_to_quick_replies` | Columna `is_auto_reply BOOLEAN DEFAULT FALSE` + unique index parcial por tenant |
-| 2 | `add_inactivity_threshold_to_tenants` | Columna `inactivity_threshold_minutes INT DEFAULT 1440` |
-| 3 | `add_is_interaction_start_to_messages` | Columna `is_interaction_start BOOLEAN DEFAULT FALSE` + índice |
-| 4 | `add_dt1_fields_to_conversations` | `first_human_response_at TIMESTAMPTZ NULL` + `dt1_minutes_business INT NULL` |
-| 5 | (job) `BackfillDt1BusinessMinutes` | Recalcular conversaciones históricas |
+| 2 | `add_dt1_fields_to_conversations` | `first_human_response_at TIMESTAMPTZ NULL` + `dt1_minutes_business INT NULL` |
+| 3 | (job) `BackfillDt1BusinessMinutes` | Recalcular primera conversación de cada contacto |
 
 ---
 

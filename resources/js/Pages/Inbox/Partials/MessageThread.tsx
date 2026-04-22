@@ -2,6 +2,8 @@ import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Message, MessageStatus, QuickReply } from '@/types';
 import axios from 'axios';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import {
     Check,
     CheckCheck,
@@ -126,7 +128,7 @@ function MediaContent({ message, isOut }: { message: Message; isOut: boolean }) 
 
 function MessageBubble({ message }: { message: Message }) {
     const isOut = message.direction === 'out';
-    const time  = new Date(message.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    const timestamp = format(new Date(message.created_at), 'd MMM, h:mm a', { locale: es });
 
     return (
         <div className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
@@ -141,7 +143,7 @@ function MessageBubble({ message }: { message: Message }) {
                     <p className="text-xs italic opacity-70">[Mensaje vacío]</p>
                 )}
                 <div className={`mt-1 flex items-center gap-1 ${isOut ? 'justify-end' : 'justify-start'}`}>
-                    <span className={`text-[10px] ${isOut ? 'text-ari-100' : 'text-gray-400'}`}>{time}</span>
+                    <span className={`text-[10px] ${isOut ? 'text-ari-100' : 'text-gray-400'}`}>{timestamp}</span>
                     {isOut && <StatusIcon status={message.status} />}
                 </div>
             </div>

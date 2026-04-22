@@ -20,6 +20,7 @@
 
 declare(strict_types=1);
 
+require __DIR__ . '/../vendor/autoload.php';
 $app = require __DIR__ . '/../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
@@ -182,14 +183,15 @@ $excludedContactIds = DB::table('contact_tag')
     ->unique()
     ->values();
 
-// First conversation per contact = MIN(created_at) grouped by contact_id
+// First conversation per contact (earliest created_at), PostgreSQL DISTINCT ON
 $firstConvIds = DB::table('conversations')
-    ->select(DB::raw('MIN(id) as id'))
+    ->select(DB::raw('DISTINCT ON (contact_id) id'))
     ->when($filterTenantId, fn ($q) => $q->where('tenant_id', $filterTenantId))
     ->whereNotIn('contact_id', $excludedContactIds)
     ->whereNotNull('dt1_minutes_business')
     ->whereNotNull('first_human_response_at')
-    ->groupBy('contact_id')
+    ->orderBy('contact_id')
+    ->orderBy('created_at')
     ->pluck('id');
 
 $conversations = Conversation::query()

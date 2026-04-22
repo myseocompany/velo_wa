@@ -35,13 +35,16 @@ class MetricsController extends Controller
                 'u.id',
                 'u.name',
                 DB::raw('COUNT(DISTINCT c.id) AS conversations_handled'),
-                DB::raw('ROUND(AVG(EXTRACT(EPOCH FROM (c.first_response_at - c.first_message_at))))::int AS avg_dt1'),
+                DB::raw('ROUND(AVG(COALESCE(c.dt1_minutes_business * 60, EXTRACT(EPOCH FROM (c.first_response_at - c.first_message_at)))))::int AS avg_dt1'),
                 DB::raw('COUNT(DISTINCT m.id) AS messages_sent'),
             ])
             ->leftJoin('conversations as c', function ($join) use ($startUtc, $endUtc) {
                 $join->on('c.assigned_to', '=', 'u.id')
                     ->whereBetween('c.created_at', [$startUtc, $endUtc])
-                    ->whereNotNull('c.first_response_at');
+                    ->where(function ($q) {
+                        $q->whereNotNull('c.dt1_minutes_business')
+                          ->orWhereNotNull('c.first_response_at');
+                    });
             })
             ->leftJoin('messages as m', function ($join) use ($startUtc, $endUtc) {
                 $join->on('m.sent_by', '=', 'u.id')
@@ -124,13 +127,16 @@ class MetricsController extends Controller
             ->select([
                 'u.name',
                 DB::raw('COUNT(DISTINCT c.id) AS conversations_handled'),
-                DB::raw('ROUND(AVG(EXTRACT(EPOCH FROM (c.first_response_at - c.first_message_at))))::int AS avg_dt1'),
+                DB::raw('ROUND(AVG(COALESCE(c.dt1_minutes_business * 60, EXTRACT(EPOCH FROM (c.first_response_at - c.first_message_at)))))::int AS avg_dt1'),
                 DB::raw('COUNT(DISTINCT m.id) AS messages_sent'),
             ])
             ->leftJoin('conversations as c', function ($join) use ($startUtc, $endUtc) {
                 $join->on('c.assigned_to', '=', 'u.id')
                     ->whereBetween('c.created_at', [$startUtc, $endUtc])
-                    ->whereNotNull('c.first_response_at');
+                    ->where(function ($q) {
+                        $q->whereNotNull('c.dt1_minutes_business')
+                          ->orWhereNotNull('c.first_response_at');
+                    });
             })
             ->leftJoin('messages as m', function ($join) use ($startUtc, $endUtc) {
                 $join->on('m.sent_by', '=', 'u.id')

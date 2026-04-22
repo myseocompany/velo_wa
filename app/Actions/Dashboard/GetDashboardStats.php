@@ -30,6 +30,10 @@ class GetDashboardStats
 
     /** @var array<string, int> */
     private const DAY_MAP = [
+        // Full day names (current format)
+        'sunday' => 0, 'monday' => 1, 'tuesday'  => 2,
+        'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6,
+        // 3-letter abbreviations (backwards-compat)
         'sun' => 0, 'mon' => 1, 'tue' => 2,
         'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6,
     ];
@@ -156,7 +160,7 @@ class GetDashboardStats
         ?array $businessHours,
         string $timezone,
     ): array {
-        $conditions = $this->buildBusinessHoursConditions($businessHours, $timezone);
+        $conditions = array_filter($this->buildBusinessHoursConditions($businessHours, $timezone));
 
         if (empty($conditions)) {
             return $this->computeDt1Stats($startUtc, $endUtc);
@@ -207,48 +211,69 @@ class GetDashboardStats
 
     /**
      * Builds SQL OR conditions for each configured business-hours slot.
+     * Supports multi-block format {enabled, blocks:[{start,end}]} and old {open,close} format.
      *
-     * @param  array<string, array{open: string, close: string}>|null $businessHours
+     * @param  array<string, mixed>|null $businessHours
      * @return list<string>
      */
     private function buildBusinessHoursConditions(?array $businessHours, string $timezone): array
     {
-        // Default: Mon–Fri, 08:00–18:00
-        $schedule = $businessHours && count($businessHours) > 0
+        $schedule = ($businessHours && count($businessHours) > 0)
             ? $businessHours
-            : ['mon' => ['open' => '08:00', 'close' => '18:00'],
-               'tue' => ['open' => '08:00', 'close' => '18:00'],
-               'wed' => ['open' => '08:00', 'close' => '18:00'],
-               'thu' => ['open' => '08:00', 'close' => '18:00'],
-               'fri' => ['open' => '08:00', 'close' => '18:00']];
+            : [
+                'monday'    => ['enabled' => true, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+                'tuesday'   => ['enabled' => true, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+                'wednesday' => ['enabled' => true, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+                'thursday'  => ['enabled' => true, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+                'friday'    => ['enabled' => true, 'blocks' => [['start' => '08:00', 'end' => '18:00']]],
+            ];
 
         $conditions = [];
+        $tz         = addslashes($timezone);
 
-        foreach ($schedule as $day => $hours) {
+        foreach ($schedule as $day => $config) {
             $dow = self::DAY_MAP[strtolower($day)] ?? null;
             if ($dow === null) {
                 continue;
             }
-            $open  = $hours['open']  ?? null;
-            $close = $hours['close'] ?? null;
 
-            if (! $open || ! $close) {
-                continue;
-            }
-            // Validate time format to prevent SQL injection
-            if (! preg_match('/^\d{2}:\d{2}$/', $open) || ! preg_match('/^\d{2}:\d{2}$/', $close)) {
+            // Backwards-compat: old {open, close} format
+            if (isset($config['open'], $config['close'])) {
+                $conditions[] = $this->buildSlotCondition($tz, $dow, $config['open'], $config['close']);
                 continue;
             }
 
-            // PostgreSQL: EXTRACT(DOW FROM ...) → 0=Sunday, 1=Monday … 6=Saturday
-            $conditions[] = sprintf(
-                "(EXTRACT(DOW FROM (first_message_at AT TIME ZONE 'UTC' AT TIME ZONE '%s'))::int = %d"
-                . " AND CAST(first_message_at AT TIME ZONE 'UTC' AT TIME ZONE '%s' AS TIME) BETWEEN '%s'::time AND '%s'::time)",
-                addslashes($timezone), $dow, addslashes($timezone), $open, $close,
-            );
+            // New format: {enabled, blocks:[{start, end}]}
+            if (empty($config['enabled']) || empty($config['blocks'])) {
+                continue;
+            }
+
+            foreach ($config['blocks'] as $block) {
+                $start = $block['start'] ?? null;
+                $end   = $block['end']   ?? null;
+                if (! $start || ! $end) {
+                    continue;
+                }
+                $conditions[] = $this->buildSlotCondition($tz, $dow, $start, $end);
+            }
         }
 
         return $conditions;
+    }
+
+    private function buildSlotCondition(string $tz, int $dow, string $start, string $end): ?string
+    {
+        // Validate time format to prevent SQL injection
+        if (! preg_match('/^\d{2}:\d{2}$/', $start) || ! preg_match('/^\d{2}:\d{2}$/', $end)) {
+            return null;
+        }
+
+        // PostgreSQL: EXTRACT(DOW FROM ...) → 0=Sunday, 1=Monday … 6=Saturday
+        return sprintf(
+            "(EXTRACT(DOW FROM (first_message_at AT TIME ZONE 'UTC' AT TIME ZONE '%s'))::int = %d"
+            . " AND CAST(first_message_at AT TIME ZONE 'UTC' AT TIME ZONE '%s' AS TIME) BETWEEN '%s'::time AND '%s'::time)",
+            $tz, $dow, $tz, $start, $end,
+        );
     }
 
     // ─── Conversations chart (SQL aggregation) ────────────────────────────────

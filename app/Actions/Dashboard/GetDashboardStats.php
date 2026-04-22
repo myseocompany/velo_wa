@@ -48,13 +48,15 @@ class GetDashboardStats
         $startUtc = $startAtLocal->setTimezone('UTC');
         $endUtc   = $endAtLocal->setTimezone('UTC');
 
+        $tenantId = (string) $user->tenant_id;
+
         return [
-            'stats'                  => $this->computeStats($timezone, $startUtc, $endUtc),
+            'stats'                  => $this->computeStats($timezone, $startUtc, $endUtc, $tenantId),
             'dt1_stats'              => $businessHoursOnly
                 ? $this->computeDt1StatsBusinessHours($startUtc, $endUtc, $user->tenant?->business_hours, $timezone)
                 : $this->computeDt1Stats($startUtc, $endUtc),
-            'conversation_chart'     => $this->buildConversationChart($startAtLocal, $endAtLocal, $bucket, $range, $timezone),
-            'messages_chart'         => $this->buildMessagesChart($startAtLocal, $endAtLocal, $bucket, $timezone),
+            'conversation_chart'     => $this->buildConversationChart($startAtLocal, $endAtLocal, $bucket, $range, $timezone, $tenantId),
+            'messages_chart'         => $this->buildMessagesChart($startAtLocal, $endAtLocal, $bucket, $timezone, $tenantId),
             'pipeline_summary'       => $this->buildPipelineSummary(),
             'recent_conversations'   => $this->buildRecentConversations($timezone),
             'business_hours_active'  => $businessHoursOnly,
@@ -63,31 +65,36 @@ class GetDashboardStats
 
     // ─── Stats cards ──────────────────────────────────────────────────────────
 
-    private function computeStats(string $timezone, CarbonImmutable $startUtc, CarbonImmutable $endUtc): array
+    private function computeStats(string $timezone, CarbonImmutable $startUtc, CarbonImmutable $endUtc, string $tenantId): array
     {
         // Conversations opened (created) within the selected period that are still open/pending
         $openConversations = Conversation::query()
+            ->where('tenant_id', $tenantId)
             ->whereIn('status', [ConversationStatus::Open->value, ConversationStatus::Pending->value])
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->count();
 
         // Conversations closed within the period — regardless of current status (handles reopen cases)
         $closedInPeriod = Conversation::query()
+            ->where('tenant_id', $tenantId)
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$startUtc, $endUtc])
             ->count();
 
         // Contacts created within the selected period
         $totalContacts = Contact::query()
+            ->where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->count();
 
         // Messages sent/received within the selected period
         $messagesInPeriod = Message::query()
+            ->where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->count();
 
         $inboundInPeriod = Message::query()
+            ->where('tenant_id', $tenantId)
             ->where('direction', 'in')
             ->whereBetween('created_at', [$startUtc, $endUtc])
             ->count();
@@ -284,8 +291,9 @@ class GetDashboardStats
         string $bucket,
         string $range,
         string $timezone,
+        string $tenantId,
     ): array {
-        $series = $this->buildConversationSeries($startAt, $endAt, $bucket, $range, $timezone);
+        $series = $this->buildConversationSeries($startAt, $endAt, $bucket, $range, $timezone, $tenantId);
 
         return [
             'range'  => $range,
@@ -308,6 +316,7 @@ class GetDashboardStats
         string $bucket,
         string $range,
         string $timezone,
+        string $tenantId,
     ): array {
         $truncUnit = $this->pgTruncUnit($bucket);
 
@@ -316,7 +325,7 @@ class GetDashboardStats
 
         $rows = DB::table('conversations')
             ->selectRaw("{$expr} AS bkt, COUNT(*) AS cnt")
-            ->where('tenant_id', auth()->user()->tenant_id)
+            ->where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
             ->groupByRaw($expr)
             ->get()
@@ -345,6 +354,7 @@ class GetDashboardStats
         CarbonImmutable $endAt,
         string $bucket,
         string $timezone,
+        string $tenantId,
     ): array {
         $truncUnit = $this->pgTruncUnit($bucket);
 
@@ -353,7 +363,7 @@ class GetDashboardStats
 
         $rows = DB::table('messages')
             ->selectRaw("{$expr} AS bkt, direction, COUNT(*) AS cnt")
-            ->where('tenant_id', auth()->user()->tenant_id)
+            ->where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startAt->setTimezone('UTC'), $endAt->setTimezone('UTC')])
             ->groupByRaw("{$expr}, direction")
             ->get();

@@ -22,6 +22,18 @@ const DEFAULT_HOURS: Record<string, BusinessHourDay> = Object.fromEntries(
     ])
 );
 
+/** Normalizes old {start, end} format from the DB to the new {blocks} format. */
+function normalizeBusinessHours(raw: Record<string, any>): Record<string, BusinessHourDay> {
+    return Object.fromEntries(
+        DAYS.map(({ key }) => {
+            const day = raw[key] ?? DEFAULT_HOURS[key];
+            if (Array.isArray(day.blocks)) return [key, day as BusinessHourDay];
+            // Old format: {enabled, start, end}
+            return [key, { enabled: !!day.enabled, blocks: [{ start: day.start ?? '08:00', end: day.end ?? '18:00' }] }];
+        })
+    );
+}
+
 interface TenantSettings {
     timezone: string;
     auto_close_hours: number | null;
@@ -46,7 +58,7 @@ export default function SettingsGeneral() {
                 const data = res.data.data as TenantSettings;
                 setSettings({
                     ...data,
-                    business_hours: data.business_hours ?? DEFAULT_HOURS,
+                    business_hours: normalizeBusinessHours(data.business_hours ?? DEFAULT_HOURS),
                 });
             })
             .catch(() => setError('No se pudo cargar la configuración.'))

@@ -6,6 +6,17 @@ This document defines the boundaries, responsibilities, and communication patter
 
 ---
 
+## Production Server Access
+
+- **SSH alias:** `waterfall` (configurado en `~/.ssh/config`)
+- **App root:** `/home/forge/app.aricrm.co/`
+- **Release activa (latest):** `/home/forge/app.aricrm.co/releases/<id_más_reciente>/`
+  - Para encontrar la release más reciente: `ls -lt /home/forge/app.aricrm.co/releases/ | head -3`
+- **Artisan:** `php artisan` desde la carpeta de la release activa
+- **Logs:** `storage/logs/laravel.log` dentro de la release
+
+---
+
 ## Development Handoff Notes
 
 ### 2026-03-07 - Test baseline stabilization

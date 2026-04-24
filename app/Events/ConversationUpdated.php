@@ -34,6 +34,7 @@ class ConversationUpdated implements ShouldBroadcastNow
         $conv = $this->conversation->load([
             'contact',
             'assignee',
+            'whatsappLine',
             'messages' => fn ($q) => $q->reorder()->orderByDesc('created_at')->limit(1),
         ]);
         $lastMessage = $conv->messages->sortByDesc('created_at')->first();
@@ -46,8 +47,10 @@ class ConversationUpdated implements ShouldBroadcastNow
             'contact_id'        => $conv->contact_id,
             'status'            => $conv->status->value,
             'channel'           => $conv->channel->value,
+            'whatsapp_line_id'  => $conv->whatsapp_line_id,
             'assigned_to'       => $conv->assigned_to,
             'assigned_at'       => $conv->assigned_at?->toIso8601String(),
+            'ai_agent_enabled'  => $conv->ai_agent_enabled,
             'first_message_at'  => $conv->first_message_at?->toIso8601String(),
             'first_response_at' => $conv->first_response_at?->toIso8601String(),
             'last_message_at'   => $conv->last_message_at?->toIso8601String(),
@@ -72,6 +75,12 @@ class ConversationUpdated implements ShouldBroadcastNow
             'assignee'          => $conv->assignee ? [
                 'id'   => $conv->assignee->id,
                 'name' => $conv->assignee->name,
+            ] : null,
+            'whatsapp_line'     => $conv->whatsappLine ? [
+                'id'     => $conv->whatsappLine->id,
+                'label'  => $conv->whatsappLine->label,
+                'phone'  => $conv->whatsappLine->phone,
+                'status' => $conv->whatsappLine->status->value,
             ] : null,
         ];
     }

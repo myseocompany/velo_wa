@@ -141,7 +141,7 @@ class ConversationController extends Controller
 
         $conversation = $action->handle($conversation, $agent);
 
-        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'whatsappLine', 'messages']));
     }
 
     public function close(Request $request, Conversation $conversation, CloseConversation $action): ConversationResource
@@ -152,7 +152,7 @@ class ConversationController extends Controller
 
         $conversation = $action->handle($conversation, $request->user());
 
-        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'whatsappLine', 'messages']));
     }
 
     public function reopen(Conversation $conversation, ReopenConversation $action): ConversationResource
@@ -163,7 +163,7 @@ class ConversationController extends Controller
 
         $conversation = $action->handle($conversation);
 
-        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'messages']));
+        return new ConversationResource($conversation->fresh(['contact', 'assignee', 'whatsappLine', 'messages']));
     }
 
     public function destroy(Request $request, Conversation $conversation): Response

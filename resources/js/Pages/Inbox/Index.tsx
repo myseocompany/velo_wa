@@ -382,8 +382,10 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
     const conversationsRef = useRef<Conversation[]>([]);
     const activeConvRef    = useRef<Conversation | null>(null);
+    const pendingRouteConversationIdRef = useRef<string | null>(activeConversationId ?? null);
     useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
     useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
+    useEffect(() => { pendingRouteConversationIdRef.current = activeConversationId ?? null; }, [activeConversationId]);
 
     const extractNextCursor = useCallback((nextUrl: string | null | undefined) => {
         if (!nextUrl) return null;
@@ -497,6 +499,13 @@ export default function InboxIndex({ activeConversationId }: Props) {
         );
     }, []);
 
+    const syncInboxUrl = useCallback((conversationId: string | null = null, params = new URLSearchParams(window.location.search)) => {
+        const qs = params.toString();
+        const basePath = conversationId ? `/inbox/${conversationId}` : '/inbox';
+
+        window.history.replaceState({}, '', qs ? `${basePath}?${qs}` : basePath);
+    }, []);
+
     // Load conversations when filter changes
     useEffect(() => {
         setLoadingConvs(true);
@@ -506,13 +515,16 @@ export default function InboxIndex({ activeConversationId }: Props) {
             .then(({ conversations: convs, nextCursor: firstPageNextCursor }) => {
                 setConversations(convs);
                 setConversationsNextCursor(firstPageNextCursor);
-                if (activeConversationId && statusFilter === 'all' && !search) {
-                    const found = convs.find((c) => c.id === activeConversationId);
+                const pendingRouteConversationId = pendingRouteConversationIdRef.current;
+
+                if (pendingRouteConversationId && statusFilter === 'all' && !search && !activeConvRef.current) {
+                    const found = convs.find((c) => c.id === pendingRouteConversationId);
+                    pendingRouteConversationIdRef.current = null;
                     if (found) selectConversation(found);
                 }
             })
             .finally(() => setLoadingConvs(false));
-    }, [CONVERSATION_PAGE_SIZE, activeConversationId, fetchConversations, search, statusFilter]);
+    }, [CONVERSATION_PAGE_SIZE, fetchConversations, search, statusFilter]);
 
     // Load AI agent config (global toggle state for per-conversation behavior)
     useEffect(() => {
@@ -550,12 +562,12 @@ export default function InboxIndex({ activeConversationId }: Props) {
         } else {
             params.delete('line_id');
         }
-        const qs = params.toString();
-        window.history.replaceState({}, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
-    }, [lineFilter]);
+        syncInboxUrl(activeConv?.id ?? null, params);
+    }, [activeConv?.id, lineFilter, syncInboxUrl]);
 
     async function selectConversation(conv: Conversation) {
         setActiveConv(conv);
+        syncInboxUrl(conv.id);
         setLoadingMessages(true);
         setMessages([]);
         setNextCursor(null);
@@ -780,6 +792,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
         setActiveConv(null);
         setMessages([]);
         setShowContactPanel(false);
+        syncInboxUrl(null);
     }
 
     return (

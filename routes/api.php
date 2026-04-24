@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
+use App\Http\Controllers\Api\V1\WhatsAppLineController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -45,9 +46,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     // WhatsApp — status readable by all; connect/disconnect owner only
     Route::get('/whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
     Route::get('/whatsapp/health-logs', [WhatsAppController::class, 'healthLogs'])->name('whatsapp.health-logs');
+    Route::get('/whatsapp/lines', [WhatsAppLineController::class, 'index'])->name('whatsapp.lines.index');
+    Route::get('/whatsapp/lines/{line}/status', [WhatsAppLineController::class, 'status'])->name('whatsapp.lines.status');
+    Route::get('/whatsapp/lines/{line}/health-logs', [WhatsAppLineController::class, 'healthLogs'])->name('whatsapp.lines.health-logs');
     Route::middleware(['role:owner', 'throttle:whatsapp-control'])->group(function () {
         Route::post('/whatsapp/connect', [WhatsAppController::class, 'connect'])->name('whatsapp.connect');
         Route::post('/whatsapp/disconnect', [WhatsAppController::class, 'disconnect'])->name('whatsapp.disconnect');
+        Route::post('/whatsapp/lines', [WhatsAppLineController::class, 'store'])->name('whatsapp.lines.store');
+        Route::patch('/whatsapp/lines/{line}', [WhatsAppLineController::class, 'update'])->name('whatsapp.lines.update');
+        Route::delete('/whatsapp/lines/{line}', [WhatsAppLineController::class, 'destroy'])->name('whatsapp.lines.destroy');
+        Route::post('/whatsapp/lines/{line}/connect', [WhatsAppLineController::class, 'connect'])->name('whatsapp.lines.connect');
+        Route::post('/whatsapp/lines/{line}/disconnect', [WhatsAppLineController::class, 'disconnect'])->name('whatsapp.lines.disconnect');
     });
 
     // Conversations — all authenticated users

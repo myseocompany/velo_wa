@@ -15,6 +15,7 @@ class WaHealthLog extends Model
 
     protected $fillable = [
         'tenant_id',
+        'whatsapp_line_id',
         'instance_name',
         'state',
         'is_healthy',
@@ -36,5 +37,9 @@ class WaHealthLog extends Model
     {
         return $this->belongsTo(Tenant::class);
     }
-}
 
+    public function whatsappLine(): BelongsTo
+    {
+        return $this->belongsTo(WhatsAppLine::class);
+    }
+}

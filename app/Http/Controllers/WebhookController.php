@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tenant;
 use App\Models\WebhookLog;
+use App\Models\WhatsAppLine;
 use App\Services\WebhookHandlerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,10 +40,16 @@ class WebhookController extends Controller
         $event    = $payload['event'] ?? '';
         $instance = $payload['instance'] ?? '';
         $tenant   = null;
+        $line     = null;
 
         // Verify the instance belongs to a known tenant
         if ($instance) {
-            $tenant = Tenant::where('wa_instance_id', $instance)->first();
+            $line = WhatsAppLine::where('instance_id', $instance)->with('tenant')->first();
+            if (! $line) {
+                $legacyTenant = Tenant::where('wa_instance_id', $instance)->first();
+                $line = $legacyTenant?->getOrCreateDefaultLine();
+            }
+            $tenant = $line?->tenant;
 
             if (! $tenant) {
                 Log::debug('Webhook: unknown instance', ['instance' => $instance, 'event' => $event]);
@@ -64,7 +71,9 @@ class WebhookController extends Controller
             Log::warning('Webhook: failed to store log', ['error' => $e->getMessage()]);
         }
 
-        $handler->handle($payload);
+        if ($line) {
+            $handler->handle($payload, $line);
+        }
 
         return response()->json(['ok' => true]);
     }

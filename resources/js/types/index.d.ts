@@ -1,6 +1,33 @@
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 export type WaStatus = 'disconnected' | 'qr_pending' | 'connected' | 'banned';
+
+// ─── WhatsApp Lines ──────────────────────────────────────────────────────────
+
+export interface WhatsAppLine {
+    id: string;
+    label: string;
+    instance_id: string | null;
+    status: WaStatus;
+    phone: string | null;
+    connected_at: string | null;
+    is_default: boolean;
+    health_consecutive_failures: number;
+    health_last_alert_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface WaStatusUpdatedPayload {
+    line_id?: string;
+    label?: string;
+    status: WaStatus;
+    phone: string | null;
+    connected_at: string | null;
+    qr_code: string | null;
+    legacy?: boolean;
+}
+export type TenantPlan = 'trial' | 'seed' | 'grow' | 'scale';
 export type UserRole = 'owner' | 'admin' | 'agent';
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type ConversationStatus = 'open' | 'pending' | 'closed';
@@ -49,6 +76,9 @@ export interface Tenant {
     business_hours: Record<string, BusinessHourDay> | null;
     auto_close_hours: number | null;
     onboarding_vertical?: string | null;
+    current_plan: TenantPlan;
+    max_wa_lines: number;
+    current_wa_lines_count: number;
     created_at: string;
     updated_at: string;
 }
@@ -108,6 +138,7 @@ export interface Conversation {
     contact_id: string;
     status: ConversationStatus;
     channel: Channel;
+    whatsapp_line_id: string | null;
     assigned_to: string | null;
     assigned_at: string | null;
     ai_agent_enabled: boolean | null;
@@ -121,6 +152,7 @@ export interface Conversation {
     updated_at: string;
     contact?: Contact;
     assignee?: User;
+    whatsapp_line?: Pick<WhatsAppLine, 'id' | 'label' | 'phone' | 'status'> | null;
     last_message?: {
         body: string | null;
         direction: MessageDirection;

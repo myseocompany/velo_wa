@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class CreateOrUpdateConversation
 {
-    public function handle(Contact $contact, bool &$isNew = false): Conversation
+    public function handle(Contact $contact, bool &$isNew = false, ?string $whatsappLineId = null): Conversation
     {
-        return DB::transaction(function () use ($contact, &$isNew) {
+        return DB::transaction(function () use ($contact, &$isNew, $whatsappLineId) {
             // Lock the contact row to serialize concurrent webhook processing
             // for the same contact across queue workers, preventing duplicate conversations.
             Contact::withoutGlobalScope('tenant')
@@ -26,6 +26,7 @@ class CreateOrUpdateConversation
             $conversation = Conversation::withoutGlobalScope('tenant')
                 ->where('tenant_id', $contact->tenant_id)
                 ->where('contact_id', $contact->id)
+                ->when($whatsappLineId, fn ($query) => $query->where('whatsapp_line_id', $whatsappLineId))
                 ->whereIn('status', [ConversationStatus::Open->value, ConversationStatus::Pending->value])
                 ->latest('last_message_at')
                 ->first();
@@ -40,6 +41,7 @@ class CreateOrUpdateConversation
             return Conversation::create([
                 'tenant_id'        => $contact->tenant_id,
                 'contact_id'       => $contact->id,
+                'whatsapp_line_id' => $whatsappLineId,
                 'status'           => ConversationStatus::Open,
                 'channel'          => Channel::WhatsApp,
                 'first_message_at' => now(),

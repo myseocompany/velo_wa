@@ -23,6 +23,7 @@ use App\Models\PipelineDeal;
 use App\Models\Reservation;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\WhatsAppLine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,7 +34,26 @@ class ConversationController extends Controller
 {
     public function store(StoreConversationRequest $request, CreateConversation $action): JsonResponse
     {
-        $result = $action->handle($request->user(), $request->validated());
+        $tenant = $request->user()->tenant;
+        $requestedLineId = $request->input('whatsapp_line_id');
+        $line = null;
+
+        if ($requestedLineId) {
+            $line = WhatsAppLine::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('id', $requestedLineId)
+                ->first();
+
+            abort_unless($line, 422, 'The selected WhatsApp line does not exist.');
+        } else {
+            $line = $tenant->defaultWhatsAppLine()->first();
+
+            abort_unless($line, 422, 'No WhatsApp lines are configured for this tenant.');
+        }
+
+        abort_unless($line->isConnected(), 422, 'Line is not connected.');
+
+        $result = $action->handle($request->user(), $request->validated(), (string) $line->id);
         $conversation = $result['conversation'];
 
         broadcast(new ConversationUpdated($conversation));
@@ -48,6 +68,7 @@ class ConversationController extends Controller
         $query = Conversation::query()->with([
             'contact',
             'assignee',
+            'whatsappLine',
             'messages' => fn ($q) => $q->reorder()->orderByDesc('created_at')->limit(1),
         ]);
 
@@ -65,6 +86,11 @@ class ConversationController extends Controller
             // Restrict to users within the same tenant to prevent cross-tenant enumeration
             $query->where('assigned_to', $assigned)
                 ->whereHas('assignee', fn ($q) => $q->where('tenant_id', $request->user()->tenant_id));
+        }
+
+        $lineId = $request->string('whatsapp_line_id')->toString();
+        if ($lineId !== '') {
+            $query->where('whatsapp_line_id', $lineId);
         }
 
         $search = trim($request->string('search')->toString());
@@ -100,6 +126,7 @@ class ConversationController extends Controller
         $conversation->load([
             'contact',
             'assignee',
+            'whatsappLine',
             'messages' => fn ($q) => $q->reorder()->orderByDesc('created_at')->limit(1),
         ]);
 

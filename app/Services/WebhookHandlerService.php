@@ -11,24 +11,25 @@ use App\Jobs\HandleInboundMessage;
 use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Tenant;
+use App\Models\WhatsAppLine;
 use Illuminate\Support\Facades\Log;
 
 class WebhookHandlerService
 {
-    public function handle(array $payload): void
+    public function handle(array $payload, WhatsAppLine $line): void
     {
         $event        = $payload['event'] ?? '';
         $instanceName = $payload['instance'] ?? '';
 
         Log::debug('Webhook received', ['event' => $event, 'instance' => $instanceName]);
 
-        $tenant = $this->resolveTenant($instanceName);
+        $tenant = $line->tenant;
 
         match (true) {
-            str_starts_with($event, 'messages.upsert')  => $this->handleMessagesUpsert($payload, $tenant),
-            str_starts_with($event, 'messages.update')  => $this->handleMessagesUpdate($payload['data'] ?? [], $tenant),
-            str_starts_with($event, 'connection.update') => $this->handleConnectionUpdate($payload['data'] ?? [], $tenant),
-            str_starts_with($event, 'qrcode.updated')   => $this->handleQrCodeUpdated($payload['data'] ?? [], $tenant),
+            str_starts_with($event, 'messages.upsert')  => $this->handleMessagesUpsert($payload, $tenant, $line),
+            str_starts_with($event, 'messages.update')  => $this->handleMessagesUpdate($payload['data'] ?? [], $tenant, $line),
+            str_starts_with($event, 'connection.update') => $this->handleConnectionUpdate($payload['data'] ?? [], $tenant, $line),
+            str_starts_with($event, 'qrcode.updated')   => $this->handleQrCodeUpdated($payload['data'] ?? [], $tenant, $line),
             str_starts_with($event, 'contacts.upsert')  => $this->handleContactsUpsert($payload['data'] ?? [], $tenant),
             str_starts_with($event, 'contacts.update')  => $this->handleContactsUpsert($payload['data'] ?? [], $tenant),
             default => Log::debug('Unhandled webhook event', ['event' => $event]),
@@ -37,16 +38,16 @@ class WebhookHandlerService
 
     // ─── Event handlers ───────────────────────────────────────────────────────
 
-    private function handleMessagesUpsert(array $payload, ?Tenant $tenant): void
+    private function handleMessagesUpsert(array $payload, ?Tenant $tenant, WhatsAppLine $line): void
     {
         if (! $tenant) {
             return;
         }
 
-        HandleInboundMessage::dispatch($payload, $tenant->id)->onQueue('whatsapp');
+        HandleInboundMessage::dispatch($payload, $tenant->id, $line->id)->onQueue('whatsapp');
     }
 
-    private function handleMessagesUpdate(array $updates, ?Tenant $tenant): void
+    private function handleMessagesUpdate(array $updates, ?Tenant $tenant, WhatsAppLine $line): void
     {
         if (! $tenant) {
             return;
@@ -72,11 +73,12 @@ class WebhookHandlerService
             Message::withoutGlobalScope('tenant')
                 ->where('tenant_id', $tenant->id)
                 ->where('wa_message_id', $waMessageId)
+                ->whereHas('conversation', fn ($q) => $q->where('whatsapp_line_id', $line->id))
                 ->update(['status' => $status->value]);
         }
     }
 
-    private function handleConnectionUpdate(array $data, ?Tenant $tenant): void
+    private function handleConnectionUpdate(array $data, ?Tenant $tenant, WhatsAppLine $line): void
     {
         if (! $tenant) {
             return;
@@ -90,31 +92,36 @@ class WebhookHandlerService
             default      => WaStatus::Disconnected,
         };
 
-        $updates = ['wa_status' => $waStatus];
+        $lineUpdates = ['status' => $waStatus];
+        $tenantUpdates = ['wa_status' => $waStatus];
 
         if ($waStatus === WaStatus::Connected) {
-            $updates['wa_connected_at'] = now();
+            $lineUpdates['connected_at'] = now();
+            $tenantUpdates['wa_connected_at'] = now();
 
             // Extract phone from wuid (e.g. "573004410097@s.whatsapp.net" → "573004410097")
             $wuid = $data['wuid'] ?? '';
             if ($wuid && str_contains($wuid, '@')) {
-                $updates['wa_phone'] = explode('@', $wuid)[0];
+                $lineUpdates['phone'] = explode('@', $wuid)[0];
+                $tenantUpdates['wa_phone'] = $lineUpdates['phone'];
             }
         }
 
-        $tenant->update($updates);
+        $line->update($lineUpdates);
+        $tenant->update($tenantUpdates);
 
         Log::info('Connection update processed', [
             'tenant'  => $tenant->id,
+            'line'    => $line->id,
             'state'   => $state,
             'status'  => $waStatus->value,
-            'phone'   => $updates['wa_phone'] ?? null,
+            'phone'   => $lineUpdates['phone'] ?? null,
         ]);
 
-        broadcast(new WaStatusUpdated($tenant->fresh(), null))->toOthers();
+        broadcast(new WaStatusUpdated($tenant->fresh(), $line->fresh(), null))->toOthers();
     }
 
-    private function handleQrCodeUpdated(array $data, ?Tenant $tenant): void
+    private function handleQrCodeUpdated(array $data, ?Tenant $tenant, WhatsAppLine $line): void
     {
         if (! $tenant) {
             return;
@@ -123,8 +130,9 @@ class WebhookHandlerService
         $qrBase64 = $data['qrcode']['base64'] ?? null;
 
         $tenant->update(['wa_status' => WaStatus::QrPending]);
+        $line->update(['status' => WaStatus::QrPending]);
 
-        broadcast(new WaStatusUpdated($tenant, $qrBase64));
+        broadcast(new WaStatusUpdated($tenant, $line->fresh(), $qrBase64));
     }
 
     private function handleContactsUpsert(array $data, ?Tenant $tenant): void
@@ -175,15 +183,6 @@ class WebhookHandlerService
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    private function resolveTenant(string $instanceName): ?Tenant
-    {
-        if (empty($instanceName)) {
-            return null;
-        }
-
-        return Tenant::where('wa_instance_id', $instanceName)->first();
-    }
 
     private function mapStatusInt(int $status): MessageStatus
     {

@@ -27,6 +27,7 @@ class StoreConversationRequest extends FormRequest
             'company' => $this->filled('company') ? trim($this->input('company')) : null,
             'notes' => $this->filled('notes') ? trim($this->input('notes')) : null,
             'assigned_to' => $this->filled('assigned_to') ? $this->input('assigned_to') : null,
+            'whatsapp_line_id' => $this->filled('whatsapp_line_id') ? $this->input('whatsapp_line_id') : null,
         ]);
     }
 
@@ -44,6 +45,13 @@ class StoreConversationRequest extends FormRequest
                 'nullable',
                 'uuid',
                 Rule::exists('users', 'id')->where('tenant_id', $tenantId),
+            ],
+            'whatsapp_line_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('whatsapp_lines', 'id')
+                    ->where('tenant_id', $tenantId)
+                    ->whereNull('deleted_at'),
             ],
         ];
     }

@@ -86,6 +86,19 @@ enum TenantPlan: string
         };
     }
 
+    /**
+     * Max WhatsApp lines allowed (-1 = unlimited).
+     */
+    public function maxWhatsAppLines(): int
+    {
+        return match ($this) {
+            self::Trial => 1,
+            self::Seed  => 1,
+            self::Grow  => 3,
+            self::Scale => -1,
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

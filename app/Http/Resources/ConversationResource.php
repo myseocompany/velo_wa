@@ -15,7 +15,8 @@ class ConversationResource extends JsonResource
             'id'                => $this->id,
             'status'            => $this->status->value,
             'channel'           => $this->channel->value,
-            'assigned_to'       => $this->assigned_to,
+            'whatsapp_line_id'  => $this->whatsapp_line_id,
+            'assigned_to'       => $this->assigned_to ? (string) $this->assigned_to : null,
             'assigned_at'       => $this->assigned_at?->toIso8601String(),
             'ai_agent_enabled'  => $this->ai_agent_enabled,
             'first_message_at'  => $this->first_message_at?->toIso8601String(),
@@ -28,6 +29,12 @@ class ConversationResource extends JsonResource
                 'id'   => $this->assignee->id,
                 'name' => $this->assignee->name,
             ]),
+            'whatsapp_line'     => $this->whenLoaded('whatsappLine', fn () => $this->whatsappLine ? [
+                'id'     => $this->whatsappLine->id,
+                'label'  => $this->whatsappLine->label,
+                'phone'  => $this->whatsappLine->phone,
+                'status' => $this->whatsappLine->status->value,
+            ] : null),
             'last_message'      => $this->whenLoaded('messages', function () {
                 $last = $this->messages->sortByDesc('created_at')->first();
 

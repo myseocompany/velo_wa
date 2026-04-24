@@ -54,6 +54,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function getIdAttribute($value): ?string
+    {
+        return $value !== null ? (string) $value : null;
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

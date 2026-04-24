@@ -19,6 +19,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $tenant = $user?->tenant;
 
         // Impersonation state (shared to tenant app so the banner shows)
         $impersonating = $request->session()->has('impersonating_user_id')
@@ -36,7 +37,12 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user'   => $user,
-                'tenant' => $user?->tenant,
+                'tenant' => $tenant ? [
+                    ...$tenant->toArray(),
+                    'current_plan' => $tenant->currentPlan()->value,
+                    'max_wa_lines' => $tenant->currentPlan()->maxWhatsAppLines(),
+                    'current_wa_lines_count' => $tenant->currentWhatsAppLinesCount(),
+                ] : null,
             ],
             'impersonation' => $impersonating,
             'platform_admin' => $platformAdmin ? [

@@ -7,10 +7,12 @@ namespace Tests\Feature;
 use App\Enums\Channel;
 use App\Enums\ContactSource;
 use App\Enums\ConversationStatus;
+use App\Enums\WaStatus;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\WhatsAppLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,6 +24,8 @@ class CreateConversationTest extends TestCase
 
     private User $agent;
 
+    private WhatsAppLine $line;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -29,6 +33,14 @@ class CreateConversationTest extends TestCase
         $this->tenant = Tenant::create([
             'name' => 'Test Tenant',
             'slug' => 'test-tenant',
+        ]);
+
+        $this->line = WhatsAppLine::create([
+            'tenant_id' => $this->tenant->id,
+            'label' => 'Principal',
+            'is_default' => true,
+            'instance_id' => 'test_line',
+            'status' => WaStatus::Connected,
         ]);
 
         $this->agent = User::factory()->create(['tenant_id' => $this->tenant->id]);

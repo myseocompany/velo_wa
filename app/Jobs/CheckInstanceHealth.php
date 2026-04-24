@@ -8,6 +8,7 @@ use App\Enums\WaStatus;
 use App\Events\WaStatusUpdated;
 use App\Models\Tenant;
 use App\Models\WaHealthLog;
+use App\Models\WhatsAppLine;
 use App\Services\WhatsAppClientService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,14 +27,23 @@ class CheckInstanceHealth implements ShouldQueue
 
     public function handle(WhatsAppClientService $client): void
     {
-        Tenant::whereNotNull('wa_instance_id')->each(function (Tenant $tenant) use ($client): void {
-            $this->checkTenant($tenant, $client);
+        Tenant::whereNotNull('wa_instance_id')
+            ->whereDoesntHave('whatsappLines')
+            ->each(fn (Tenant $tenant) => $tenant->getOrCreateDefaultLine());
+
+        WhatsAppLine::withoutGlobalScope('tenant')
+            ->whereNotNull('instance_id')
+            ->where('status', '!=', WaStatus::Disconnected)
+            ->with('tenant')
+            ->each(function (WhatsAppLine $line) use ($client): void {
+                $this->checkLine($line, $client);
         });
     }
 
-    private function checkTenant(Tenant $tenant, WhatsAppClientService $client): void
+    private function checkLine(WhatsAppLine $line, WhatsAppClientService $client): void
     {
-        $instanceName = $tenant->wa_instance_id ?: WhatsAppClientService::instanceName($tenant->id);
+        $tenant = $line->tenant;
+        $instanceName = (string) $line->instance_id;
         $startedAt = microtime(true);
 
         try {
@@ -42,6 +52,7 @@ class CheckInstanceHealth implements ShouldQueue
             $responseMs = (int) round((microtime(true) - $startedAt) * 1000);
             WaHealthLog::create([
                 'tenant_id' => $tenant->id,
+                'whatsapp_line_id' => $line->id,
                 'instance_name' => $instanceName,
                 'state' => null,
                 'is_healthy' => false,
@@ -50,10 +61,11 @@ class CheckInstanceHealth implements ShouldQueue
                 'checked_at' => now(),
             ]);
 
-            $this->recordFailureAndAlert($tenant, "exception: {$e->getMessage()}");
+            $this->recordFailureAndAlert($line, "exception: {$e->getMessage()}");
 
             Log::warning('CheckInstanceHealth: could not reach Evolution API', [
                 'tenant_id' => $tenant->id,
+                'line_id' => $line->id,
                 'error'     => $e->getMessage(),
             ]);
             return;
@@ -63,6 +75,7 @@ class CheckInstanceHealth implements ShouldQueue
         $isHealthy = $state === 'open';
         WaHealthLog::create([
             'tenant_id' => $tenant->id,
+            'whatsapp_line_id' => $line->id,
             'instance_name' => $instanceName,
             'state' => $state,
             'is_healthy' => $isHealthy,
@@ -72,41 +85,52 @@ class CheckInstanceHealth implements ShouldQueue
         ]);
 
         if ($isHealthy) {
-            $this->recordRecoveryIfNeeded($tenant);
+            $this->recordRecoveryIfNeeded($line);
         } else {
-            $this->recordFailureAndAlert($tenant, "state={$state}");
+            $this->recordFailureAndAlert($line, "state={$state}");
         }
 
-        $currentStatus = $tenant->wa_status;
+        $currentStatus = $line->status;
 
         if ($state === 'open' && $currentStatus !== WaStatus::Connected) {
+            $line->update(['status' => WaStatus::Connected]);
             $tenant->update(['wa_status' => WaStatus::Connected]);
-            broadcast(new WaStatusUpdated($tenant, null));
+            broadcast(new WaStatusUpdated($tenant, $line->fresh(), null));
         } elseif ($state !== 'open' && $currentStatus === WaStatus::Connected) {
+            $line->update(['status' => WaStatus::Disconnected]);
             $tenant->update(['wa_status' => WaStatus::Disconnected]);
-            broadcast(new WaStatusUpdated($tenant, null));
+            broadcast(new WaStatusUpdated($tenant, $line->fresh(), null));
         }
     }
 
-    private function recordFailureAndAlert(Tenant $tenant, string $reason): void
+    private function recordFailureAndAlert(WhatsAppLine $line, string $reason): void
     {
-        $tenant->increment('wa_health_consecutive_failures');
-        $tenant = $tenant->fresh();
+        $line->increment('health_consecutive_failures');
+        $line = $line->fresh();
+        $tenant = $line->tenant;
+        if ($line->is_default) {
+            $tenant->increment('wa_health_consecutive_failures');
+            $tenant = $tenant->fresh();
+        }
 
-        $failures = (int) ($tenant->wa_health_consecutive_failures ?? 0);
-        $lastAlertAt = $tenant->wa_health_last_alert_at;
+        $failures = (int) ($line->health_consecutive_failures ?? 0);
+        $lastAlertAt = $line->health_last_alert_at;
         $cooldownPassed = $lastAlertAt === null || $lastAlertAt->lte(now()->subMinutes(self::ALERT_COOLDOWN_MINUTES));
 
         if ($failures < self::ALERT_FAILURE_THRESHOLD || ! $cooldownPassed) {
             return;
         }
 
-        $tenant->update(['wa_health_last_alert_at' => now()]);
+        $line->update(['health_last_alert_at' => now()]);
+        if ($line->is_default) {
+            $tenant->update(['wa_health_last_alert_at' => now()]);
+        }
 
         activity()
             ->performedOn($tenant)
             ->withProperties([
                 'tenant_id' => $tenant->id,
+                'whatsapp_line_id' => $line->id,
                 'consecutive_failures' => $failures,
                 'reason' => $reason,
             ])
@@ -120,21 +144,23 @@ class CheckInstanceHealth implements ShouldQueue
             $reason
         );
 
-        Log::error($message, ['tenant_id' => $tenant->id]);
+        Log::error($message, ['tenant_id' => $tenant->id, 'line_id' => $line->id]);
 
         if (filled(config('logging.channels.slack.url'))) {
             Log::channel('slack')->error($message);
         }
     }
 
-    private function recordRecoveryIfNeeded(Tenant $tenant): void
+    private function recordRecoveryIfNeeded(WhatsAppLine $line): void
     {
-        $failures = (int) ($tenant->wa_health_consecutive_failures ?? 0);
+        $tenant = $line->tenant;
+        $failures = (int) ($line->health_consecutive_failures ?? 0);
         if ($failures >= self::ALERT_FAILURE_THRESHOLD) {
             activity()
                 ->performedOn($tenant)
                 ->withProperties([
                     'tenant_id' => $tenant->id,
+                    'whatsapp_line_id' => $line->id,
                     'previous_consecutive_failures' => $failures,
                 ])
                 ->event('wa_health')
@@ -142,7 +168,10 @@ class CheckInstanceHealth implements ShouldQueue
         }
 
         if ($failures > 0) {
-            $tenant->update(['wa_health_consecutive_failures' => 0]);
+            $line->update(['health_consecutive_failures' => 0]);
+            if ($line->is_default) {
+                $tenant->update(['wa_health_consecutive_failures' => 0]);
+            }
         }
     }
 }

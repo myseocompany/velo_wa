@@ -1,4 +1,4 @@
-import { Conversation } from '@/types';
+import { Conversation, WhatsAppLine } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MessageSquare } from 'lucide-react';
@@ -9,6 +9,7 @@ interface Props {
     conversations: Conversation[];
     activeId: string | null;
     unreadCounts: Record<string, number>;
+    lines?: WhatsAppLine[];
     hasMore: boolean;
     loadingMore: boolean;
     onLoadMore: () => void;
@@ -38,11 +39,13 @@ export default function ConversationList({
     conversations,
     activeId,
     unreadCounts,
+    lines = [],
     hasMore,
     loadingMore,
     onLoadMore,
     onSelect,
 }: Props) {
+    const showLineBadge = lines.length > 1;
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -111,9 +114,19 @@ export default function ConversationList({
                                         )}
                                     </div>
                                 </div>
-                                <p className={`mt-0.5 truncate text-xs ${unread > 0 ? 'font-medium text-gray-700' : 'text-gray-500'}`}>
-                                    {getLastMessagePreview(conv)}
-                                </p>
+                                <div className="mt-0.5 flex items-center gap-1.5">
+                                    <p className={`min-w-0 flex-1 truncate text-xs ${unread > 0 ? 'font-medium text-gray-700' : 'text-gray-500'}`}>
+                                        {getLastMessagePreview(conv)}
+                                    </p>
+                                    {showLineBadge && conv.whatsapp_line && (
+                                        <span
+                                            className="max-w-[80px] flex-shrink-0 truncate rounded-sm bg-gray-100 px-1 py-0.5 text-[10px] font-medium text-gray-500"
+                                            title={conv.whatsapp_line.label}
+                                        >
+                                            {conv.whatsapp_line.label}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </button>
                     </li>

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\WaStatus;
 use App\Jobs\CheckInstanceHealth;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WaHealthLog;
+use App\Models\WhatsAppLine;
 use App\Services\WhatsAppClientService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
@@ -54,6 +56,15 @@ class MonitoringHealthLogTest extends TestCase
             'name' => 'Tenant Alert',
             'slug' => 'tenant-alert',
             'wa_instance_id' => 'tenant_alert',
+            'wa_status' => WaStatus::Connected,
+        ]);
+
+        WhatsAppLine::create([
+            'tenant_id' => $tenant->id,
+            'label' => 'Principal',
+            'is_default' => true,
+            'instance_id' => 'tenant_alert',
+            'status' => WaStatus::Connected,
         ]);
 
         $job = new CheckInstanceHealth();

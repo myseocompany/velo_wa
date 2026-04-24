@@ -10,6 +10,7 @@ use App\Enums\ConversationStatus;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\User;
+use App\Models\WhatsAppLine;
 use Illuminate\Support\Facades\DB;
 
 class CreateConversation
@@ -21,18 +22,25 @@ class CreateConversation
      *     email?: ?string,
      *     company?: ?string,
      *     notes?: ?string,
-     *     assigned_to?: ?string
+     *     assigned_to?: ?string,
+     *     whatsapp_line_id?: ?string
      * }  $data
      * @return array{conversation: Conversation, created: bool}
      */
-    public function handle(User $user, array $data): array
+    public function handle(User $user, array $data, ?string $whatsappLineId = null): array
     {
-        return DB::transaction(function () use ($user, $data): array {
+        return DB::transaction(function () use ($user, $data, $whatsappLineId): array {
             $contact = $this->resolveContact($user, $data);
+            $lineId = $whatsappLineId ?? ($data['whatsapp_line_id'] ?? null);
+            $lineId ??= $this->resolveDefaultLineId($user);
 
             $conversation = Conversation::withoutGlobalScope('tenant')
                 ->where('tenant_id', $user->tenant_id)
                 ->where('contact_id', $contact->id)
+                ->where(function ($query) use ($lineId): void {
+                    $query->where('whatsapp_line_id', $lineId)
+                        ->orWhereNull('whatsapp_line_id');
+                })
                 ->whereIn('status', [ConversationStatus::Open->value, ConversationStatus::Pending->value])
                 ->lockForUpdate()
                 ->orderByDesc('last_message_at')
@@ -40,8 +48,12 @@ class CreateConversation
                 ->first();
 
             if ($conversation) {
+                if ($conversation->whatsapp_line_id === null) {
+                    $conversation->update(['whatsapp_line_id' => $lineId]);
+                }
+
                 return [
-                    'conversation' => $conversation->load(['contact', 'assignee', 'messages']),
+                    'conversation' => $conversation->load(['contact', 'assignee', 'messages', 'whatsappLine']),
                     'created' => false,
                 ];
             }
@@ -52,6 +64,7 @@ class CreateConversation
             $conversation = Conversation::create([
                 'tenant_id' => $user->tenant_id,
                 'contact_id' => $contact->id,
+                'whatsapp_line_id' => $lineId,
                 'status' => ConversationStatus::Open,
                 'channel' => Channel::WhatsApp,
                 'assigned_to' => $assignedTo,
@@ -65,7 +78,7 @@ class CreateConversation
             $contact->update($contactUpdates);
 
             return [
-                'conversation' => $conversation->fresh(['contact', 'assignee', 'messages']),
+                'conversation' => $conversation->fresh(['contact', 'assignee', 'messages', 'whatsappLine']),
                 'created' => true,
             ];
         });
@@ -129,5 +142,14 @@ class CreateConversation
         }
 
         return $contact;
+    }
+
+    private function resolveDefaultLineId(User $user): string
+    {
+        $line = $user->tenant?->getOrCreateDefaultLine();
+
+        abort_unless($line instanceof WhatsAppLine, 422, 'No WhatsApp line available.');
+
+        return (string) $line->id;
     }
 }

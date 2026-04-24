@@ -33,6 +33,7 @@ class Conversation extends Model
         'contact_id',
         'status',
         'channel',
+        'whatsapp_line_id',
         'assigned_to',
         'assigned_at',
         'ai_agent_enabled',
@@ -73,6 +74,11 @@ class Conversation extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function whatsappLine(): BelongsTo
+    {
+        return $this->belongsTo(WhatsAppLine::class);
     }
 
     public function closedBy(): BelongsTo

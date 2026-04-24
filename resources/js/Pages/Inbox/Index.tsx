@@ -1,7 +1,7 @@
 import AiAgentToggle from '@/Components/Inbox/AiAgentToggle';
 import AppLayout from '@/Layouts/AppLayout';
 import { useTenantChannel, useTenantPresence } from '@/hooks/useEcho';
-import { AiAgent, Conversation, ConversationStatus, Message, PageProps, User } from '@/types';
+import { AiAgent, Conversation, ConversationStatus, Message, PageProps, User, WhatsAppLine } from '@/types';
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
 import {
@@ -157,6 +157,7 @@ function AssignDropdown({ conversation, agents, onlineUserIds, onAssigned }: Ass
 
 interface CreateConversationModalProps {
     agents: User[];
+    lines: WhatsAppLine[];
     currentUser: User;
     onClose: () => void;
     onCreated: (conversation: Conversation) => void;
@@ -164,17 +165,24 @@ interface CreateConversationModalProps {
 
 function CreateConversationModal({
     agents,
+    lines,
     currentUser,
     onClose,
     onCreated,
 }: CreateConversationModalProps) {
-    const [phone, setPhone]           = useState('');
-    const [name, setName]             = useState('');
-    const [email, setEmail]           = useState('');
-    const [company, setCompany]       = useState('');
-    const [assignedTo, setAssignedTo] = useState(currentUser.id);
-    const [saving, setSaving]         = useState(false);
-    const [errors, setErrors]         = useState<Record<string, string>>({});
+    const connectedLines = lines.filter((l) => l.status === 'connected');
+    const defaultLine    = connectedLines.find((l) => l.is_default) ?? connectedLines[0] ?? null;
+    const multiLine      = connectedLines.length > 1;
+    const noLines        = connectedLines.length === 0;
+
+    const [phone, setPhone]                   = useState('');
+    const [name, setName]                     = useState('');
+    const [email, setEmail]                   = useState('');
+    const [company, setCompany]               = useState('');
+    const [assignedTo, setAssignedTo]         = useState(currentUser.id);
+    const [whatsappLineId, setWhatsappLineId] = useState(defaultLine?.id ?? '');
+    const [saving, setSaving]                 = useState(false);
+    const [errors, setErrors]                 = useState<Record<string, string>>({});
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -183,11 +191,12 @@ function CreateConversationModal({
 
         try {
             const res = await axios.post<{ data: Conversation }>('/api/v1/conversations', {
-                phone:       phone.trim(),
-                name:        name.trim() || null,
-                email:       email.trim() || null,
-                company:     company.trim() || null,
-                assigned_to: assignedTo || null,
+                phone:              phone.trim(),
+                name:               name.trim() || null,
+                email:              email.trim() || null,
+                company:            company.trim() || null,
+                assigned_to:        assignedTo || null,
+                whatsapp_line_id:   whatsappLineId || null,
             });
 
             onCreated(res.data.data);
@@ -221,90 +230,122 @@ function CreateConversationModal({
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
-                    <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">
-                            Teléfono <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="+57 300 0000000"
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
-                        />
-                        {errors.phone && <p className="mt-0.5 text-xs text-red-500">{errors.phone}</p>}
+                {noLines ? (
+                    <div className="px-5 py-8 text-center">
+                        <p className="text-sm font-medium text-gray-700">Sin líneas de WhatsApp conectadas</p>
+                        <p className="mt-1 text-xs text-gray-400">
+                            Conecta una línea en{' '}
+                            <a href="/settings/whatsapp" className="text-ari-600 hover:underline">
+                                Ajustes › WhatsApp
+                            </a>{' '}
+                            para iniciar conversaciones.
+                        </p>
                     </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
+                        {/* Line selector — only when >1 connected line */}
+                        {multiLine && (
+                            <div>
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Línea de WhatsApp</label>
+                                <select
+                                    value={whatsappLineId}
+                                    onChange={(e) => setWhatsappLineId(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                                >
+                                    {connectedLines.map((line) => (
+                                        <option key={line.id} value={line.id}>
+                                            {line.label}{line.phone ? ` · ...${line.phone.slice(-4)}` : ''}
+                                            {line.is_default ? ' (predeterminada)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
-                    <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
-                        <input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="mb-1 block text-xs font-medium text-gray-700">Email</label>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">
+                                Teléfono <span className="text-red-500">*</span>
+                            </label>
                             <input
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                type="email"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="+57 300 0000000"
                                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                             />
-                            {errors.email && <p className="mt-0.5 text-xs text-red-500">{errors.email}</p>}
+                            {errors.phone && <p className="mt-0.5 text-xs text-red-500">{errors.phone}</p>}
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-medium text-gray-700">Empresa</label>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
                             <input
-                                value={company}
-                                onChange={(e) => setCompany(e.target.value)}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
                                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
                             />
                         </div>
-                    </div>
 
-                    <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">Asignar a</label>
-                        <select
-                            value={assignedTo}
-                            onChange={(e) => setAssignedTo(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
-                        >
-                            <option value="">Sin asignar</option>
-                            {agents.map((agent) => (
-                                <option key={agent.id} value={agent.id}>
-                                    {agent.name}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.assigned_to && <p className="mt-0.5 text-xs text-red-500">{errors.assigned_to}</p>}
-                    </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Email</label>
+                                <input
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="email"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                                />
+                                {errors.email && <p className="mt-0.5 text-xs text-red-500">{errors.email}</p>}
+                            </div>
 
-                    {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
+                            <div>
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Empresa</label>
+                                <input
+                                    value={company}
+                                    onChange={(e) => setCompany(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                                />
+                            </div>
+                        </div>
 
-                    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="min-h-11 w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={saving || !phone.trim()}
-                            className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50 sm:w-auto"
-                        >
-                            {saving
-                                ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                : <Plus className="h-4 w-4" />}
-                            Crear y abrir
-                        </button>
-                    </div>
-                </form>
+                        <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">Asignar a</label>
+                            <select
+                                value={assignedTo}
+                                onChange={(e) => setAssignedTo(e.target.value)}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                            >
+                                <option value="">Sin asignar</option>
+                                {agents.map((agent) => (
+                                    <option key={agent.id} value={agent.id}>
+                                        {agent.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.assigned_to && <p className="mt-0.5 text-xs text-red-500">{errors.assigned_to}</p>}
+                        </div>
+
+                        {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
+
+                        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="min-h-11 w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={saving || !phone.trim()}
+                                className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-ari-600 px-4 py-2 text-sm font-medium text-white hover:bg-ari-700 disabled:opacity-50 sm:w-auto"
+                            >
+                                {saving
+                                    ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    : <Plus className="h-4 w-4" />}
+                                Crear y abrir
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     );
@@ -327,6 +368,10 @@ export default function InboxIndex({ activeConversationId }: Props) {
     const [statusFilter, setStatusFilter]       = useState<ConversationStatus | 'all'>('all');
     const [search, setSearch]                   = useState('');
     const [agents, setAgents]                   = useState<User[]>([]);
+    const [lines, setLines]                     = useState<WhatsAppLine[]>([]);
+    const [lineFilter, setLineFilter]           = useState<string | null>(() =>
+        new URLSearchParams(window.location.search).get('line_id'),
+    );
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showContactPanel, setShowContactPanel] = useState(false);
     const [unreadCounts, setUnreadCounts]       = useState<Record<string, number>>({});
@@ -356,10 +401,11 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
         if (statusFilter !== 'all') params.status = statusFilter;
         if (search) params.search = search;
+        if (lineFilter) params.whatsapp_line_id = lineFilter;
         if (options?.cursor) params.cursor = options.cursor;
 
         return params;
-    }, [CONVERSATION_PAGE_SIZE, search, statusFilter]);
+    }, [CONVERSATION_PAGE_SIZE, lineFilter, search, statusFilter]);
 
     const mergeConversationPages = useCallback((current: Conversation[], incoming: Conversation[]) => {
         const byId = new Map(current.map((conversation) => [conversation.id, conversation]));
@@ -480,6 +526,33 @@ export default function InboxIndex({ activeConversationId }: Props) {
         axios.get<{ data: User[] }>('/api/v1/team/members')
             .then((res) => setAgents(res.data.data));
     }, []);
+
+    // Load WhatsApp lines (for filter + selector)
+    useEffect(() => {
+        axios.get<{ data: WhatsAppLine[] }>('/api/v1/whatsapp/lines')
+            .then((res) => setLines(res.data.data))
+            .catch(() => setLines([]));
+    }, []);
+
+    // Clear line filter if the selected line no longer exists (e.g. deleted)
+    useEffect(() => {
+        if (!lineFilter || lines.length === 0) return;
+        if (!lines.some((l) => l.id === lineFilter)) {
+            setLineFilter(null);
+        }
+    }, [lineFilter, lines]);
+
+    // Sync line filter to URL query param
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (lineFilter) {
+            params.set('line_id', lineFilter);
+        } else {
+            params.delete('line_id');
+        }
+        const qs = params.toString();
+        window.history.replaceState({}, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+    }, [lineFilter]);
 
     async function selectConversation(conv: Conversation) {
         setActiveConv(conv);
@@ -735,6 +808,25 @@ export default function InboxIndex({ activeConversationId }: Props) {
                         />
                     </div>
 
+                    {/* Line filter — only when tenant has >1 line */}
+                    {lines.length > 1 && (
+                        <div className="border-b border-gray-100 px-3 py-2">
+                            <select
+                                value={lineFilter ?? ''}
+                                onChange={(e) => setLineFilter(e.target.value || null)}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:border-ari-500 focus:outline-none"
+                                aria-label="Filtrar por línea de WhatsApp"
+                            >
+                                <option value="">Todas las líneas</option>
+                                {lines.map((line) => (
+                                    <option key={line.id} value={line.id}>
+                                        {line.label}{line.phone ? ` · ...${line.phone.slice(-4)}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     {/* Status filter tabs */}
                     <div className="flex border-b border-gray-100">
                         {STATUS_TABS.map((tab) => (
@@ -762,6 +854,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                 conversations={conversations}
                                 activeId={activeConv?.id ?? null}
                                 unreadCounts={unreadCounts}
+                                lines={lines}
                                 hasMore={conversationsNextCursor !== null}
                                 loadingMore={loadingMoreConvs}
                                 onLoadMore={loadMoreConversations}
@@ -797,6 +890,12 @@ export default function InboxIndex({ activeConversationId }: Props) {
                                             'Desconocido'}
                                     </p>
                                     <p className="text-xs text-gray-500">{activeConv.contact?.phone}</p>
+                                    {lines.length > 1 && activeConv.whatsapp_line && (
+                                        <p className="text-xs text-gray-400">
+                                            via {activeConv.whatsapp_line.label}
+                                            {activeConv.whatsapp_line.phone ? ` · ${activeConv.whatsapp_line.phone}` : ''}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Actions */}
@@ -904,6 +1003,7 @@ export default function InboxIndex({ activeConversationId }: Props) {
             {showCreateModal && (
                 <CreateConversationModal
                     agents={agents}
+                    lines={lines}
                     currentUser={auth.user}
                     onClose={() => setShowCreateModal(false)}
                     onCreated={handleConversationCreated}

@@ -34,7 +34,7 @@ class SendWhatsAppMessage implements ShouldQueue
     public function handle(WhatsAppClientService $client): void
     {
         try {
-            $message      = $this->message->load(['conversation.contact.tenant']);
+            $message      = $this->message->load(['conversation.whatsappLine', 'conversation.contact.tenant']);
             $conversation = $message->conversation;
             $contact      = $conversation->contact;
             $tenant       = $contact?->tenant;
@@ -48,16 +48,10 @@ class SendWhatsAppMessage implements ShouldQueue
                 return;
             }
 
-            if (! $tenant->wa_instance_id) {
-                Log::warning('SendWhatsAppMessage: tenant has no WA instance', [
-                    'message_id' => $message->id,
-                    'tenant_id'  => $message->tenant_id,
-                ]);
-                $this->updateStatus(MessageStatus::Failed, 'Tenant has no WhatsApp instance configured');
+            $instanceName = $this->resolveInstanceName($message, $conversation, $tenant);
+            if ($instanceName === null) {
                 return;
             }
-
-            $instanceName = WhatsAppClientService::instanceName($tenant->id);
 
             // Use the full wa_id for @lid contacts (WhatsApp privacy mode).
             // For regular contacts strip the @s.whatsapp.net suffix so Evolution
@@ -131,6 +125,36 @@ class SendWhatsAppMessage implements ShouldQueue
         }
 
         $this->message->update($updates);
+    }
+
+    private function resolveInstanceName(Message $message, $conversation, $tenant): ?string
+    {
+        $line = $conversation->whatsappLine ?: $tenant->defaultWhatsAppLine()->first();
+
+        if ($line) {
+            if (! $line->isConnected() || ! $line->instance_id) {
+                Log::warning('SendWhatsAppMessage: WA line disconnected', [
+                    'message_id' => $message->id,
+                    'tenant_id' => $message->tenant_id,
+                    'line_id' => $line->id,
+                ]);
+                $this->updateStatus(MessageStatus::Failed, 'Line disconnected');
+                return null;
+            }
+
+            return $line->instance_id;
+        }
+
+        if (! $tenant->wa_instance_id) {
+            Log::warning('SendWhatsAppMessage: tenant has no WA instance', [
+                'message_id' => $message->id,
+                'tenant_id' => $message->tenant_id,
+            ]);
+            $this->updateStatus(MessageStatus::Failed, 'Tenant has no WhatsApp instance configured');
+            return null;
+        }
+
+        return $tenant->wa_instance_id;
     }
 
     /**

@@ -21,7 +21,7 @@ class CreateOrUpdateContact
      *   aliases?: array<int, string>
      * }  $waData
      */
-    public function handle(Tenant $tenant, array $waData): Contact
+    public function handle(Tenant $tenant, array $waData, ?string $linePhone = null): Contact
     {
         $aliases = $this->normalizeAliases(array_merge(
             [$waData['remoteJid']], // e.g. "573001234567@s.whatsapp.net"
@@ -29,7 +29,7 @@ class CreateOrUpdateContact
         ));
         $primaryWaId = $this->selectPrimaryWaId($aliases);
         $phone       = $this->sanitizeResolvedPhone(
-            $tenant,
+            $linePhone ?? $tenant->wa_phone,
             $this->resolvePhone($aliases, $waData['phone'] ?? null),
             $primaryWaId,
         );
@@ -133,13 +133,13 @@ class CreateOrUpdateContact
         return null;
     }
 
-    private function sanitizeResolvedPhone(Tenant $tenant, ?string $phone, ?string $primaryWaId): ?string
+    private function sanitizeResolvedPhone(?string $selfPhone, ?string $phone, ?string $primaryWaId): ?string
     {
         if ($phone === null) {
             return null;
         }
 
-        $tenantPhone = $this->normalizePhone($tenant->wa_phone);
+        $tenantPhone = $this->normalizePhone($selfPhone);
         $tenantWaId = $tenantPhone ? $tenantPhone.'@s.whatsapp.net' : null;
 
         if ($tenantPhone !== null && $phone === $tenantPhone && $primaryWaId !== $tenantWaId) {

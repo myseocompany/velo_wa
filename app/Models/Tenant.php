@@ -9,7 +9,9 @@ use App\Enums\WaStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Billable;
 
 class Tenant extends Model
@@ -74,6 +76,16 @@ class Tenant extends Model
         return $this->hasMany(Conversation::class);
     }
 
+    public function whatsappLines(): HasMany
+    {
+        return $this->hasMany(WhatsAppLine::class);
+    }
+
+    public function defaultWhatsAppLine(): HasOne
+    {
+        return $this->hasOne(WhatsAppLine::class)->where('is_default', true);
+    }
+
     public function quickReplies(): HasMany
     {
         return $this->hasMany(QuickReply::class);
@@ -92,6 +104,40 @@ class Tenant extends Model
     public function isConnected(): bool
     {
         return $this->wa_status === WaStatus::Connected;
+    }
+
+    public function hasAnyConnectedLine(): bool
+    {
+        return $this->whatsappLines()->where('status', WaStatus::Connected)->exists();
+    }
+
+    public function getOrCreateDefaultLine(): WhatsAppLine
+    {
+        return DB::transaction(function (): WhatsAppLine {
+            Tenant::whereKey($this->id)->lockForUpdate()->first();
+
+            $default = $this->defaultWhatsAppLine()->first();
+            if ($default) {
+                return $default;
+            }
+
+            $first = $this->whatsappLines()->oldest()->first();
+            if ($first) {
+                $first->update(['is_default' => true]);
+                return $first;
+            }
+
+            return $this->whatsappLines()->create([
+                'label' => 'Principal',
+                'is_default' => true,
+                'instance_id' => $this->wa_instance_id,
+                'status' => $this->wa_status ?? WaStatus::Disconnected,
+                'phone' => $this->wa_phone,
+                'connected_at' => $this->wa_connected_at,
+                'health_consecutive_failures' => $this->wa_health_consecutive_failures ?? 0,
+                'health_last_alert_at' => $this->wa_health_last_alert_at,
+            ]);
+        });
     }
 
     public function hasCompletedOnboarding(): bool
@@ -113,5 +159,10 @@ class Tenant extends Model
     public function canUse(string $feature): bool
     {
         return $this->currentPlan()->can($feature);
+    }
+
+    public function currentWhatsAppLinesCount(): int
+    {
+        return $this->whatsappLines()->count();
     }
 }

@@ -14,6 +14,7 @@ use App\Jobs\DispatchOutboundWebhook;
 use App\Jobs\DownloadMessageMedia;
 use App\Models\Conversation;
 use App\Models\Tenant;
+use App\Models\WhatsAppLine;
 use App\Services\AssignmentEngineService;
 use App\Services\AiAgentService;
 use App\Services\AutomationEngineService;
@@ -34,6 +35,7 @@ class HandleInboundMessage implements ShouldQueue
     public function __construct(
         private readonly array $payload,
         private readonly string $tenantId,
+        private readonly ?string $whatsappLineId = null,
     ) {
         $this->onQueue('whatsapp');
     }
@@ -44,14 +46,19 @@ class HandleInboundMessage implements ShouldQueue
         StoreInboundMessage $storeMessage,
         AssignmentEngineService $assignmentEngine,
         AutomationEngineService $automationEngine,
-        AiAgentService $aiAgentService,
+        ?AiAgentService $aiAgentService = null,
     ): void {
+        $aiAgentService ??= app(AiAgentService::class);
         $tenant = Tenant::find($this->tenantId);
 
         if (! $tenant) {
             Log::warning('HandleInboundMessage: tenant not found', ['tenant_id' => $this->tenantId]);
             return;
         }
+
+        $line = $this->whatsappLineId
+            ? WhatsAppLine::withoutGlobalScope('tenant')->find($this->whatsappLineId)
+            : $tenant->defaultWhatsAppLine()->first();
 
         $messages = $this->payload['data'] ?? [];
 
@@ -61,12 +68,13 @@ class HandleInboundMessage implements ShouldQueue
         }
 
         foreach ($messages as $msgPayload) {
-            $this->processMessage($tenant, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine, $automationEngine, $aiAgentService);
+            $this->processMessage($tenant, $line, $msgPayload, $createContact, $createConversation, $storeMessage, $assignmentEngine, $automationEngine, $aiAgentService);
         }
     }
 
     private function processMessage(
         Tenant $tenant,
+        ?WhatsAppLine $line,
         array $msgPayload,
         CreateOrUpdateContact $createContact,
         CreateOrUpdateConversation $createConversation,
@@ -95,9 +103,9 @@ class HandleInboundMessage implements ShouldQueue
             'aliases'       => $aliases,
         ];
 
-        $contact      = $createContact->handle($tenant, $waData);
+        $contact      = $createContact->handle($tenant, $waData, $line?->phone);
         $isNewConversation = false;
-        $conversation = $createConversation->handle($contact, $isNewConversation);
+        $conversation = $createConversation->handle($contact, $isNewConversation, $line?->id);
 
         $msgData = $this->extractMessageData($key, $msgPayload);
 
@@ -129,10 +137,11 @@ class HandleInboundMessage implements ShouldQueue
             }
 
             // Dispatch media download if message has media
-            if ($msgData['mediaType'] && $tenant->wa_instance_id) {
+            $instanceName = $line?->instance_id ?? $tenant->wa_instance_id;
+            if ($msgData['mediaType'] && $instanceName) {
                 DownloadMessageMedia::dispatch(
                     $message->id,
-                    $tenant->wa_instance_id,
+                    $instanceName,
                     $this->buildMediaDownloadPayload($msgPayload, $msgData['mediaType']),
                     $msgData['mediaType'],
                     $msgData['mediaMimeType'],

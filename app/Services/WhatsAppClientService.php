@@ -20,8 +20,14 @@ class WhatsAppClientService
         $this->apiKey  = config('services.evolution.key');
     }
 
-    /** Generate the instance name for a tenant (stable, deterministic). */
-    public static function instanceName(string $tenantId): string
+    /** Generate the instance name for a WhatsApp line (stable, deterministic). */
+    public static function instanceName(string $lineId): string
+    {
+        return 'line_' . substr(str_replace('-', '', $lineId), 0, 12);
+    }
+
+    /** Generate the legacy tenant-scoped instance name. */
+    public static function legacyInstanceName(string $tenantId): string
     {
         return 'tenant_' . substr(str_replace('-', '', $tenantId), 0, 8);
     }

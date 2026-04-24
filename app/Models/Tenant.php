@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Laravel\Cashier\Subscription as CashierSubscription;
 use Laravel\Cashier\Billable;
 
 class Tenant extends Model
@@ -164,5 +165,18 @@ class Tenant extends Model
     public function currentWhatsAppLinesCount(): int
     {
         return $this->whatsappLines()->count();
+    }
+
+    public function subscription(string $type = 'default'): ?CashierSubscription
+    {
+        /** @var CashierSubscription|null $subscription */
+        $subscription = CashierSubscription::query()
+            ->where('billable_id', (string) $this->getKey())
+            ->where('billable_type', self::class)
+            ->where('type', $type)
+            ->orderByDesc('created_at')
+            ->first();
+
+        return $subscription;
     }
 }

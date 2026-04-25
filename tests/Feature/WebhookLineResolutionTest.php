@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\WaStatus;
 use App\Jobs\HandleInboundMessage;
+use App\Services\WebhookHandlerService;
 use App\Models\Tenant;
 use App\Models\WhatsAppLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,5 +100,35 @@ class WebhookLineResolutionTest extends TestCase
 
         $response->assertOk();
         $response->assertJson(['ignored' => true]);
+    }
+
+    public function test_connection_update_does_not_overwrite_legacy_tenant_wa_phone(): void
+    {
+        $tenant = Tenant::create([
+            'name' => 'Tenant',
+            'slug' => 'tenant',
+            'wa_phone' => '573000000001',
+            'wa_status' => WaStatus::Disconnected,
+        ]);
+
+        $line = WhatsAppLine::create([
+            'tenant_id' => $tenant->id,
+            'label' => 'Nueva linea',
+            'instance_id' => 'line_xyz',
+            'is_default' => false,
+            'status' => WaStatus::Disconnected,
+        ]);
+
+        app(WebhookHandlerService::class)->handle([
+            'event' => 'connection.update',
+            'instance' => 'line_xyz',
+            'data' => [
+                'state' => 'open',
+                'wuid' => '573015627486@s.whatsapp.net',
+            ],
+        ], $line->fresh());
+
+        $this->assertSame('573000000001', $tenant->fresh()->wa_phone);
+        $this->assertSame('573015627486', $line->fresh()->phone);
     }
 }

@@ -103,7 +103,6 @@ class WebhookHandlerService
             $wuid = $data['wuid'] ?? '';
             if ($wuid && str_contains($wuid, '@')) {
                 $lineUpdates['phone'] = explode('@', $wuid)[0];
-                $tenantUpdates['wa_phone'] = $lineUpdates['phone'];
             }
         }
 

@@ -31,11 +31,12 @@ class MessageReceived implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $message = $this->message->load('sender');
+        $message = $this->message->load(['sender', 'conversation']);
 
         return [
             'id'              => $message->id,
             'conversation_id' => $message->conversation_id,
+            'whatsapp_line_id' => $message->conversation?->whatsapp_line_id,
             'direction'       => $message->direction->value,
             'body'            => $message->body,
             'media_url'       => $message->media_url,

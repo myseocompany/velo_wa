@@ -16,8 +16,8 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PipelineDealController;
 use App\Http\Controllers\Api\V1\QuickReplyController;
 use App\Http\Controllers\Api\V1\ReservationController;
-use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TagController;
+use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\WhatsAppController;
@@ -74,7 +74,6 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::post('/conversations/{conversation}/messages/media', [MessageController::class, 'storeMedia'])->middleware('throttle:messages')->name('messages.store-media');
     Route::post('/conversations/{conversation}/messages/quick-reply/{quickReply}', [MessageController::class, 'storeQuickReply'])->middleware('throttle:messages')->name('messages.store-quick-reply');
 
-
     // AI agent
     Route::get('/ai-agent', [AiAgentController::class, 'show'])->name('ai-agent.show');
     Route::get('/ai-agents', [AiAgentController::class, 'index'])->name('ai-agents.index');
@@ -90,6 +89,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
         Route::delete('/ai-agents/{aiAgent}', [AiAgentController::class, 'destroy'])->name('ai-agents.destroy');
         Route::patch('/ai-agents/{aiAgent}/toggle', [AiAgentController::class, 'toggleAgent'])->name('ai-agents.toggle');
         Route::patch('/ai-agents/{aiAgent}/default', [AiAgentController::class, 'setDefault'])->name('ai-agents.default');
+        Route::post('/ai-agents/{aiAgent}/playground', [AiAgentController::class, 'playground'])
+            ->middleware('throttle:playground')
+            ->name('ai-agents.playground');
     });
 
     // Team — members/workload readable by all; management admin+

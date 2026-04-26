@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Models\Conversation;
 use App\Support\PlanCatalog;
@@ -113,7 +113,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
 
     Route::get('/settings/ai-agent', function () {
         return Inertia::render('Settings/AiAgent');
-    })->name('settings.ai-agent');
+    })->middleware('role:admin')->name('settings.ai-agent');
 
     Route::get('/settings/webhooks', function () {
         return Inertia::render('Settings/Webhooks');
@@ -148,7 +148,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
 
 // Stripe webhook (no auth — verified by Cashier via signature)
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])->name('cashier.webhook');

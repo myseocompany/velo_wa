@@ -57,6 +57,17 @@ class AppServiceProvider extends ServiceProvider
                 ], 429));
         });
 
+        // AI playground: 20 tests/minute per tenant (LLM token cost protection)
+        RateLimiter::for('playground', function (Request $request) {
+            $tenantId = $request->user()?->tenant_id ?? $request->ip();
+
+            return Limit::perMinute(20)
+                ->by("playground:{$tenantId}")
+                ->response(fn () => response()->json([
+                    'message' => 'Demasiadas pruebas. Espera un momento.',
+                ], 429));
+        });
+
         // WhatsApp connect/disconnect: 5 attempts/minute per user (prevents abuse)
         RateLimiter::for('whatsapp-control', function (Request $request) {
             return Limit::perMinute(5)->by($request->user()?->id ?? $request->ip());

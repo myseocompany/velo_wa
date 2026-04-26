@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\AiProviderException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AiAgentRequest;
+use App\Http\Requests\Api\PlaygroundRequest;
 use App\Http\Resources\AiAgentResource;
 use App\Models\AiAgent;
+use App\Services\AiAgentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -155,6 +158,64 @@ class AiAgentController extends Controller
             'data' => new AiAgentResource($aiAgent->fresh()),
             'available_models' => AiAgentRequest::availableModels(),
         ]);
+    }
+
+    public function playground(PlaygroundRequest $request, string $aiAgent, AiAgentService $service): JsonResponse
+    {
+        $aiAgent = $this->resolveAgent($request, $aiAgent);
+
+        $prompt = trim((string) $aiAgent->system_prompt);
+        if ($prompt === '') {
+            return response()->json([
+                'message' => 'El agente no tiene system_prompt configurado.',
+            ], 422);
+        }
+
+        /** @var array<int, array{role: string, content: string}> $history */
+        $history = $request->input('history', []);
+        $history[] = [
+            'role' => 'user',
+            'content' => $request->string('message')->toString(),
+        ];
+
+        try {
+            $reply = $service->generateReplyWithMeta(
+                $aiAgent,
+                $prompt,
+                $history,
+                disableFallback: true,
+                context: ['playground' => true],
+            );
+        } catch (AiProviderException $exception) {
+            return response()->json([
+                'message' => $this->playgroundProviderErrorMessage($exception),
+                'provider' => $exception->provider,
+                'status' => $exception->status,
+            ], 502);
+        }
+
+        if ($reply === null) {
+            return response()->json([
+                'message' => 'El proveedor no devolvió una respuesta.',
+            ], 502);
+        }
+
+        return response()->json([
+            'data' => $reply,
+        ]);
+    }
+
+    private function playgroundProviderErrorMessage(AiProviderException $exception): string
+    {
+        if ($exception->status !== 0) {
+            return $exception->getMessage();
+        }
+
+        if (str_contains(strtolower($exception->getMessage()), 'key')) {
+            return 'La API key del proveedor '.$exception->provider.' no está configurada.';
+        }
+
+        return 'No se pudo conectar con '.$exception->provider.'. Reintenta en unos segundos.';
     }
 
     // Backward compatibility endpoint: upsert default agent

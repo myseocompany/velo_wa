@@ -8,10 +8,12 @@ use App\Enums\ConversationStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Events\ConversationUpdated;
+use App\Exceptions\AiProviderException;
 use App\Jobs\SendWhatsAppMessage;
 use App\Models\AiAgent;
 use App\Models\Conversation;
 use App\Models\Message;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -141,28 +143,55 @@ class AiAgentService
      */
     public function generateReply(AiAgent $agent, string $prompt, array $history): ?string
     {
+        return $this->generateReplyWithMeta($agent, $prompt, $history)['reply'] ?? null;
+    }
+
+    /**
+     * @param  array<int, array{role: string, content: string}>  $history
+     * @param  array<string, mixed>  $context
+     * @return array{reply: string, provider: string, model: string}|null
+     */
+    public function generateReplyWithMeta(
+        AiAgent $agent,
+        string $prompt,
+        array $history,
+        bool $disableFallback = false,
+        array $context = [],
+    ): ?array {
         [$primaryProvider, $primaryModel] = $this->resolveProviderAndModel($agent->llm_model);
-        $attempts = $this->providerFallbackChain($primaryProvider, $primaryModel);
+        $attempts = $disableFallback
+            ? [[$primaryProvider, $primaryModel]]
+            : $this->providerFallbackChain($primaryProvider, $primaryModel);
         $lastException = null;
 
         foreach ($attempts as $index => [$provider, $model]) {
             $apiKey = $this->providerApiKey($provider);
             if ($apiKey === '') {
-                Log::warning('AiAgent: missing provider API key', [
-                    'agent_id' => $agent->id,
-                    'provider' => $provider,
-                ]);
+                $this->throwOrSkipMissingKey($provider, $agent->id, $disableFallback, $context);
 
                 continue;
             }
 
             try {
-                return match ($provider) {
-                    'anthropic' => $this->generateAnthropicReply($apiKey, $model, $prompt, $history, $agent->id),
-                    'openai' => $this->generateOpenAiReply($apiKey, $model, $prompt, $history, $agent->id),
-                    'gemini' => $this->generateGeminiReply($apiKey, $model, $prompt, $history, $agent->id),
-                    default => throw new \RuntimeException('Unsupported provider: '.$provider),
+                $reply = match ($provider) {
+                    'anthropic' => $this->generateAnthropicReply($apiKey, $model, $prompt, $history, $agent->id, $context),
+                    'openai' => $this->generateOpenAiReply($apiKey, $model, $prompt, $history, $agent->id, $context),
+                    'gemini' => $this->generateGeminiReply($apiKey, $model, $prompt, $history, $agent->id, $context),
+                    default => $this->throwProviderRequestException(
+                        $provider,
+                        $agent->id,
+                        0,
+                        null,
+                        'Proveedor de IA no soportado: '.$provider,
+                        $context,
+                    ),
                 };
+
+                return $reply !== null ? [
+                    'reply' => $reply,
+                    'provider' => $provider,
+                    'model' => $model,
+                ] : null;
             } catch (\RuntimeException $exception) {
                 $lastException = $exception;
                 $isLastAttempt = $index === array_key_last($attempts);
@@ -172,7 +201,7 @@ class AiAgentService
                 }
 
                 Log::warning('AiAgent: provider failed, trying fallback provider', [
-                    'agent_id' => $agent->id,
+                    ...$this->logContext($provider, $agent->id, $exception instanceof AiProviderException ? $exception->status : null, $context),
                     'failed_provider' => $provider,
                     'failed_model' => $model,
                     'next_provider' => $attempts[$index + 1][0] ?? null,
@@ -187,6 +216,7 @@ class AiAgentService
         Log::warning('AiAgent: no provider available for reply generation', [
             'agent_id' => $agent->id,
             'requested_model' => $agent->llm_model,
+            ...$context,
         ]);
 
         return null;
@@ -252,6 +282,14 @@ class AiAgentService
 
     private function shouldFallbackAfterProviderFailure(\RuntimeException $exception): bool
     {
+        if ($exception instanceof AiProviderException) {
+            $message = strtolower($exception->getMessage());
+
+            return in_array($exception->status, [0, 429], true)
+                || str_contains($message, 'insufficient_quota')
+                || str_contains($message, 'rate_limit');
+        }
+
         $message = strtolower($exception->getMessage());
 
         return str_contains($message, ' api request failed: 429')
@@ -262,21 +300,26 @@ class AiAgentService
 
     /**
      * @param  array<int, array{role: string, content: string}>  $history
+     * @param  array<string, mixed>  $context
      */
-    private function generateAnthropicReply(string $apiKey, string $model, string $prompt, array $history, string $agentId): ?string
+    private function generateAnthropicReply(string $apiKey, string $model, string $prompt, array $history, string $agentId, array $context = []): ?string
     {
-        $response = Http::withHeaders([
-            'x-api-key' => $apiKey,
-            'anthropic-version' => '2023-06-01',
-        ])->timeout(40)->post('https://api.anthropic.com/v1/messages', [
-            'model' => $model,
-            'max_tokens' => 1024,
-            'system' => $prompt,
-            'messages' => $history,
-        ]);
+        try {
+            $response = Http::withHeaders([
+                'x-api-key' => $apiKey,
+                'anthropic-version' => '2023-06-01',
+            ])->timeout(40)->post('https://api.anthropic.com/v1/messages', [
+                'model' => $model,
+                'max_tokens' => 1024,
+                'system' => $prompt,
+                'messages' => $history,
+            ]);
+        } catch (ConnectionException $exception) {
+            $this->throwProviderRequestException('anthropic', $agentId, 0, null, $exception->getMessage(), $context);
+        }
 
         if ($response->failed()) {
-            $this->throwProviderRequestException('anthropic', $agentId, $response->status(), $response->body());
+            $this->throwProviderRequestException('anthropic', $agentId, $response->status(), $response->body(), null, $context);
         }
 
         $content = $response->json('content');
@@ -302,22 +345,27 @@ class AiAgentService
 
     /**
      * @param  array<int, array{role: string, content: string}>  $history
+     * @param  array<string, mixed>  $context
      */
-    private function generateOpenAiReply(string $apiKey, string $model, string $prompt, array $history, string $agentId): ?string
+    private function generateOpenAiReply(string $apiKey, string $model, string $prompt, array $history, string $agentId, array $context = []): ?string
     {
-        $response = Http::withToken($apiKey)
-            ->timeout(40)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $model,
-                'messages' => [
-                    ['role' => 'system', 'content' => $prompt],
-                    ...$history,
-                ],
-                'max_tokens' => 1024,
-            ]);
+        try {
+            $response = Http::withToken($apiKey)
+                ->timeout(40)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $prompt],
+                        ...$history,
+                    ],
+                    'max_tokens' => 1024,
+                ]);
+        } catch (ConnectionException $exception) {
+            $this->throwProviderRequestException('openai', $agentId, 0, null, $exception->getMessage(), $context);
+        }
 
         if ($response->failed()) {
-            $this->throwProviderRequestException('openai', $agentId, $response->status(), $response->body());
+            $this->throwProviderRequestException('openai', $agentId, $response->status(), $response->body(), null, $context);
         }
 
         $content = $response->json('choices.0.message.content');
@@ -345,8 +393,9 @@ class AiAgentService
 
     /**
      * @param  array<int, array{role: string, content: string}>  $history
+     * @param  array<string, mixed>  $context
      */
-    private function generateGeminiReply(string $apiKey, string $model, string $prompt, array $history, string $agentId): ?string
+    private function generateGeminiReply(string $apiKey, string $model, string $prompt, array $history, string $agentId, array $context = []): ?string
     {
         $contents = array_map(static function (array $item): array {
             return [
@@ -357,21 +406,25 @@ class AiAgentService
             ];
         }, $history);
 
-        $response = Http::timeout(40)
-            ->post('https://generativelanguage.googleapis.com/v1beta/models/'.$model.':generateContent?key='.$apiKey, [
-                'systemInstruction' => [
-                    'parts' => [
-                        ['text' => $prompt],
+        try {
+            $response = Http::timeout(40)
+                ->post('https://generativelanguage.googleapis.com/v1beta/models/'.$model.':generateContent?key='.$apiKey, [
+                    'systemInstruction' => [
+                        'parts' => [
+                            ['text' => $prompt],
+                        ],
                     ],
-                ],
-                'contents' => $contents,
-                'generationConfig' => [
-                    'maxOutputTokens' => 1024,
-                ],
-            ]);
+                    'contents' => $contents,
+                    'generationConfig' => [
+                        'maxOutputTokens' => 1024,
+                    ],
+                ]);
+        } catch (ConnectionException $exception) {
+            $this->throwProviderRequestException('gemini', $agentId, 0, null, $exception->getMessage(), $context);
+        }
 
         if ($response->failed()) {
-            $this->throwProviderRequestException('gemini', $agentId, $response->status(), $response->body());
+            $this->throwProviderRequestException('gemini', $agentId, $response->status(), $response->body(), null, $context);
         }
 
         $parts = $response->json('candidates.0.content.parts');
@@ -391,15 +444,63 @@ class AiAgentService
         return $text !== '' ? $text : null;
     }
 
-    private function throwProviderRequestException(string $provider, string $agentId, int $status, string $body): void
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function throwOrSkipMissingKey(string $provider, string $agentId, bool $disableFallback, array $context): void
     {
-        Log::error('AiAgent: provider request failed', [
+        Log::warning(
+            'AiAgent: missing provider API key',
+            $this->logContext($provider, $agentId, 0, $context),
+        );
+
+        if ($disableFallback) {
+            $this->throwProviderRequestException(
+                $provider,
+                $agentId,
+                0,
+                null,
+                ucfirst($provider).' API key no está configurada.',
+                $context,
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $extra
+     * @return array<string, mixed>
+     */
+    private function logContext(string $provider, string $agentId, ?int $status, array $extra = []): array
+    {
+        return array_filter([
             'provider' => $provider,
             'agent_id' => $agentId,
             'status' => $status,
-            'body' => $body,
-        ]);
+            ...$extra,
+        ], static fn ($value) => $value !== null);
+    }
 
-        throw new \RuntimeException(ucfirst($provider).' API request failed: '.$status.' body='.$body);
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function throwProviderRequestException(
+        string $provider,
+        string $agentId,
+        int $status,
+        ?string $body,
+        ?string $message = null,
+        array $context = [],
+    ): never {
+        Log::error(
+            'AiAgent: provider request failed',
+            $this->logContext($provider, $agentId, $status, $context),
+        );
+
+        throw new AiProviderException(
+            $provider,
+            $status,
+            $body,
+            $message ?: ucfirst($provider).' API request failed: '.$status,
+        );
     }
 }

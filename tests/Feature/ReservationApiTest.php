@@ -184,7 +184,7 @@ class ReservationApiTest extends TestCase
     {
         $response = $this->actingAs($this->agent)->getJson('/api/v1/reservations/slots?date=not-a-date');
 
-        $response->assertStatus(500); // Actualmente lanza excepción — documentado para fix futuro
+        $response->assertUnprocessable();
     }
 
     public function test_past_reservation_rejected(): void

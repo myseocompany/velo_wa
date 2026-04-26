@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Reservations\BuildReservationSlots;
+use App\Actions\Reservations\GenerateReservationCode;
 use App\Actions\Reservations\MoveReservationToStatus;
 use App\Enums\ReservationStatus;
 use App\Http\Controllers\Controller;
@@ -18,13 +19,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class ReservationController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Reservation::query()->with(['contact', 'assignee']);
+        $query = Reservation::query()->with(['contact', 'assignee', 'bookableUnit']);
 
         $status = $request->string('status')->toString();
         if ($status !== '' && ReservationStatus::tryFrom($status) !== null) {
@@ -106,7 +106,7 @@ class ReservationController extends Controller
         return response()->json(['data' => $slots]);
     }
 
-    public function store(ReservationRequest $request): JsonResponse
+    public function store(ReservationRequest $request, GenerateReservationCode $generateCode): JsonResponse
     {
         $status = ReservationStatus::tryFrom($request->input('status', ReservationStatus::Requested->value))
             ?? ReservationStatus::Requested;
@@ -116,7 +116,9 @@ class ReservationController extends Controller
             'contact_id' => $request->input('contact_id'),
             'conversation_id' => $request->input('conversation_id'),
             'assigned_to' => $request->input('assigned_to'),
-            'code' => $this->generateReservationCode(),
+            'bookable_unit_id' => $request->input('bookable_unit_id'),
+            'service' => $request->input('service'),
+            'code' => $generateCode->handle(),
             'status' => $status,
             'starts_at' => $request->date('starts_at'),
             'ends_at' => $request->date('ends_at'),
@@ -125,13 +127,13 @@ class ReservationController extends Controller
             'requested_at' => now(),
         ]);
 
-        return response()->json(['data' => new ReservationResource($reservation->load(['contact', 'assignee']))], 201);
+        return response()->json(['data' => new ReservationResource($reservation->load(['contact', 'assignee', 'bookableUnit']))], 201);
     }
 
     public function show(Reservation $reservation): JsonResponse
     {
         return response()->json([
-            'data' => new ReservationResource($reservation->load(['contact', 'assignee'])),
+            'data' => new ReservationResource($reservation->load(['contact', 'assignee', 'bookableUnit'])),
         ]);
     }
 
@@ -141,6 +143,8 @@ class ReservationController extends Controller
             'contact_id' => $request->input('contact_id', $reservation->contact_id),
             'conversation_id' => $request->input('conversation_id', $reservation->conversation_id),
             'assigned_to' => $request->input('assigned_to', $reservation->assigned_to),
+            'bookable_unit_id' => $request->input('bookable_unit_id', $reservation->bookable_unit_id),
+            'service' => $request->input('service', $reservation->service),
             'starts_at' => $request->date('starts_at'),
             'ends_at' => $request->date('ends_at'),
             'party_size' => $request->integer('party_size', $reservation->party_size),
@@ -148,7 +152,7 @@ class ReservationController extends Controller
         ]);
 
         return response()->json([
-            'data' => new ReservationResource($reservation->fresh(['contact', 'assignee'])),
+            'data' => new ReservationResource($reservation->fresh(['contact', 'assignee', 'bookableUnit'])),
         ]);
     }
 
@@ -160,7 +164,7 @@ class ReservationController extends Controller
         $updated = $action->handle($reservation, $request->status());
 
         return response()->json([
-            'data' => new ReservationResource($updated->load(['contact', 'assignee'])),
+            'data' => new ReservationResource($updated->load(['contact', 'assignee', 'bookableUnit'])),
         ]);
     }
 
@@ -171,13 +175,4 @@ class ReservationController extends Controller
         return response()->noContent();
     }
 
-    private function generateReservationCode(): string
-    {
-        do {
-            $code = 'RES-' . strtoupper(Str::random(6));
-        } while (Reservation::query()->where('code', $code)->exists());
-
-        return $code;
-    }
 }
-

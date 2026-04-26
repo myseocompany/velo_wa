@@ -8,6 +8,12 @@ import { useEffect, useRef, useState } from 'react';
 
 type BoardState = Record<ReservationStatus, Reservation[]>;
 interface ApiResponse extends PaginatedData<Reservation> {}
+interface BookableUnit {
+    id: string;
+    name: string;
+    type: string;
+    settings?: { services?: string[] } | null;
+}
 
 const STATUSES: { key: ReservationStatus; label: string; dot: string; header: string }[] = [
     { key: 'requested', label: 'Solicitada', dot: 'bg-slate-400', header: 'bg-slate-100 border-slate-200' },
@@ -59,6 +65,8 @@ function ReservationCard({ reservation, moving }: { reservation: Reservation; mo
             </div>
             <div className="ml-5 mt-1 flex items-center gap-2 text-[11px] text-gray-500">
                 <span>{reservation.party_size} pax</span>
+                {reservation.bookable_unit && <span>{reservation.bookable_unit.name}</span>}
+                {reservation.service && <span>{reservation.service}</span>}
                 {reservation.assignee && (
                     <span className="ml-auto flex items-center gap-1 text-gray-400">
                         <User size={10} />
@@ -93,6 +101,9 @@ function CreateReservationModal({
     const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
     const [slotDate, setSlotDate] = useState(new Date().toISOString().slice(0, 10));
     const [slots, setSlots] = useState<Slot[]>([]);
+    const [bookableUnits, setBookableUnits] = useState<BookableUnit[]>([]);
+    const [selectedUnitId, setSelectedUnitId] = useState('');
+    const [service, setService] = useState('');
     const [selectedSlot, setSelectedSlot] = useState('');
     const [partySize, setPartySize] = useState(2);
     const [notes, setNotes] = useState('');
@@ -118,6 +129,14 @@ function CreateReservationModal({
             }
         }, 250);
     }, [contactSearch]);
+
+    useEffect(() => {
+        axios.get<{ data: BookableUnit[] }>('/api/v1/bookable-units', {
+            params: { type: 'professional', active: 1 },
+        }).then((res) => {
+            setBookableUnits(res.data.data ?? []);
+        });
+    }, []);
 
     async function loadSlots() {
         setLoadingSlots(true);
@@ -159,6 +178,8 @@ function CreateReservationModal({
         try {
             const res = await axios.post<{ data: Reservation }>('/api/v1/reservations', {
                 contact_id: selectedContact.id,
+                bookable_unit_id: selectedUnitId || null,
+                service: service || null,
                 starts_at: slot.starts_at,
                 ends_at: slot.ends_at,
                 party_size: partySize,
@@ -235,6 +256,33 @@ function CreateReservationModal({
                             />
                         </div>
                     </div>
+
+                    {bookableUnits.length > 0 && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Recurso</label>
+                                <select
+                                    value={selectedUnitId}
+                                    onChange={(e) => setSelectedUnitId(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                                >
+                                    <option value="">Sin recurso</option>
+                                    {bookableUnits.map((unit) => (
+                                        <option key={unit.id} value={unit.id}>{unit.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Servicio</label>
+                                <input
+                                    value={service}
+                                    onChange={(e) => setService(e.target.value)}
+                                    placeholder="citologia"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Slot disponible</label>
@@ -429,4 +477,3 @@ export default function ReservationsIndex() {
         </AppLayout>
     );
 }
-

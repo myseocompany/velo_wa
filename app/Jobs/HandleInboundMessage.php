@@ -130,7 +130,7 @@ class HandleInboundMessage implements ShouldQueue
                 }
                 $automationEngine->dispatch($conversation, AutomationTriggerType::Keyword, $message);
 
-                $aiAgent = $aiAgentService->agentForTenant($tenant->id);
+                $aiAgent = $aiAgentService->agentForConversation($conversation->refresh());
                 if ($aiAgent && $conversation->isOpen() && $aiAgentService->shouldRespond($conversation->refresh(), $aiAgent)) {
                     GenerateAiAgentReply::dispatch($conversation->id, $aiAgent->id, $message->id);
                 }

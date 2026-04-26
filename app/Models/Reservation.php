@@ -21,6 +21,8 @@ class Reservation extends Model
         'contact_id',
         'conversation_id',
         'assigned_to',
+        'bookable_unit_id',
+        'service',
         'code',
         'status',
         'starts_at',
@@ -65,5 +67,9 @@ class Reservation extends Model
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
-}
 
+    public function bookableUnit(): BelongsTo
+    {
+        return $this->belongsTo(BookableUnit::class);
+    }
+}

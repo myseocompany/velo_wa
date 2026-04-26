@@ -167,9 +167,11 @@ export interface AiAgent {
     name: string;
     system_prompt: string | null;
     llm_model: string;
+    whatsapp_line_id?: string | null;
     is_enabled: boolean;
     is_default?: boolean;
     context_messages: number;
+    tool_calling_enabled?: boolean;
     is_configured: boolean;
     created_at?: string | null;
     updated_at?: string | null;
@@ -250,6 +252,8 @@ export interface Reservation {
     contact_id: string;
     conversation_id: string | null;
     assigned_to: string | null;
+    bookable_unit_id: string | null;
+    service: string | null;
     code: string;
     status: ReservationStatus;
     starts_at: string;
@@ -266,6 +270,11 @@ export interface Reservation {
     updated_at: string;
     contact?: Contact;
     assignee?: User | null;
+    bookable_unit?: {
+        id: string;
+        name: string;
+        type: string;
+    } | null;
 }
 
 export interface LoyaltyAccount {

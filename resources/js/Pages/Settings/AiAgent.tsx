@@ -10,9 +10,11 @@ interface AiAgentConfig {
     name: string;
     system_prompt: string | null;
     llm_model: string;
+    whatsapp_line_id: string | null;
     is_enabled: boolean;
     is_default: boolean;
     context_messages: number;
+    tool_calling_enabled: boolean;
     is_configured: boolean;
 }
 
@@ -20,8 +22,16 @@ interface AgentPayload {
     name: string;
     system_prompt: string | null;
     llm_model: string;
+    whatsapp_line_id: string | null;
     is_enabled: boolean;
     context_messages: number;
+    tool_calling_enabled: boolean;
+}
+
+interface WhatsAppLineOption {
+    id: string;
+    label: string;
+    phone: string | null;
 }
 
 interface PlaygroundMessage {
@@ -64,6 +74,7 @@ export default function SettingsAiAgent() {
     const [busy, setBusy] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [availableModels, setAvailableModels] = useState<string[]>([]);
+    const [whatsappLines, setWhatsappLines] = useState<WhatsAppLineOption[]>([]);
     const [agents, setAgents] = useState<AiAgentConfig[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [playgroundMessages, setPlaygroundMessages] = useState<PlaygroundMessage[]>([]);
@@ -75,8 +86,10 @@ export default function SettingsAiAgent() {
         name: 'Agente IA',
         system_prompt: '',
         llm_model: 'claude-haiku-4-5',
+        whatsapp_line_id: null,
         is_enabled: false,
         context_messages: 10,
+        tool_calling_enabled: false,
     });
 
     const selectedAgent = useMemo(
@@ -88,9 +101,11 @@ export default function SettingsAiAgent() {
         setLoading(true);
         try {
             const res = await axios.get<{ data: AiAgentConfig[]; available_models: string[] }>('/api/v1/ai-agents');
+            const linesRes = await axios.get<{ data: WhatsAppLineOption[] }>('/api/v1/whatsapp/lines');
             const list = res.data.data ?? [];
             setAgents(list);
             setAvailableModels(res.data.available_models ?? []);
+            setWhatsappLines(linesRes.data.data ?? []);
 
             if (list.length > 0) {
                 const selected = list.find((a) => a.is_default) ?? list[0];
@@ -99,8 +114,10 @@ export default function SettingsAiAgent() {
                     name: selected.name,
                     system_prompt: selected.system_prompt,
                     llm_model: selected.llm_model,
+                    whatsapp_line_id: selected.whatsapp_line_id,
                     is_enabled: selected.is_enabled,
                     context_messages: selected.context_messages,
+                    tool_calling_enabled: selected.tool_calling_enabled,
                 });
             } else {
                 setSelectedId(null);
@@ -125,8 +142,10 @@ export default function SettingsAiAgent() {
             name: agent.name,
             system_prompt: agent.system_prompt,
             llm_model: agent.llm_model,
+            whatsapp_line_id: agent.whatsapp_line_id,
             is_enabled: agent.is_enabled,
             context_messages: agent.context_messages,
+            tool_calling_enabled: agent.tool_calling_enabled,
         });
     }
 
@@ -139,8 +158,10 @@ export default function SettingsAiAgent() {
                 name: `Agente IA ${nextNumber}`,
                 system_prompt: '',
                 llm_model: availableModels[0] ?? 'claude-haiku-4-5',
+                whatsapp_line_id: null,
                 is_enabled: false,
                 context_messages: 10,
+                tool_calling_enabled: false,
             };
 
             const res = await axios.post<{ data: AiAgentConfig }>('/api/v1/ai-agents', payload);
@@ -232,8 +253,10 @@ export default function SettingsAiAgent() {
                     name: 'Agente IA',
                     system_prompt: '',
                     llm_model: availableModels[0] ?? 'claude-haiku-4-5',
+                    whatsapp_line_id: null,
                     is_enabled: false,
                     context_messages: 10,
+                    tool_calling_enabled: false,
                 });
             }
         } catch (err: unknown) {
@@ -403,6 +426,34 @@ export default function SettingsAiAgent() {
                                                 />
                                                 {errors.context_messages && <p className="mt-1 text-xs text-red-500">{errors.context_messages}</p>}
                                             </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-medium text-gray-700">Línea WhatsApp</label>
+                                                <select
+                                                    value={form.whatsapp_line_id ?? ''}
+                                                    onChange={(e) => setForm((prev) => ({ ...prev, whatsapp_line_id: e.target.value || null }))}
+                                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-ari-500 focus:outline-none"
+                                                >
+                                                    <option value="">Todas</option>
+                                                    {whatsappLines.map((line) => (
+                                                        <option key={line.id} value={line.id}>
+                                                            {line.label}{line.phone ? ` · ${line.phone}` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {errors.whatsapp_line_id && <p className="mt-1 text-xs text-red-500">{errors.whatsapp_line_id}</p>}
+                                            </div>
+
+                                            <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.tool_calling_enabled}
+                                                    onChange={(e) => setForm((prev) => ({ ...prev, tool_calling_enabled: e.target.checked }))}
+                                                />
+                                                Habilitar herramientas
+                                            </label>
                                         </div>
 
                                         <div>

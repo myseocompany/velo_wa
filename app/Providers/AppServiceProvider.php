@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Services\AiAgent\ToolRegistry;
+use App\Services\AiAgent\Tools;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -13,7 +15,19 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->app->singleton(ToolRegistry::class, function ($app) {
+            return new ToolRegistry([
+                $app->make(Tools\GetContactTool::class),
+                $app->make(Tools\UpdateContactTool::class),
+                $app->make(Tools\GetAvailableSlotsTool::class),
+                $app->make(Tools\CreateAppointmentTool::class),
+                $app->make(Tools\HandoffToHumanTool::class),
+                $app->make(Tools\ScheduleFollowUpTool::class),
+            ]);
+        });
+    }
 
     public function boot(): void
     {

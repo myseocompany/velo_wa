@@ -33,6 +33,8 @@ class AiAgentRequest extends FormRequest
             'llm_model' => ['required', 'string', Rule::in(self::AVAILABLE_MODELS)],
             'context_messages' => ['required', 'integer', 'min:3', 'max:50'],
             'is_enabled' => ['sometimes', 'boolean'],
+            'tool_calling_enabled' => ['sometimes', 'boolean'],
+            'whatsapp_line_id' => ['nullable', 'uuid', Rule::exists('whatsapp_lines', 'id')->where('tenant_id', $this->user()->tenant_id)],
         ];
     }
 

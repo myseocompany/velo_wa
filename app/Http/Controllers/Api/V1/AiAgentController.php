@@ -11,6 +11,7 @@ use App\Http\Requests\Api\PlaygroundRequest;
 use App\Http\Resources\AiAgentResource;
 use App\Models\AiAgent;
 use App\Services\AiAgentService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,6 +32,7 @@ class AiAgentController extends Controller
                 'is_enabled' => false,
                 'is_default' => true,
                 'context_messages' => 10,
+                'tool_calling_enabled' => false,
             ]);
         }
 
@@ -65,15 +67,21 @@ class AiAgentController extends Controller
             ->where('tenant_id', $tenantId)
             ->exists();
 
-        $agent = AiAgent::withoutGlobalScope('tenant')->create([
-            'tenant_id' => $tenantId,
-            'name' => $request->input('name'),
-            'system_prompt' => $request->input('system_prompt'),
-            'llm_model' => $request->input('llm_model'),
-            'context_messages' => $request->integer('context_messages'),
-            'is_enabled' => $request->boolean('is_enabled', false),
-            'is_default' => ! $hasAgents,
-        ]);
+        try {
+            $agent = AiAgent::withoutGlobalScope('tenant')->create([
+                'tenant_id' => $tenantId,
+                'whatsapp_line_id' => $request->input('whatsapp_line_id'),
+                'name' => $request->input('name'),
+                'system_prompt' => $request->input('system_prompt'),
+                'llm_model' => $request->input('llm_model'),
+                'context_messages' => $request->integer('context_messages'),
+                'is_enabled' => $request->boolean('is_enabled', false),
+                'tool_calling_enabled' => $request->boolean('tool_calling_enabled', false),
+                'is_default' => ! $hasAgents,
+            ]);
+        } catch (QueryException $exception) {
+            return $this->agentConstraintError($exception);
+        }
 
         return response()->json([
             'data' => new AiAgentResource($agent),
@@ -85,13 +93,19 @@ class AiAgentController extends Controller
     {
         $aiAgent = $this->resolveAgent($request, $aiAgent);
 
-        $aiAgent->update([
-            'name' => $request->input('name'),
-            'system_prompt' => $request->input('system_prompt'),
-            'llm_model' => $request->input('llm_model'),
-            'context_messages' => $request->integer('context_messages'),
-            'is_enabled' => $request->boolean('is_enabled', false),
-        ]);
+        try {
+            $aiAgent->update([
+                'whatsapp_line_id' => $request->input('whatsapp_line_id'),
+                'name' => $request->input('name'),
+                'system_prompt' => $request->input('system_prompt'),
+                'llm_model' => $request->input('llm_model'),
+                'context_messages' => $request->integer('context_messages'),
+                'is_enabled' => $request->boolean('is_enabled', false),
+                'tool_calling_enabled' => $request->boolean('tool_calling_enabled', false),
+            ]);
+        } catch (QueryException $exception) {
+            return $this->agentConstraintError($exception);
+        }
 
         return response()->json([
             'data' => new AiAgentResource($aiAgent->fresh()),
@@ -226,23 +240,35 @@ class AiAgentController extends Controller
         $agent = $this->defaultAgentQuery($tenantId)->first();
 
         if (! $agent) {
-            $agent = AiAgent::withoutGlobalScope('tenant')->create([
-                'tenant_id' => $tenantId,
-                'name' => $request->input('name'),
-                'system_prompt' => $request->input('system_prompt'),
-                'llm_model' => $request->input('llm_model'),
-                'context_messages' => $request->integer('context_messages'),
-                'is_enabled' => $request->boolean('is_enabled', false),
-                'is_default' => true,
-            ]);
+            try {
+                $agent = AiAgent::withoutGlobalScope('tenant')->create([
+                    'tenant_id' => $tenantId,
+                    'name' => $request->input('name'),
+                    'whatsapp_line_id' => $request->input('whatsapp_line_id'),
+                    'system_prompt' => $request->input('system_prompt'),
+                    'llm_model' => $request->input('llm_model'),
+                    'context_messages' => $request->integer('context_messages'),
+                    'is_enabled' => $request->boolean('is_enabled', false),
+                    'tool_calling_enabled' => $request->boolean('tool_calling_enabled', false),
+                    'is_default' => true,
+                ]);
+            } catch (QueryException $exception) {
+                return $this->agentConstraintError($exception);
+            }
         } else {
-            $agent->update([
-                'name' => $request->input('name'),
-                'system_prompt' => $request->input('system_prompt'),
-                'llm_model' => $request->input('llm_model'),
-                'context_messages' => $request->integer('context_messages'),
-                'is_enabled' => $request->boolean('is_enabled', false),
-            ]);
+            try {
+                $agent->update([
+                    'whatsapp_line_id' => $request->input('whatsapp_line_id'),
+                    'name' => $request->input('name'),
+                    'system_prompt' => $request->input('system_prompt'),
+                    'llm_model' => $request->input('llm_model'),
+                    'context_messages' => $request->integer('context_messages'),
+                    'is_enabled' => $request->boolean('is_enabled', false),
+                    'tool_calling_enabled' => $request->boolean('tool_calling_enabled', false),
+                ]);
+            } catch (QueryException $exception) {
+                return $this->agentConstraintError($exception);
+            }
         }
 
         return response()->json([
@@ -271,6 +297,7 @@ class AiAgentController extends Controller
                 'context_messages' => 10,
                 'is_enabled' => false,
                 'is_default' => true,
+                'tool_calling_enabled' => false,
             ]);
         }
 
@@ -306,5 +333,17 @@ class AiAgentController extends Controller
         }
 
         return $agent;
+    }
+
+    private function agentConstraintError(QueryException $exception): JsonResponse
+    {
+        if (str_contains($exception->getMessage(), 'ai_agents_unique_per_line')) {
+            return response()->json([
+                'message' => 'Ya existe un agente configurado para esa línea de WhatsApp.',
+                'errors' => ['whatsapp_line_id' => ['Ya existe un agente configurado para esa línea de WhatsApp.']],
+            ], 422);
+        }
+
+        throw $exception;
     }
 }

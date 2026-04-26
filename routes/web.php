@@ -73,6 +73,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'onboarding'])->group(function 
         return Inertia::render('Reservations/Index');
     })->name('reservations');
 
+    Route::get('/bookable-units', function () {
+        return Inertia::render('BookableUnits/Index');
+    })->middleware('role:admin')->name('bookable-units');
+
     // Tasks
     Route::get('/tasks', function () {
         return Inertia::render('Tasks/Index');

@@ -16,6 +16,8 @@ class ReservationResource extends JsonResource
             'contact_id' => $this->contact_id,
             'conversation_id' => $this->conversation_id,
             'assigned_to' => $this->assigned_to,
+            'bookable_unit_id' => $this->bookable_unit_id,
+            'service' => $this->service,
             'code' => $this->code,
             'status' => $this->status->value,
             'starts_at' => $this->starts_at?->toIso8601String(),
@@ -35,7 +37,11 @@ class ReservationResource extends JsonResource
                 'id' => $this->assignee->id,
                 'name' => $this->assignee->name,
             ] : null),
+            'bookable_unit' => $this->whenLoaded('bookableUnit', fn () => $this->bookableUnit ? [
+                'id' => $this->bookableUnit->id,
+                'name' => $this->bookableUnit->name,
+                'type' => $this->bookableUnit->type,
+            ] : null),
         ];
     }
 }
-

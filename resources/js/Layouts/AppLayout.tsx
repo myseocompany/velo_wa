@@ -4,6 +4,7 @@ import {
     CheckSquare,
     ClipboardList,
     CalendarClock,
+    CalendarPlus,
     ChevronDown,
     Inbox,
     LayoutDashboard,
@@ -68,6 +69,13 @@ const navItems: NavItem[] = [
         href: '/reservations',
         icon: <CalendarClock size={18} />,
         routeName: 'reservations',
+    },
+    {
+        label: 'Recursos',
+        href: '/bookable-units',
+        icon: <CalendarPlus size={18} />,
+        routeName: 'bookable-units',
+        roles: ['owner', 'admin'],
     },
     {
         label: 'Tareas',

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\AiAgentController;
 use App\Http\Controllers\Api\V1\AssignmentRuleController;
 use App\Http\Controllers\Api\V1\AutomationController;
+use App\Http\Controllers\Api\V1\BookableUnitController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\LoyaltyController;
@@ -163,6 +164,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'throttle:api'])->group(function ()
     Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->middleware('role:admin')->name('orders.destroy');
 
     // Reservations — all can read/create/update; delete admin+
+    Route::get('/bookable-units', [BookableUnitController::class, 'index'])->name('bookable-units.index');
+    Route::get('/bookable-units/{unit}', [BookableUnitController::class, 'show'])->name('bookable-units.show');
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/bookable-units', [BookableUnitController::class, 'store'])->name('bookable-units.store');
+        Route::put('/bookable-units/{unit}', [BookableUnitController::class, 'update'])->name('bookable-units.update');
+        Route::delete('/bookable-units/{unit}', [BookableUnitController::class, 'destroy'])->name('bookable-units.destroy');
+    });
+
     Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('/reservations/slots', [ReservationController::class, 'slots'])->name('reservations.slots');
     Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');

@@ -13,12 +13,15 @@ use App\Jobs\SendWhatsAppMessage;
 use App\Models\AiAgent;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Services\AiAgent\ToolRegistry;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class AiAgentService
 {
+    public function __construct(private readonly ToolRegistry $toolRegistry) {}
+
     /**
      * @var array<string, string>
      */
@@ -38,6 +41,32 @@ class AiAgentService
             ->orderByDesc('is_enabled')
             ->orderBy('created_at')
             ->first();
+    }
+
+    public function agentForConversation(Conversation $conversation): ?AiAgent
+    {
+        if ($conversation->whatsapp_line_id) {
+            $lineAgent = AiAgent::withoutGlobalScope('tenant')
+                ->where('tenant_id', $conversation->tenant_id)
+                ->where('whatsapp_line_id', $conversation->whatsapp_line_id)
+                ->where('is_enabled', true)
+                ->orderBy('created_at')
+                ->first();
+
+            if ($lineAgent) {
+                return $lineAgent;
+            }
+        }
+
+        $defaultAgent = AiAgent::withoutGlobalScope('tenant')
+            ->where('tenant_id', $conversation->tenant_id)
+            ->whereNull('whatsapp_line_id')
+            ->where('is_default', true)
+            ->where('is_enabled', true)
+            ->orderBy('created_at')
+            ->first();
+
+        return $defaultAgent ?: $this->agentForTenant((string) $conversation->tenant_id);
     }
 
     public function shouldRespond(Conversation $conversation, AiAgent $agent): bool
@@ -74,7 +103,27 @@ class AiAgentService
             return;
         }
 
-        $reply = $this->generateReply($agent, $prompt, $history);
+        try {
+            $reply = $this->generateReplyWithMeta(
+                $agent,
+                $prompt,
+                $history,
+                useTools: (bool) $agent->tool_calling_enabled,
+                conversation: $conversation,
+            )['reply'] ?? null;
+        } catch (AiProviderException $exception) {
+            if ((bool) $agent->tool_calling_enabled) {
+                Log::error('AiAgent: tool calling unavailable, skipping IA reply', [
+                    ...$this->logContext($exception->provider, $agent->id, $exception->status, [
+                        'conversation_id' => $conversation->id,
+                    ]),
+                ]);
+
+                return;
+            }
+
+            throw $exception;
+        }
         if ($reply === null || trim($reply) === '') {
             return;
         }
@@ -157,24 +206,43 @@ class AiAgentService
         array $history,
         bool $disableFallback = false,
         array $context = [],
+        bool $useTools = false,
+        ?Conversation $conversation = null,
     ): ?array {
+        if ($useTools && $conversation === null) {
+            throw new \InvalidArgumentException('Tool calling requires a conversation.');
+        }
+
         [$primaryProvider, $primaryModel] = $this->resolveProviderAndModel($agent->llm_model);
+        if ($useTools && $primaryProvider !== 'anthropic') {
+            $this->throwProviderRequestException(
+                'anthropic',
+                $agent->id,
+                0,
+                null,
+                'Tool calling requires Anthropic provider; current model: '.$agent->llm_model,
+                $context,
+            );
+        }
+
         $attempts = $disableFallback
             ? [[$primaryProvider, $primaryModel]]
-            : $this->providerFallbackChain($primaryProvider, $primaryModel);
+            : ($useTools ? [[$primaryProvider, $primaryModel]] : $this->providerFallbackChain($primaryProvider, $primaryModel));
         $lastException = null;
 
         foreach ($attempts as $index => [$provider, $model]) {
             $apiKey = $this->providerApiKey($provider);
             if ($apiKey === '') {
-                $this->throwOrSkipMissingKey($provider, $agent->id, $disableFallback, $context);
+                $this->throwOrSkipMissingKey($provider, $agent->id, $disableFallback || $useTools, $context);
 
                 continue;
             }
 
             try {
                 $reply = match ($provider) {
-                    'anthropic' => $this->generateAnthropicReply($apiKey, $model, $prompt, $history, $agent->id, $context),
+                    'anthropic' => $useTools
+                        ? $this->generateAnthropicReplyWithTools($apiKey, $model, $prompt, $history, $conversation, $agent->id, $context)
+                        : $this->generateAnthropicReply($apiKey, $model, $prompt, $history, $agent->id, $context),
                     'openai' => $this->generateOpenAiReply($apiKey, $model, $prompt, $history, $agent->id, $context),
                     'gemini' => $this->generateGeminiReply($apiKey, $model, $prompt, $history, $agent->id, $context),
                     default => $this->throwProviderRequestException(
@@ -334,6 +402,124 @@ class AiAgentService
             }
 
             if (($item['type'] ?? null) === 'text' && is_string($item['text'] ?? null)) {
+                $parts[] = $item['text'];
+            }
+        }
+
+        $text = trim(implode("\n", $parts));
+
+        return $text !== '' ? $text : null;
+    }
+
+    /**
+     * @param  array<int, array{role: string, content: string}>  $history
+     * @param  array<string, mixed>  $context
+     */
+    private function generateAnthropicReplyWithTools(string $apiKey, string $model, string $prompt, array $history, Conversation $conversation, string $agentId, array $context = []): ?string
+    {
+        $messages = array_map(static fn (array $item): array => [
+            'role' => $item['role'],
+            'content' => $item['content'],
+        ], $history);
+        $lastText = null;
+
+        for ($iteration = 0; $iteration < 5; $iteration++) {
+            try {
+                $response = Http::withHeaders([
+                    'x-api-key' => $apiKey,
+                    'anthropic-version' => '2023-06-01',
+                ])->timeout(40)->post('https://api.anthropic.com/v1/messages', [
+                    'model' => $model,
+                    'max_tokens' => 1024,
+                    'system' => $prompt,
+                    'tools' => $this->toolRegistry->definitionsForAnthropic(),
+                    'messages' => $messages,
+                ]);
+            } catch (ConnectionException $exception) {
+                $this->throwProviderRequestException('anthropic', $agentId, 0, null, $exception->getMessage(), $context);
+            }
+
+            if ($response->failed()) {
+                $this->throwProviderRequestException('anthropic', $agentId, $response->status(), $response->body(), null, $context);
+            }
+
+            $content = $response->json('content');
+            if (! is_array($content)) {
+                return $lastText;
+            }
+
+            $text = $this->textFromAnthropicContent($content);
+            if ($text !== null) {
+                $lastText = $text;
+            }
+
+            $messages[] = ['role' => 'assistant', 'content' => $content];
+            if ($response->json('stop_reason') !== 'tool_use') {
+                return $lastText;
+            }
+
+            $toolResults = [];
+            foreach ($content as $block) {
+                if (! is_array($block) || ($block['type'] ?? null) !== 'tool_use') {
+                    continue;
+                }
+
+                $toolName = (string) ($block['name'] ?? '');
+                $tool = $this->toolRegistry->get($toolName);
+                $input = is_array($block['input'] ?? null) ? $block['input'] : [];
+                $ok = false;
+
+                try {
+                    if (! $tool) {
+                        throw new \RuntimeException('Unknown tool: '.$toolName);
+                    }
+
+                    $output = $tool->execute($conversation, $input);
+                    $ok = true;
+                    $toolResults[] = [
+                        'type' => 'tool_result',
+                        'tool_use_id' => (string) $block['id'],
+                        'content' => json_encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ];
+                } catch (\Throwable $exception) {
+                    $toolResults[] = [
+                        'type' => 'tool_result',
+                        'tool_use_id' => (string) $block['id'],
+                        'is_error' => true,
+                        'content' => 'Tool failed: '.$exception->getMessage(),
+                    ];
+                }
+
+                Log::info('AiAgent tool', $this->logContext('anthropic', $agentId, null, [
+                    ...$context,
+                    'conversation_id' => $conversation->id,
+                    'tool' => $toolName,
+                    'iteration' => $iteration,
+                    'input_keys' => array_keys($input),
+                    'ok' => $ok,
+                ]));
+            }
+
+            if ($toolResults === []) {
+                return $lastText;
+            }
+
+            $messages[] = ['role' => 'user', 'content' => $toolResults];
+        }
+
+        Log::warning('AiAgent: tool loop exceeded max iterations', $this->logContext('anthropic', $agentId, null, [
+            ...$context,
+            'conversation_id' => $conversation->id,
+        ]));
+
+        return $lastText;
+    }
+
+    private function textFromAnthropicContent(array $content): ?string
+    {
+        $parts = [];
+        foreach ($content as $item) {
+            if (is_array($item) && ($item['type'] ?? null) === 'text' && is_string($item['text'] ?? null)) {
                 $parts[] = $item['text'];
             }
         }

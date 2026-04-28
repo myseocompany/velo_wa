@@ -101,6 +101,7 @@ const navItems: NavItem[] = [
 export default function AppLayout({ children, title }: PropsWithChildren<{ title?: string }>) {
     const { auth, impersonation } = usePage<ExtendedPageProps>().props;
     const { user } = auth;
+    const tenantName = auth.tenant?.name ?? 'Sin empresa';
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const currentRoute = route().current();
@@ -216,8 +217,21 @@ export default function AppLayout({ children, title }: PropsWithChildren<{ title
             {/* Sidebar desktop (md+) */}
             <aside className="hidden md:flex w-60 flex-col border-r border-gray-200 bg-white">
                 {/* Logo */}
-                <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-4">
-                    <ApplicationLogo className="h-10 w-full object-contain" />
+                <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-4">
+                    <ApplicationLogo className="h-10 w-24 shrink-0 object-contain" />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Empresa</p>
+                        {auth.tenant_switcher_available ? (
+                            <Link
+                                href="/tenant/select"
+                                className="block truncate text-sm font-semibold text-ari-900 hover:text-ari-600"
+                            >
+                                {tenantName}
+                            </Link>
+                        ) : (
+                            <p className="truncate text-sm font-semibold text-ari-900">{tenantName}</p>
+                        )}
+                    </div>
                 </div>
                 {sidebarContent}
             </aside>
@@ -233,6 +247,9 @@ export default function AppLayout({ children, title }: PropsWithChildren<{ title
                         <Menu className="h-5 w-5" />
                     </button>
                     <ApplicationLogo className="h-8 object-contain" />
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-ari-900">{tenantName}</p>
+                    </div>
                 </div>
                 {/* Impersonation banner */}
                 {impersonation?.active && (

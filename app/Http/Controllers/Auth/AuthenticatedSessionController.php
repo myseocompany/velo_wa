@@ -107,13 +107,14 @@ class AuthenticatedSessionController extends Controller
 
         $remember = (bool) $request->session()->get('login.remember', false);
 
-        $request->session()->forget(['login.tenant_user_ids', 'login.remember']);
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         Auth::login($user, $remember);
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->route('dashboard');
     }
 
     /**

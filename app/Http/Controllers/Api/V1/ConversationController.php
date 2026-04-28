@@ -90,6 +90,13 @@ class ConversationController extends Controller
 
         $lineId = $request->string('whatsapp_line_id')->toString();
         if ($lineId !== '') {
+            $lineBelongsToTenant = WhatsAppLine::query()
+                ->where('tenant_id', $request->user()->tenant_id)
+                ->whereKey($lineId)
+                ->exists();
+
+            abort_unless($lineBelongsToTenant, 422, 'The selected WhatsApp line does not exist.');
+
             $query->where('whatsapp_line_id', $lineId);
         }
 

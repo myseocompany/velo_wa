@@ -80,6 +80,29 @@ class CreateConversationTest extends TestCase
         ]);
     }
 
+    public function test_conversation_index_rejects_whatsapp_line_from_another_tenant(): void
+    {
+        $otherTenant = Tenant::create([
+            'name' => 'Other Tenant',
+            'slug' => 'other-tenant',
+        ]);
+
+        $foreignLine = WhatsAppLine::create([
+            'tenant_id' => $otherTenant->id,
+            'label' => 'Foreign',
+            'is_default' => true,
+            'instance_id' => 'foreign_line',
+            'status' => WaStatus::Connected,
+        ]);
+
+        $response = $this->actingAs($this->agent)->getJson(
+            "/api/v1/conversations?whatsapp_line_id={$foreignLine->id}"
+        );
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('message', 'The selected WhatsApp line does not exist.');
+    }
+
     public function test_existing_active_conversation_is_reused_for_same_phone(): void
     {
         $contact = Contact::withoutGlobalScopes()->create([

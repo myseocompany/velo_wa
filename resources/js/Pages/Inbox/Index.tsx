@@ -403,11 +403,13 @@ export default function InboxIndex({ activeConversationId }: Props) {
 
         if (statusFilter !== 'all') params.status = statusFilter;
         if (search) params.search = search;
-        if (lineFilter) params.whatsapp_line_id = lineFilter;
+        if (lineFilter && lines.some((line) => line.id === lineFilter)) {
+            params.whatsapp_line_id = lineFilter;
+        }
         if (options?.cursor) params.cursor = options.cursor;
 
         return params;
-    }, [CONVERSATION_PAGE_SIZE, lineFilter, search, statusFilter]);
+    }, [CONVERSATION_PAGE_SIZE, lineFilter, lines, search, statusFilter]);
 
     const mergeConversationPages = useCallback((current: Conversation[], incoming: Conversation[]) => {
         const byId = new Map(current.map((conversation) => [conversation.id, conversation]));

@@ -23,6 +23,7 @@ class TenantSelectionController extends Controller
         }
 
         return Inertia::render('Auth/SelectTenant', [
+            'submitUrl' => route('tenant.store', absolute: false),
             'tenants' => $this->tenantOptions($users),
             'backUrl' => route('settings', absolute: false),
         ]);

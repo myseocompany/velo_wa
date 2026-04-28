@@ -72,6 +72,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         return Inertia::render('Auth/SelectTenant', [
+            'submitUrl' => route('login.tenant.store', absolute: false),
             'tenants' => $users->map(fn (User $user): array => [
                 'user_id' => $user->id,
                 'tenant_name' => $user->tenant?->name ?? 'Sin nombre',

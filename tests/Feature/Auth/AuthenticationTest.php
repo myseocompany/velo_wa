@@ -61,6 +61,10 @@ class AuthenticationTest extends TestCase
             ])
             ->assertRedirect(route('login.tenant.select'));
 
+        $this->get(route('login.tenant.select'))
+            ->assertOk()
+            ->assertSee(str_replace('/', '\\/', route('login.tenant.store', absolute: false)), false);
+
         $response = $this->post(route('login.tenant.store'), [
             'user_id' => $secondUser->id,
         ]);
@@ -107,6 +111,28 @@ class AuthenticationTest extends TestCase
         $response->assertSessionMissing('impersonating_user_id');
         $response->assertSessionMissing('impersonating_tenant_id');
         $response->assertSessionMissing('impersonating_admin_id');
+    }
+
+    public function test_tenant_selector_screen_exposes_the_authenticated_submit_url(): void
+    {
+        $email = 'switcher@example.com';
+        $firstTenant = Tenant::create(['name' => 'First Tenant', 'slug' => 'switch-first']);
+        $secondTenant = Tenant::create(['name' => 'Second Tenant', 'slug' => 'switch-second']);
+
+        $user = User::factory()->create([
+            'tenant_id' => $firstTenant->id,
+            'email' => $email,
+        ]);
+
+        User::factory()->create([
+            'tenant_id' => $secondTenant->id,
+            'email' => $email,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('tenant.select'))
+            ->assertOk()
+            ->assertSee(str_replace('/', '\\/', route('tenant.store', absolute: false)), false);
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

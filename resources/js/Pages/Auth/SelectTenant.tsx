@@ -15,9 +15,11 @@ interface TenantOption {
 
 export default function SelectTenant({
     tenants,
+    submitUrl,
     backUrl,
 }: {
     tenants: TenantOption[];
+    submitUrl: string;
     backUrl?: string;
 }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -26,7 +28,7 @@ export default function SelectTenant({
 
     const submit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        post(route('login.tenant.store'));
+        post(submitUrl);
     };
 
     return (

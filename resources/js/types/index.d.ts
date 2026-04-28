@@ -361,6 +361,7 @@ export type PageProps<
     auth: {
         user: User;
         tenant: Tenant;
+        tenant_switcher_available: boolean;
     };
     flash?: {
         success?: string;

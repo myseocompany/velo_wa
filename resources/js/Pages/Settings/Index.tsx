@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, Bot, Clock, DatabaseZap, QrCode, Shuffle, Sparkles, Tag, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
+import { Activity, Bot, Building2, Clock, DatabaseZap, QrCode, Shuffle, Sparkles, Tag, UtensilsCrossed, Users, Webhook, Zap } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface SettingCard {
@@ -115,7 +115,18 @@ export default function SettingsIndex() {
     const { auth } = usePage<PageProps>().props;
     const role = auth.user.role;
 
-    const visibleCards = CARDS.filter(c => !c.roles || c.roles.includes(role as any));
+    const tenantSwitcherCards: SettingCard[] = auth.tenant_switcher_available ? [{
+        title: 'Empresa activa',
+        description: `Estás trabajando en ${auth.tenant.name}. Cambia a otra empresa asociada a tu correo.`,
+        icon: <Building2 className="h-6 w-6 text-ari-600" />,
+        href: '/tenant/select',
+        label: 'Cambiar empresa',
+    }] : [];
+
+    const visibleCards = [
+        ...tenantSwitcherCards,
+        ...CARDS,
+    ].filter(c => !c.roles || c.roles.includes(role as any));
 
     return (
         <AppLayout title="Configuración">

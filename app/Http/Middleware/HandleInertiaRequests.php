@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -43,6 +44,13 @@ class HandleInertiaRequests extends Middleware
                     'max_wa_lines' => $tenant->currentPlan()->maxWhatsAppLines(),
                     'current_wa_lines_count' => $tenant->currentWhatsAppLinesCount(),
                 ] : null,
+                'tenant_switcher_available' => $user
+                    ? User::query()
+                        ->whereRaw('lower(email) = ?', [mb_strtolower($user->email)])
+                        ->whereNotNull('tenant_id')
+                        ->where('is_active', true)
+                        ->count() > 1
+                    : false,
             ],
             'impersonation' => $impersonating,
             'platform_admin' => $platformAdmin ? [

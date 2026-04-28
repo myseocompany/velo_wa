@@ -13,7 +13,13 @@ interface TenantOption {
     role: string;
 }
 
-export default function SelectTenant({ tenants }: { tenants: TenantOption[] }) {
+export default function SelectTenant({
+    tenants,
+    backUrl,
+}: {
+    tenants: TenantOption[];
+    backUrl?: string;
+}) {
     const { data, setData, post, processing, errors } = useForm({
         user_id: tenants[0]?.user_id ?? '',
     });
@@ -70,7 +76,7 @@ export default function SelectTenant({ tenants }: { tenants: TenantOption[] }) {
                 <InputError message={errors.user_id} className="mt-2" />
 
                 <div className="mt-6 flex items-center justify-between gap-3">
-                    <Link href={route('login')}>
+                    <Link href={backUrl ?? route('login')}>
                         <SecondaryButton>Volver</SecondaryButton>
                     </Link>
 
